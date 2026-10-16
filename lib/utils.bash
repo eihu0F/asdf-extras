@@ -8,7 +8,7 @@ TOOL_NAME="asdf-extras"
 TOOL_TEST="asdf-extras --help"
 
 fail() {
-	echo -e "asdf-$TOOL_NAME: $*"
+	echo -e "$TOOL_NAME: $*"
 	exit 1
 }
 
@@ -54,7 +54,7 @@ install_version() {
 	local install_path="${3%/bin}/bin"
 
 	if [ "$install_type" != "version" ]; then
-		fail "asdf-$TOOL_NAME supports release installs only"
+		fail "$TOOL_NAME supports release installs only"
 	fi
 
 	(

@@ -63,7 +63,7 @@ Shell initialization:
 eval "$(asdf cmd extras init bash)"
 ```
 
-`init` overrides the `asdf` shell function behavior and adds extras-aware completion.
+`init` defines an `asdf` shell function wrapper to extend `asdf` command behavior and adds extras-aware completion.
 After initialization, the following behavior changes are applied.
 
 1. `update` is delegated to extras.

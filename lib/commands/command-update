@@ -8,6 +8,26 @@ plugin_dir=$(dirname "$(dirname "$(dirname "$current_script_path")")")
 # shellcheck source=./common.bash
 source "${plugin_dir}/lib/commands/common.bash"
 
+resolve_latest_target() {
+	local plugin="$1"
+	local latest_output target
+
+	latest_output="$(command asdf latest "$plugin" 2>/dev/null || true)"
+	target="$(printf "%s\n" "$latest_output" | awk 'NR==1 {print $NF}')"
+
+	if [[ -z "$target" || "$target" == ")" || "$target" == "(" ]]; then
+		return 1
+	fi
+
+	if ! command asdf list all "$plugin" 2>/dev/null |
+		sed 's/^[[:space:]]*//' |
+		grep -Fx -- "$target" >/dev/null; then
+		return 1
+	fi
+
+	printf "%s\n" "$target"
+}
+
 update_all() {
 	local plugin
 
@@ -15,7 +35,9 @@ update_all() {
 
 	while IFS= read -r plugin; do
 		[[ -n "$plugin" ]] || continue
-		update_one_internal "$plugin" ""
+		if ! update_one_internal "$plugin" ""; then
+			printf "asdf-extras: skipped %s (unable to resolve latest version)\n" "$plugin" >&2
+		fi
 	done < <(extras_plugins)
 }
 
@@ -29,8 +51,11 @@ update_one_internal() {
 	if [[ -n "$version" ]]; then
 		target="$version"
 	else
-		target="$(extras_latest_version "$plugin")"
-		[[ -n "$target" ]] || extras_fail "no available version for plugin: $plugin"
+		target="$(resolve_latest_target "$plugin" || true)"
+		if [[ -z "$target" ]]; then
+			printf "asdf-extras: no available version for plugin: %s\n" "$plugin" >&2
+			return 1
+		fi
 	fi
 
 	if [[ "$current" == "$target" ]]; then
@@ -51,7 +76,9 @@ update_one() {
 	local version="${2:-}"
 
 	command asdf plugin update "$plugin"
-	update_one_internal "$plugin" "$version"
+	if ! update_one_internal "$plugin" "$version"; then
+		extras_fail "unable to resolve target version for plugin: $plugin"
+	fi
 }
 
 main() {

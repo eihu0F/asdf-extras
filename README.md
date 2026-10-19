@@ -115,6 +115,7 @@ asdf-extras update all
 Behavior:
 - Updates all plugins.
 - Updates already-installed commands that have newer available versions.
+- If `latest` cannot be resolved for a plugin, it is skipped and processing continues.
 
 3. Update one plugin and refresh installed commands to latest, then activate.
 

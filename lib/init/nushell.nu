@@ -4,7 +4,7 @@ def "asdf-extras-dispatch" [...args] {
 	if (which asdf-extras | is-not-empty) {
 		^asdf-extras ...$args
 	} else {
-		^asdf cmd extras ...$args
+		^asdf cmd asdf-extras ...$args
 	}
 }
 

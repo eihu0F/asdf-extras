@@ -3,7 +3,7 @@ function __asdf_extras_dispatch
 		asdf-extras $argv
 		return $status
 	end
-	command asdf cmd extras $argv
+	command asdf cmd asdf-extras $argv
 end
 
 function asdf

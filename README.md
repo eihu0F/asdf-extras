@@ -36,7 +36,7 @@ Install and activate `asdf-extras` itself:
 asdf list-all asdf-extras
 
 # Bootstrap install via plugin command
-asdf cmd extras install asdf-extras latest
+asdf cmd asdf-extras install asdf-extras latest
 
 # Now the installed asdf-extras command is available
 asdf-extras --help
@@ -57,11 +57,11 @@ Default usage is the installed command:
 asdf-extras [subcommand]
 ```
 
-`asdf-extras` and `asdf cmd extras` provide the same subcommands.
+`asdf-extras` and `asdf cmd asdf-extras` provide the same subcommands.
 
 Version source difference:
 - `asdf-extras`: runs the installed version selected by asdf.
-- `asdf cmd extras`: runs the version that exists in the plugin checkout.
+- `asdf cmd asdf-extras`: runs the version that exists in the plugin checkout.
 
 Shell initialization:
 

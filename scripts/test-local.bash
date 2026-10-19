@@ -89,10 +89,10 @@ run_custom_smoke() {
 		log "asdf-extras command is not installed yet (skipped)"
 	fi
 
-	if asdf cmd extras --help >/dev/null 2>&1; then
-		log "asdf cmd extras --help: PASS"
+	if asdf cmd asdf-extras --help >/dev/null 2>&1; then
+		log "asdf cmd asdf-extras --help: PASS"
 	else
-		log "asdf cmd extras --help is not available yet (skipped)"
+		log "asdf cmd asdf-extras --help is not available yet (skipped)"
 	fi
 }
 

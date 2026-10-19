@@ -6,7 +6,7 @@ fn asdf-extras-dispatch [@args]{
 	if (has-external asdf-extras) {
 		asdf-extras $@args
 	} else {
-		asdf cmd extras $@args
+		asdf cmd asdf-extras $@args
 	}
 }
 

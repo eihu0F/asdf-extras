@@ -15,7 +15,7 @@ printf "asdf-extras %s\n\n" "$version"
 cat <<'EOF'
 Usage:
   asdf-extras <subcommand>
-  asdf cmd extras <subcommand>
+  asdf cmd asdf-extras <subcommand>
   asdf-extras --version
 
 Subcommands:

@@ -9,7 +9,7 @@ plugin_dir=$(dirname "$(dirname "$(dirname "$current_script_path")")")
 source "${plugin_dir}/lib/commands/common.bash"
 
 main() {
-	extras_need_args 2 "$#" "asdf cmd extras install <plugin> <version>"
+	extras_need_args 2 "$#" "asdf cmd asdf-extras install <plugin> <version>"
 
 	local plugin="$1"
 	local version="$2"

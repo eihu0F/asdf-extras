@@ -3,7 +3,7 @@ _asdf_extras_dispatch() {
 		asdf-extras "$@"
 		return $?
 	fi
-	command asdf cmd extras "$@"
+	command asdf cmd asdf-extras "$@"
 }
 
 asdf() {

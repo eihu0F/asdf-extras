@@ -19,9 +19,7 @@ resolve_latest_target() {
 		return 1
 	fi
 
-	if ! command asdf list all "$plugin" 2>/dev/null |
-		sed 's/^[[:space:]]*//' |
-		grep -Fx -- "$target" >/dev/null; then
+	if ! extras_version_exists "$plugin" "$target"; then
 		return 1
 	fi
 
@@ -44,12 +42,16 @@ update_all() {
 update_one_internal() {
 	local plugin="$1"
 	local version="${2:-}"
-	local current target
+	local current target activated
 
 	current="$(extras_current_version "$plugin")"
 
 	if [[ -n "$version" ]]; then
 		target="$version"
+		if ! extras_version_exists "$plugin" "$target"; then
+			printf "asdf-extras: target version is unavailable for plugin: %s (%s)\n" "$plugin" "$target" >&2
+			return 1
+		fi
 	else
 		target="$(resolve_latest_target "$plugin" || true)"
 		if [[ -z "$target" ]]; then
@@ -65,6 +67,17 @@ update_one_internal() {
 
 	command asdf install "$plugin" "$target"
 	command asdf set -u "$plugin" "$target"
+	activated="$(extras_current_version "$plugin")"
+
+	if ! extras_version_installed "$plugin" "$target"; then
+		printf "asdf-extras: target version is not installed after update: %s (%s)\n" "$plugin" "$target" >&2
+		return 1
+	fi
+
+	if [[ "$activated" != "$target" ]]; then
+		printf "asdf-extras: target version did not become current; keep previous version: %s (current=%s, target=%s)\n" "$plugin" "${activated:-none}" "$target" >&2
+		return 1
+	fi
 
 	if [[ -n "$current" ]]; then
 		command asdf uninstall "$plugin" "$current"

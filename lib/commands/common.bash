@@ -40,6 +40,27 @@ extras_latest_version() {
 	command asdf latest "$plugin" 2>/dev/null | head -n1 | awk '{print $NF}'
 }
 
+extras_version_exists() {
+	local plugin="$1"
+	local version="$2"
+
+	[[ -n "$version" ]] || return 1
+
+	command asdf list all "$plugin" 2>/dev/null |
+		sed 's/^[[:space:]]*//' |
+		grep -Fx -- "$version" >/dev/null
+}
+
+extras_version_installed() {
+	local plugin="$1"
+	local version="$2"
+
+	[[ -n "$version" ]] || return 1
+
+	extras_installed_versions "$plugin" |
+		grep -Fx -- "$version" >/dev/null
+}
+
 extras_current_version() {
 	local plugin="$1"
 	command asdf current "$plugin" 2>/dev/null |

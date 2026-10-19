@@ -39,3 +39,12 @@ extras_latest_version() {
 	local plugin="$1"
 	command asdf latest "$plugin" 2>/dev/null | head -n1 | awk '{print $NF}'
 }
+
+extras_current_version() {
+	local plugin="$1"
+	command asdf current "$plugin" 2>/dev/null |
+		awk 'NR==2 {print $2}' |
+		sed '/^Version$/d' |
+		sed '/^$/d' |
+		sed '/^system$/d'
+}

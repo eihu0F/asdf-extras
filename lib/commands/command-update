@@ -9,39 +9,49 @@ plugin_dir=$(dirname "$(dirname "$(dirname "$current_script_path")")")
 source "${plugin_dir}/lib/commands/common.bash"
 
 update_all() {
-	local plugin latest
+	local plugin
 
 	command asdf plugin update --all
 
 	while IFS= read -r plugin; do
 		[[ -n "$plugin" ]] || continue
-		if ! extras_has_installed_versions "$plugin"; then
-			continue
-		fi
-
-		latest="$(extras_latest_version "$plugin")"
-		[[ -n "$latest" ]] || continue
-		command asdf install "$plugin" "$latest"
+		update_one_internal "$plugin" ""
 	done < <(extras_plugins)
+}
+
+update_one_internal() {
+	local plugin="$1"
+	local version="${2:-}"
+	local current target
+
+	current="$(extras_current_version "$plugin")"
+
+	if [[ -n "$version" ]]; then
+		target="$version"
+	else
+		target="$(extras_latest_version "$plugin")"
+		[[ -n "$target" ]] || extras_fail "no available version for plugin: $plugin"
+	fi
+
+	if [[ "$current" == "$target" ]]; then
+		printf "asdf-extras: %s already current at %s\n" "$plugin" "$target"
+		return 0
+	fi
+
+	command asdf install "$plugin" "$target"
+	command asdf set -u "$plugin" "$target"
+
+	if [[ -n "$current" ]]; then
+		command asdf uninstall "$plugin" "$current"
+	fi
 }
 
 update_one() {
 	local plugin="$1"
 	local version="${2:-}"
-	local latest
 
 	command asdf plugin update "$plugin"
-
-	if [[ -n "$version" ]]; then
-		command asdf install "$plugin" "$version"
-		command asdf set -u "$plugin" "$version"
-		return 0
-	fi
-
-	latest="$(extras_latest_version "$plugin")"
-	[[ -n "$latest" ]] || extras_fail "no available version for plugin: $plugin"
-	command asdf install "$plugin" "$latest"
-	command asdf set -u "$plugin" "$latest"
+	update_one_internal "$plugin" "$version"
 }
 
 main() {

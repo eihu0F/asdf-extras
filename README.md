@@ -122,8 +122,10 @@ asdf-extras update [plugin]
 
 Behavior:
 - Updates the specified plugin.
-- Updates installed commands for that plugin to the latest available version.
-- Runs `set -u` after update.
+- Treats omitted version as `latest`.
+- Compares target version with current (`set -u`) version.
+- If different, installs target version, runs `set -u`, and uninstalls the previous current version.
+- If identical, does nothing.
 
 4. Set one plugin to a specific version and activate it.
 
@@ -132,8 +134,10 @@ asdf-extras update [plugin] [version]
 ```
 
 Behavior:
-- Sets the specified plugin to the given version.
-- Runs `set -u` for that plugin/version.
+- Updates the specified plugin.
+- Compares target version with current (`set -u`) version.
+- If different, installs target version, runs `set -u`, and uninstalls the previous current version.
+- If identical, does nothing.
 
 # Contributing
 

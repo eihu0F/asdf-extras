@@ -19,6 +19,13 @@ _asdf_extras_dispatch() {
 }
 
 asdf() {
+	if [[ "${1:-}" == "completion" && "${2:-}" == "bash" ]]; then
+		command asdf completion bash
+		printf "\n# asdf-extras init overlay\n"
+		_asdf_extras_dispatch init bash
+		return $?
+	fi
+
 	if [[ "${1:-}" == "update" ]]; then
 		shift
 		_asdf_extras_dispatch update "$@"
@@ -33,25 +40,4 @@ asdf() {
 
 	command asdf "$@"
 }
-
-_asdf_extras_completion() {
-	if [[ "${COMP_WORDS[1]:-}" == "install" && "${COMP_WORDS[2]:-}" == "-u" ]]; then
-		COMPREPLY=($(compgen -W "$(command asdf plugin list 2>/dev/null)" -- "${COMP_WORDS[3]:-}"))
-		return 0
-	fi
-
-	if declare -F _asdf >/dev/null 2>&1; then
-		_asdf
-		return 0
-	fi
-
-	return 1
-}
-
-if declare -F complete >/dev/null 2>&1; then
-	complete -o bashdefault -o default -F _asdf_extras_completion asdf
-	if declare -F _asdf >/dev/null 2>&1; then
-		complete -o bashdefault -o default -F _asdf asdf-extras
-	fi
-fi
 EOF

@@ -9,11 +9,8 @@ def "asdf-extras-dispatch" [...args] {
 }
 
 def --wrapped asdf [...args] {
-	if (($args | length) >= 2 and ($args | get 0) == "completion" and ($args | get 1) == "nushell") {
-		^asdf completion nushell
-		print ""
-		print "# asdf-extras init overlay"
-		asdf-extras-dispatch init nushell
+	if (($args | length) >= 1 and ($args | get 0) == "completion") {
+		asdf-extras-dispatch completion ...($args | skip 1)
 		return
 	}
 

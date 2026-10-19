@@ -16,11 +16,8 @@ fn asdf [@args]{
 		return
 	}
 
-	if (and (>= (count $args) 2) (== $args[0] completion) (== $args[1] elvish)) {
-		asdf completion elvish
-		echo ""
-		echo "# asdf-extras init overlay"
-		asdf-extras-dispatch init elvish
+	if (== $args[0] completion) {
+		asdf-extras-dispatch completion $@args[1..]
 		return
 	}
 

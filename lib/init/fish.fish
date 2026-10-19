@@ -7,11 +7,8 @@ function __asdf_extras_dispatch
 end
 
 function asdf
-	if test (count $argv) -ge 2; and test "$argv[1]" = "completion"; and test "$argv[2]" = "fish"
-		command asdf completion fish
-		echo ""
-		echo "# asdf-extras init overlay"
-		__asdf_extras_dispatch init fish
+	if test (count $argv) -ge 1; and test "$argv[1]" = "completion"
+		__asdf_extras_dispatch completion $argv[2..-1]
 		return $status
 	end
 

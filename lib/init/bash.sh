@@ -7,10 +7,9 @@ _asdf_extras_dispatch() {
 }
 
 asdf() {
-	if [[ "${1:-}" == "completion" && "${2:-}" == "bash" ]]; then
-		command asdf completion bash
-		printf "\n# asdf-extras init overlay\n"
-		_asdf_extras_dispatch init bash
+	if [[ "${1:-}" == "completion" ]]; then
+		shift
+		_asdf_extras_dispatch completion "$@"
 		return $?
 	fi
 

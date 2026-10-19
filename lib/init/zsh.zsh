@@ -7,10 +7,9 @@ _asdf_extras_dispatch() {
 }
 
 asdf() {
-	if [[ "${1:-}" == "completion" && "${2:-}" == "zsh" ]]; then
-		command asdf completion zsh
-		printf "\n# asdf-extras init overlay\n"
-		_asdf_extras_dispatch init zsh
+	if [[ "${1:-}" == "completion" ]]; then
+		shift
+		_asdf_extras_dispatch completion "$@"
 		return $?
 	fi
 

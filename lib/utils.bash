@@ -85,6 +85,7 @@ install_version() {
 		chmod +x "$install_path/$TOOL_NAME"
 
 		chmod +x "$runtime_path/libexec/asdf-extras"
+		chmod +x "$runtime_path/lib/commands/command-completion"
 		chmod +x "$runtime_path/lib/commands/command-help"
 		chmod +x "$runtime_path/lib/commands/command-init"
 		chmod +x "$runtime_path/lib/commands/command-install"

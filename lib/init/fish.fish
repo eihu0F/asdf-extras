@@ -1,9 +1,16 @@
+set -g __asdf_extras_init_file (status filename)
+
 function __asdf_extras_dispatch
-	if type -q asdf-extras
-		asdf-extras $argv
-		return $status
+	set -l init_dir (dirname "$__asdf_extras_init_file")
+	set -l lib_dir (dirname "$init_dir")
+	set -l dispatcher "$lib_dir/commands/dispatch.bash"
+
+	if not test -r "$dispatcher"
+		echo "asdf-extras: dispatcher not found: $dispatcher" >&2
+		return 1
 	end
-	command asdf cmd asdf-extras $argv
+
+	command bash "$dispatcher" $argv
 end
 
 function asdf

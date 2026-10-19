@@ -4,28 +4,6 @@ set -euo pipefail
 
 current_script_path=${BASH_SOURCE[0]}
 extras_root=$(dirname "$(dirname "$current_script_path")")
-commands_dir="${extras_root}/lib/commands"
+dispatcher="${extras_root}/lib/commands/dispatch.bash"
 
-subcommand="${1:-help}"
-case "$subcommand" in
-"" | "-h" | "--help" | "help")
-	subcommand="help"
-	set --
-	;;
-"-v" | "--version")
-	subcommand="version"
-	set --
-	;;
-*)
-	shift
-	;;
-esac
-
-command_file="${commands_dir}/command-${subcommand}"
-if [[ ! -x "$command_file" ]]; then
-	printf "asdf-extras: unknown subcommand: %s\n" "$subcommand" >&2
-	"${commands_dir}/command-help" >&2
-	exit 1
-fi
-
-"$command_file" "$@"
+exec bash "$dispatcher" "$@"

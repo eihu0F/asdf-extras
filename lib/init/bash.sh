@@ -1,9 +1,16 @@
 _asdf_extras_dispatch() {
-	if command -v asdf-extras >/dev/null 2>&1; then
-		asdf-extras "$@"
-		return $?
+	local init_dir lib_dir dispatcher
+
+	init_dir=$(dirname "${BASH_SOURCE[0]}")
+	lib_dir=$(dirname "$init_dir")
+	dispatcher="${lib_dir}/commands/dispatch.bash"
+
+	if [[ ! -r "$dispatcher" ]]; then
+		printf "asdf-extras: dispatcher not found: %s\n" "$dispatcher" >&2
+		return 1
 	fi
-	command asdf cmd asdf-extras "$@"
+
+	command bash "$dispatcher" "$@"
 }
 
 asdf() {

@@ -1,11 +1,13 @@
 # asdf-extras init overlay for nushell
 
 def "asdf-extras-dispatch" [...args] {
-	if (which asdf-extras | is-not-empty) {
-		^asdf-extras ...$args
-	} else {
-		^asdf cmd asdf-extras ...$args
+	let dispatcher = ($env.ASDF_EXTRAS_DISPATCHER? | default "")
+
+	if $dispatcher == "" {
+		error make {msg: "asdf-extras: dispatcher not set: ASDF_EXTRAS_DISPATCHER"}
 	}
+
+	^bash $dispatcher ...$args
 }
 
 def --wrapped asdf [...args] {

@@ -15,8 +15,10 @@ printf "asdf-extras %s\n\n" "$version"
 cat <<'EOF'
 Usage:
   asdf-extras <subcommand>
-  asdf cmd asdf-extras <subcommand>
   asdf-extras --version
+
+Fallback (when asdf-extras is not installed):
+  asdf cmd asdf-extras <subcommand>
 
 Subcommands:
   completion <bash|zsh|fish|elvish|nushell>

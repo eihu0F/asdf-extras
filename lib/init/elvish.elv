@@ -3,11 +3,12 @@
 # and provides lightweight wrappers for update/install -u.
 
 fn asdf-extras-dispatch [@args]{
-	if (has-external asdf-extras) {
-		asdf-extras $@args
-	} else {
-		asdf cmd asdf-extras $@args
+	if (or (not (has-env ASDF_EXTRAS_DISPATCHER)) (== $E:ASDF_EXTRAS_DISPATCHER '')) {
+		echo 'asdf-extras: dispatcher not set: ASDF_EXTRAS_DISPATCHER' >&2
+		return 1
 	}
+
+	bash $E:ASDF_EXTRAS_DISPATCHER $@args
 }
 
 fn asdf [@args]{

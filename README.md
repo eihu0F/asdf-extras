@@ -77,7 +77,7 @@ After initialization, the following behavior changes are applied.
 ```shell
 asdf update ...
 # delegated to
-asdf cmd extras update ...
+asdf-extras update ...
 ```
 
 2. `install` is delegated to extras only when `-u` is specified.
@@ -85,7 +85,7 @@ asdf cmd extras update ...
 ```shell
 asdf install -u [plugin] [version]
 # delegated to
-asdf cmd extras install [plugin] [version]
+asdf-extras install [plugin] [version]
 ```
 
 3. Completion keeps existing behavior and adds entries for `extras init` usage.

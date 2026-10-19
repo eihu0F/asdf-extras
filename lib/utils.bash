@@ -35,12 +35,20 @@ list_all_versions() {
 }
 
 resolve_checkout_ref() {
-	local repo_dir version
+	local repo_dir version ref
 	repo_dir="$1"
 	version="$2"
 
 	for ref in "refs/tags/v${version}" "refs/tags/${version}" "${version}"; do
 		if git -C "$repo_dir" rev-parse -q --verify "$ref" >/dev/null 2>&1; then
+			printf "%s\n" "$ref"
+			return 0
+		fi
+	done
+
+	for ref in "refs/tags/v${version}" "refs/tags/${version}"; do
+		if git -C "$repo_dir" fetch --quiet origin "$ref:$ref" 2>/dev/null &&
+			git -C "$repo_dir" rev-parse -q --verify "$ref" >/dev/null 2>&1; then
 			printf "%s\n" "$ref"
 			return 0
 		fi

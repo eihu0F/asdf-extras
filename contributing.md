@@ -1,5 +1,47 @@
 # Contributing
 
+## Development Flow (Branch + Pull Request Required)
+
+1. Sync local `main` and create a working branch.
+
+```shell
+git switch main
+git pull --ff-only origin main
+git switch -c issue-<number>-<short-topic>
+```
+
+### Branch Naming Rules
+
+- If an issue already exists, branch name must include the issue number:
+	- `issue-<number>-<short-topic>`
+	- Example: `issue-123-install-parent-option`
+- If no issue exists, branch name must explicitly indicate that state:
+	- `noissue-<short-topic>`
+	- Example: `noissue-update-contributing-guide`
+- Branch names do not need a commit/PR type prefix.
+
+2. Make changes and run local validation.
+
+```shell
+bash ./scripts/test-local.bash
+```
+
+3. Commit and push the branch.
+
+```shell
+git add -A
+git commit
+git push -u origin <branch-name>
+```
+
+4. Open a pull request and merge via PR review flow.
+
+Rules:
+
+- Do not push development changes directly to `main`.
+- PR titles must follow Conventional Commits format (`<type>: <subject>`).
+- Wait for required checks before merge.
+
 Testing Locally:
 
 ```shell

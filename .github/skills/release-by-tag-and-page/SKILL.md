@@ -1,117 +1,118 @@
 ---
 name: release-by-tag-and-page
-description: Create a release by pushing a git tag and creating a GitHub Release page. Use when the user asks for manual release publication.
+description: Release skill for this repository. Prefer release-please workflow execution; use manual tag and GitHub Release page flow as fallback.
 ---
 
-# Manual Release By Tag + GitHub Release
+# Release Skill For This Repository
 
-Use this skill when the user wants a release flow that explicitly does both:
+This repository has a release workflow at `.github/workflows/release.yml`:
 
-1. Create and push a git tag.
-2. Create a GitHub Release page for that tag.
+- Trigger: push to `main` or `workflow_dispatch`
+- Action: `googleapis/release-please-action@v5`
+- Mode: `release-type: simple`
 
-## Required Inputs
+Use this skill in two modes:
 
-Collect these values before running commands:
+1. **Workflow mode (default)**: run `release-please` and let it create/update the release PR.
+2. **Manual mode (fallback)**: create/push a tag and create a GitHub Release page.
 
-- `tag`: Release tag (example: `v1.2.3`).
-- `target`: Commit/branch to tag (default: `main`).
-- `title`: Release title (default: same as tag).
-- `notesMode`: `generate` or `manual`.
-- `prerelease`: `true` or `false`.
-- `draft`: `true` or `false`.
+## Mode Selection Rules
 
-If the user did not provide them, ask concise questions first.
+- If user says only "release" and does not explicitly require manual tagging, use **workflow mode**.
+- Use **manual mode** only when user explicitly asks for tag-based/manual publishing.
 
-## Safety Rules
+## Workflow Mode (Preferred)
 
-- Never overwrite or move an existing remote tag.
-- Never use force-push for release tags.
-- Stop if the working tree is dirty unless the user explicitly approves proceeding.
-- Show a short execution plan and ask for confirmation before pushing the tag.
+### Preflight Checks
 
-## Execution Steps
+Run:
 
-Run non-interactive commands in this order.
+```bash
+gh auth status
+gh workflow view release.yml
+```
 
-1. Validate repository state.
+Then verify repository settings in GitHub UI when needed:
+
+- Settings > Actions > General
+- Workflow permissions: `Read and write permissions`
+- `Allow GitHub Actions to create and approve pull requests`: enabled
+
+If the run fails with:
+
+`GitHub Actions is not permitted to create or approve pull requests`
+
+report that this repository/org setting must be enabled before retry.
+
+### Execute
+
+Dispatch the workflow:
+
+```bash
+gh workflow run release.yml --ref main
+```
+
+Monitor status:
+
+```bash
+gh run list --workflow release.yml --limit 5
+```
+
+If release-please opens/updates a PR, report its URL and title.
+
+## Manual Mode (Fallback)
+
+Use this flow only when requested or when workflow mode cannot be used.
+
+### Required Inputs
+
+- `tag`: release tag (example: `0.2.1` or `v0.2.1`)
+- `target`: commit/branch to tag (default: `main`)
+- `title`: release title (default: same as tag)
+- `notesMode`: `generate` or `manual`
+- `prerelease`: `true` or `false`
+- `draft`: `true` or `false`
+
+### Safety Rules
+
+- Never overwrite or move existing tags.
+- Never force-push release tags.
+- Stop on dirty working tree unless user explicitly approves.
+
+### Steps
 
 ```bash
 git fetch --tags origin
-git status --short
+git status --short --branch
 git rev-parse --verify "refs/tags/$TAG" >/dev/null && echo "local tag exists"
 git ls-remote --tags origin "refs/tags/$TAG"
-```
-
-2. Validate target exists.
-
-```bash
 git rev-parse --verify "$TARGET" >/dev/null
-```
-
-3. Create an annotated tag.
-
-```bash
 git tag -a "$TAG" "$TARGET" -m "Release $TAG"
-```
-
-4. Push the tag.
-
-```bash
 git push origin "$TAG"
 ```
 
-5. Create GitHub Release page.
-
-Generate notes mode:
+Create release page:
 
 ```bash
-gh release create "$TAG" \
-  --target "$TARGET" \
-  --title "$TITLE" \
-  --generate-notes
+gh release create "$TAG" --target "$TARGET" --title "$TITLE" --generate-notes
 ```
 
-Manual notes mode:
+Or manual notes:
 
 ```bash
-gh release create "$TAG" \
-  --target "$TARGET" \
-  --title "$TITLE" \
-  --notes-file "$NOTES_FILE"
+gh release create "$TAG" --target "$TARGET" --title "$TITLE" --notes-file "$NOTES_FILE"
 ```
 
 Optional flags:
 
-- Add `--prerelease` when `prerelease=true`.
-- Add `--draft` when `draft=true`.
+- `--prerelease` when `prerelease=true`
+- `--draft` when `draft=true`
 
-## Fallback When `gh` Is Unavailable
+## Output Requirements
 
-If GitHub CLI is unavailable or unauthenticated:
+Always report:
 
-1. Push the tag only after confirmation.
-2. Provide the direct browser URL pattern for release creation:
-
-```text
-https://github.com/<owner>/<repo>/releases/new?tag=<TAG>
-```
-
-3. Tell the user exactly which values to paste (`title`, notes, prerelease, draft).
-
-## Verification Output
-
-After completion, report:
-
-- Created tag and target commit SHA.
-- Tag push result.
-- Release URL.
-- Whether release is draft/prerelease.
-
-## Failure Handling
-
-If tag push succeeds but release creation fails:
-
-1. Report the failure reason and the `gh` error output summary.
-2. Offer one-click manual completion via the release URL.
-3. Do not delete the pushed tag unless the user explicitly requests rollback.
+- Chosen mode (`workflow` or `manual`)
+- Executed command summary
+- PR URL (workflow mode) or release URL (manual mode)
+- Any blocking setting issues and exact fix path in GitHub UI

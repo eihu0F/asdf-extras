@@ -24,6 +24,7 @@ Subcommands:
   completion <bash|zsh|fish|elvish|nushell>
   init bash
   install <plugin> <version>
+  update
   update all
   update <plugin> [version]
   version

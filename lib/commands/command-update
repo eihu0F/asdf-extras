@@ -55,9 +55,7 @@ update_one() {
 }
 
 main() {
-	extras_need_args 1 "$#" "asdf-extras update <all|plugin> [version]"
-
-	local target="$1"
+	local target="${1:-all}"
 	if [[ "$target" == "all" ]]; then
 		update_all
 		return 0

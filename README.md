@@ -107,6 +107,8 @@ Behavior:
 2. Update all plugins and refresh installed commands that can be upgraded.
 
 ```shell
+asdf-extras update
+# same as
 asdf-extras update all
 ```
 

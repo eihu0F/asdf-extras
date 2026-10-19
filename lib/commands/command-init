@@ -3,41 +3,52 @@
 set -euo pipefail
 
 shell_name="${1:-bash}"
+current_script_path=${BASH_SOURCE[0]}
+extras_root=$(dirname "$(dirname "$(dirname "$current_script_path")")")
+init_dir="${extras_root}/lib/init"
 
-if [[ "$shell_name" != "bash" ]]; then
+emit_source_line() {
+	local shell="$1"
+	local file_path="$2"
+
+	case "$shell" in
+	bash | zsh)
+		printf "source %q\n" "$file_path"
+		;;
+	fish)
+		printf "source '%s'\n" "$file_path"
+		;;
+	elvish)
+		printf "source '%s'\n" "$file_path"
+		;;
+	nushell)
+		printf "source '%s'\n" "$file_path"
+		;;
+	*)
+		printf "asdf-extras: unsupported shell: %s\n" "$shell" >&2
+		exit 1
+		;;
+	esac
+}
+
+case "$shell_name" in
+bash)
+	emit_source_line "$shell_name" "${init_dir}/bash.sh"
+	;;
+zsh)
+	emit_source_line "$shell_name" "${init_dir}/zsh.zsh"
+	;;
+fish)
+	emit_source_line "$shell_name" "${init_dir}/fish.fish"
+	;;
+elvish)
+	emit_source_line "$shell_name" "${init_dir}/elvish.elv"
+	;;
+nushell)
+	emit_source_line "$shell_name" "${init_dir}/nushell.nu"
+	;;
+*)
 	printf "asdf-extras: unsupported shell: %s\n" "$shell_name" >&2
 	exit 1
-fi
-
-cat <<'EOF'
-_asdf_extras_dispatch() {
-	if command -v asdf-extras >/dev/null 2>&1; then
-		asdf-extras "$@"
-		return $?
-	fi
-	command asdf cmd extras "$@"
-}
-
-asdf() {
-	if [[ "${1:-}" == "completion" && "${2:-}" == "bash" ]]; then
-		command asdf completion bash
-		printf "\n# asdf-extras init overlay\n"
-		_asdf_extras_dispatch init bash
-		return $?
-	fi
-
-	if [[ "${1:-}" == "update" ]]; then
-		shift
-		_asdf_extras_dispatch update "$@"
-		return $?
-	fi
-
-	if [[ "${1:-}" == "install" && "${2:-}" == "-u" ]]; then
-		shift 2
-		_asdf_extras_dispatch install "$@"
-		return $?
-	fi
-
-	command asdf "$@"
-}
-EOF
+	;;
+esac

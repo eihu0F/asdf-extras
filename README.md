@@ -69,6 +69,8 @@ Shell initialization:
 eval "$(asdf-extras init bash)"
 ```
 
+Supported shells for `init`: `bash`, `elvish`, `fish`, `nushell`, `zsh`.
+
 `init` defines an `asdf` shell function wrapper to extend `asdf` command behavior and adds extras-aware completion.
 After initialization, the following behavior changes are applied.
 

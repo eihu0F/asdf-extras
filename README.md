@@ -51,19 +51,7 @@ install & manage versions.
 
 # Usage
 
-Default usage is the installed command:
-
-```shell
-asdf-extras [subcommand]
-```
-
-`asdf-extras` and `asdf cmd asdf-extras` provide the same subcommands.
-
-Version source difference:
-- `asdf-extras`: runs the installed version selected by asdf.
-- `asdf cmd asdf-extras`: runs the version that exists in the plugin checkout.
-
-Shell initialization:
+Recommended setup is to initialize your shell first:
 
 ```shell
 eval "$(asdf-extras init bash)"
@@ -71,26 +59,73 @@ eval "$(asdf-extras init bash)"
 
 Supported shells for `init`: `bash`, `elvish`, `fish`, `nushell`, `zsh`.
 
-`init` defines an `asdf` shell function wrapper to extend `asdf` command behavior and adds extras-aware completion.
-After initialization, the following behavior changes are applied.
+After initialization, `asdf-extras` extends normal `asdf` usage by overriding selected commands.
 
-1. `update` is delegated to extras.
+## With `init` (primary usage)
+
+Use normal `asdf` commands:
+
+```shell
+asdf update
+asdf update nodejs
+asdf install -u nodejs 24.11.0
+```
+
+These are routed to extras features:
 
 ```shell
 asdf update ...
-# delegated to
+# routed to
 asdf-extras update ...
-```
 
-2. `install` is delegated to extras only when `-u` is specified.
-
-```shell
 asdf install -u [plugin] [version]
-# delegated to
+# routed to
 asdf-extras install [plugin] [version]
 ```
 
-3. Completion keeps existing behavior and adds entries for `extras init` usage.
+What this provides:
+
+1. `install -u` installs and then activates the version with `asdf set -u`.
+2. `update` with no plugin argument is treated as `update all`.
+3. `update all` updates plugin definitions and upgrades installed versions when newer versions are available.
+4. If `latest` cannot be resolved for a plugin during `update all`, that plugin is skipped and processing continues.
+5. `update <plugin> [version]` compares current vs target, installs and activates target, then removes the previous current version when changed.
+6. Completion keeps base `asdf` behavior and adds extras-aware entries.
+
+## Without `init` (translation rules)
+
+If you do not run `init`, use explicit extras commands.
+
+Rule 1:
+
+```shell
+asdf update ...
+# read as
+asdf-extras update ...
+```
+
+Rule 2:
+
+```shell
+asdf install -u [plugin] [version]
+# read as
+asdf-extras install [plugin] [version]
+```
+
+Rule 3:
+
+```shell
+asdf completion <shell>
+# use
+asdf-extras completion <shell>
+```
+
+`asdf-extras` and `asdf cmd asdf-extras` provide the same subcommands.
+
+Version source difference:
+
+- `asdf-extras`: runs the installed version selected by asdf.
+- `asdf cmd asdf-extras`: runs the version that exists in the plugin checkout.
 
 Supported subcommands:
 

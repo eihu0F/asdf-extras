@@ -76,6 +76,7 @@ install_version() {
 		mkdir -p "$install_path"
 		mkdir -p "$runtime_path"
 		cp -r "$ASDF_DOWNLOAD_PATH"/* "$runtime_path"
+		printf "%s\n" "$version" >"$runtime_path/version.txt"
 
 		cat >"$install_path/$TOOL_NAME" <<-EOF
 			#!/usr/bin/env bash
@@ -90,6 +91,7 @@ install_version() {
 		chmod +x "$runtime_path/lib/commands/command-init"
 		chmod +x "$runtime_path/lib/commands/command-install"
 		chmod +x "$runtime_path/lib/commands/command-update"
+		chmod +x "$runtime_path/lib/commands/command-version"
 
 		local tool_cmd
 		tool_cmd="$(echo "$TOOL_TEST" | cut -d' ' -f1)"

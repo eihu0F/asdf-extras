@@ -48,3 +48,24 @@ extras_current_version() {
 		sed '/^$/d' |
 		sed '/^system$/d'
 }
+
+extras_self_version() {
+	local current_script_path extras_root version_file
+	current_script_path=${BASH_SOURCE[0]}
+	extras_root=$(dirname "$(dirname "$(dirname "$current_script_path")")")
+	version_file="${extras_root}/version.txt"
+
+	if [[ -d "${extras_root}/.git" ]]; then
+		if git -C "$extras_root" rev-parse -q --verify HEAD >/dev/null 2>&1; then
+			git -C "$extras_root" describe --tags --always --dirty
+			return 0
+		fi
+	fi
+
+	if [[ -s "$version_file" ]]; then
+		head -n1 "$version_file"
+		return 0
+	fi
+
+	printf "%s\n" "unknown"
+}

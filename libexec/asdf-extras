@@ -12,6 +12,10 @@ case "$subcommand" in
 	subcommand="help"
 	set --
 	;;
+"-v" | "--version")
+	subcommand="version"
+	set --
+	;;
 *)
 	shift
 	;;

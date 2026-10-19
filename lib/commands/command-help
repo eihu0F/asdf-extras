@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+cat <<'EOF'
+Usage:
+  asdf-extras <subcommand>
+  asdf cmd extras <subcommand>
+
+Subcommands:
+  init bash
+  install <plugin> <version>
+  update all
+  update <plugin> [version]
+EOF

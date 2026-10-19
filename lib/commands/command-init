@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+shell_name="${1:-bash}"
+
+if [[ "$shell_name" != "bash" ]]; then
+	printf "asdf-extras: unsupported shell: %s\n" "$shell_name" >&2
+	exit 1
+fi
+
+cat <<'EOF'
+_asdf_extras_dispatch() {
+	if command -v asdf-extras >/dev/null 2>&1; then
+		asdf-extras "$@"
+		return $?
+	fi
+	command asdf cmd extras "$@"
+}
+
+asdf() {
+	if [[ "${1:-}" == "update" ]]; then
+		shift
+		_asdf_extras_dispatch update "$@"
+		return $?
+	fi
+
+	if [[ "${1:-}" == "install" && "${2:-}" == "-u" ]]; then
+		shift 2
+		_asdf_extras_dispatch install "$@"
+		return $?
+	fi
+
+	command asdf "$@"
+}
+
+_asdf_extras_completion() {
+	if [[ "${COMP_WORDS[1]:-}" == "install" && "${COMP_WORDS[2]:-}" == "-u" ]]; then
+		COMPREPLY=($(compgen -W "$(command asdf plugin list 2>/dev/null)" -- "${COMP_WORDS[3]:-}"))
+		return 0
+	fi
+
+	if declare -F _asdf >/dev/null 2>&1; then
+		_asdf
+		return 0
+	fi
+
+	return 1
+}
+
+if declare -F complete >/dev/null 2>&1; then
+	complete -o bashdefault -o default -F _asdf_extras_completion asdf
+	if declare -F _asdf >/dev/null 2>&1; then
+		complete -o bashdefault -o default -F _asdf asdf-extras
+	fi
+fi
+EOF

@@ -2,7 +2,6 @@
 
 set -euo pipefail
 
-# TODO: Ensure this is the correct GitHub homepage where releases can be downloaded for asdf-extras.
 GH_REPO="https://github.com/eihu0F/asdf-extras"
 TOOL_NAME="asdf-extras"
 TOOL_TEST="asdf-extras --help"
@@ -11,13 +10,6 @@ fail() {
 	echo -e "$TOOL_NAME: $*"
 	exit 1
 }
-
-curl_opts=(-fsSL)
-
-# NOTE: You might want to remove this if asdf-extras is not hosted on GitHub releases.
-if [ -n "${GITHUB_API_TOKEN:-}" ]; then
-	curl_opts=("${curl_opts[@]}" -H "Authorization: token $GITHUB_API_TOKEN")
-fi
 
 sort_versions() {
 	sed 'h; s/[+-]/./g; s/.p\([[:digit:]]\)/.z\1/; s/$/.z/; G; s/\n/ /' |
@@ -31,44 +23,80 @@ list_github_tags() {
 }
 
 list_all_versions() {
-	# TODO: Adapt this. By default we simply list the tag names from GitHub releases.
-	# Change this function if asdf-extras has other means of determining installable versions.
-	list_github_tags
+	local versions
+	versions="$(list_github_tags)"
+	if [[ -n "$versions" ]]; then
+		printf "%s\n" "$versions"
+		return 0
+	fi
+
+	# Fallback for repositories without release tags yet.
+	printf "%s\n" "main"
+}
+
+resolve_checkout_ref() {
+	local repo_dir version
+	repo_dir="$1"
+	version="$2"
+
+	for ref in "refs/tags/v${version}" "refs/tags/${version}" "${version}"; do
+		if git -C "$repo_dir" rev-parse -q --verify "$ref" >/dev/null 2>&1; then
+			printf "%s\n" "$ref"
+			return 0
+		fi
+	done
+
+	fail "Could not resolve checkout ref for version: $version"
 }
 
 download_release() {
-	local version filename url
-	version="$1"
-	filename="$2"
+	local repo_dir version destination ref
+	repo_dir="$1"
+	version="$2"
+	destination="$3"
 
-	# TODO: Adapt the release URL convention for asdf-extras
-	url="$GH_REPO/archive/v${version}.tar.gz"
-
-	echo "* Downloading $TOOL_NAME release $version..."
-	curl "${curl_opts[@]}" -o "$filename" -C - "$url" || fail "Could not download $url"
+	ref="$(resolve_checkout_ref "$repo_dir" "$version")"
+	echo "* Exporting $TOOL_NAME from local checkout ref $ref..."
+	git -C "$repo_dir" archive --format=tar "$ref" | tar -xf - -C "$destination" || fail "Could not export ref: $ref"
 }
 
 install_version() {
 	local install_type="$1"
 	local version="$2"
-	local install_path="${3%/bin}/bin"
+	local install_root="${3%/bin}"
+	local install_path="${install_root}/bin"
+	local runtime_path="${install_root}/lib/${TOOL_NAME}"
 
 	if [ "$install_type" != "version" ]; then
 		fail "$TOOL_NAME supports release installs only"
 	fi
 
 	(
+		rm -rf "$runtime_path"
 		mkdir -p "$install_path"
-		cp -r "$ASDF_DOWNLOAD_PATH"/* "$install_path"
+		mkdir -p "$runtime_path"
+		cp -r "$ASDF_DOWNLOAD_PATH"/* "$runtime_path"
 
-		# TODO: Assert asdf-extras executable exists.
+		cat >"$install_path/$TOOL_NAME" <<-EOF
+			#!/usr/bin/env bash
+			set -euo pipefail
+			exec "$runtime_path/libexec/asdf-extras" "\$@"
+		EOF
+		chmod +x "$install_path/$TOOL_NAME"
+
+		chmod +x "$runtime_path/libexec/asdf-extras"
+		chmod +x "$runtime_path/lib/commands/command-help"
+		chmod +x "$runtime_path/lib/commands/command-init"
+		chmod +x "$runtime_path/lib/commands/command-install"
+		chmod +x "$runtime_path/lib/commands/command-update"
+
 		local tool_cmd
 		tool_cmd="$(echo "$TOOL_TEST" | cut -d' ' -f1)"
 		test -x "$install_path/$tool_cmd" || fail "Expected $install_path/$tool_cmd to be executable."
 
 		echo "$TOOL_NAME $version installation was successful!"
 	) || (
-		rm -rf "$install_path"
+		rm -rf "${install_path:?}/$TOOL_NAME" "${runtime_path:?}"
 		fail "An error occurred while installing $TOOL_NAME $version."
 	)
 }

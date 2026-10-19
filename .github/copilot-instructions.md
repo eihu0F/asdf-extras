@@ -49,6 +49,17 @@ Requirements:
   - `style`
   - `test`
 
+## Branch and PR Workflow Rules
+
+- Direct pushes to `main` are not allowed for normal development changes.
+- Always create a feature/fix branch first, then open a pull request.
+- Pull request merge is required before changes reach `main`.
+- Branch names must follow one of these patterns:
+  - With issue: `issue-<number>-<short-topic>` (example: `issue-123-install-parent-option`)
+  - Without issue: `noissue-<short-topic>` (example: `noissue-update-contributing-guide`)
+  - Branch names do not need a commit/PR type prefix.
+- Before opening a PR, run local validation commands documented in `contributing.md`.
+
 ## asdf-extras Behavior Rules
 
 - Keep command behavior aligned with current README and command-help output.

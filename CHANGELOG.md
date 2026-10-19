@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/eihu0F/asdf-extras/compare/v0.3.0...v0.4.0) (2026-10-19)
+
+
+### Features
+
+* add branch precheck skill and update README ([#8](https://github.com/eihu0F/asdf-extras/issues/8)) ([cc554ad](https://github.com/eihu0F/asdf-extras/commit/cc554ad4a344b131d7c85aa16c73100cff73f0dc))
+
 ## [0.3.0](https://github.com/eihu0F/asdf-extras/compare/0.2.1...v0.3.0) (2026-10-19)
 
 

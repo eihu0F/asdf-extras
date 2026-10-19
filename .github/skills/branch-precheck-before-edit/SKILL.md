@@ -57,8 +57,8 @@ fi
 ```
 
 - Resolve base reference:
-	- If `base_commit` is set: use `base_ref=<base_commit>`.
-	- Else: use `base_ref=origin/<base_branch>`.
+  - If `base_commit` is set: use `base_ref=<base_commit>`.
+  - Else: use `base_ref=origin/<base_branch>`.
 - If yes, create/switch `issue-<number>-<short-topic>` from `base_ref`.
 - If no, create/switch `noissue-<short-topic>` from `base_ref`.
 

@@ -39,7 +39,7 @@ resolve_checkout_ref() {
 	repo_dir="$1"
 	version="$2"
 
-	for ref in "refs/tags/v${version}" "refs/tags/${version}" "${version}"; do
+	for ref in "refs/tags/v${version}" "refs/tags/${version}"; do
 		if git -C "$repo_dir" rev-parse -q --verify "$ref" >/dev/null 2>&1; then
 			printf "%s\n" "$ref"
 			return 0
@@ -53,6 +53,19 @@ resolve_checkout_ref() {
 			return 0
 		fi
 	done
+
+	# For branch names and other non-tag refs, prefer a fresh origin ref
+	# to avoid installing from a stale local branch.
+	if git -C "$repo_dir" fetch --quiet origin "$version" 2>/dev/null &&
+		git -C "$repo_dir" rev-parse -q --verify FETCH_HEAD >/dev/null 2>&1; then
+		printf "%s\n" "FETCH_HEAD"
+		return 0
+	fi
+
+	if git -C "$repo_dir" rev-parse -q --verify "$version" >/dev/null 2>&1; then
+		printf "%s\n" "$version"
+		return 0
+	fi
 
 	fail "Could not resolve checkout ref for version: $version"
 }

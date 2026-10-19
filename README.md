@@ -97,21 +97,23 @@ What this provides:
 
 ## Without `init` (translation rules)
 
-If you do not run `init`, use explicit extras commands.
+If you do not run `init`, command overriding is disabled.
+
+- `asdf update ...` is not provided by asdf-extras.
+- `asdf install ...` is not rewritten by asdf-extras.
+- Use explicit `asdf-extras` commands directly.
 
 Rule 1:
 
 ```shell
-asdf update ...
-# read as
+# do this directly (not asdf update)
 asdf-extras update ...
 ```
 
 Rule 2:
 
 ```shell
-asdf install [options] (-u|--home|-p|--parent) [plugin] [version]
-# read as
+# do this directly (not asdf install)
 asdf-extras install [options] [plugin] [version]
 ```
 
@@ -140,7 +142,7 @@ asdf-extras install [plugin] [version]
 
 Behavior:
 - Installs the specified plugin version.
-- Runs `set -u` for that plugin/version after installation.
+- Runs `set --home` for that plugin/version after installation by default.
 
 2. Update all plugins and refresh installed commands that can be upgraded.
 

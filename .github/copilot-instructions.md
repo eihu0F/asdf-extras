@@ -58,6 +58,8 @@ Requirements:
   - With issue: `issue-<number>-<short-topic>` (example: `issue-123-install-parent-option`)
   - Without issue: `noissue-<short-topic>` (example: `noissue-update-contributing-guide`)
   - Branch names do not need a commit/PR type prefix.
+- Before starting edits, run the skill `branch-precheck-before-edit`.
+- If current branch is `main`, create/switch to an `issue-*` or `noissue-*` branch before modifying files.
 - Before opening a PR, run local validation commands documented in `contributing.md`.
 
 ## asdf-extras Behavior Rules

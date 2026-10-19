@@ -69,6 +69,7 @@ Use normal `asdf` commands:
 asdf update
 asdf update nodejs
 asdf install -u nodejs 24.11.0
+asdf install -p nodejs 24.11.0
 ```
 
 These are routed to extras features:
@@ -78,19 +79,21 @@ asdf update ...
 # routed to
 asdf-extras update ...
 
-asdf install -u [plugin] [version]
+asdf install [options] (-u|--home|-p|--parent) [plugin] [version]
 # routed to
-asdf-extras install [plugin] [version]
+asdf-extras install [options] [plugin] [version]
 ```
 
 What this provides:
 
-1. `install -u` installs and then activates the version with `asdf set -u`.
-2. `update` with no plugin argument is treated as `update all`.
-3. `update all` updates plugin definitions and upgrades installed versions when newer versions are available.
-4. If `latest` cannot be resolved for a plugin during `update all`, that plugin is skipped and processing continues.
-5. `update <plugin> [version]` compares current vs target, installs and activates target, then removes the previous current version when changed.
-6. Completion keeps base `asdf` behavior and adds extras-aware entries.
+1. `install -u`/`install --home` installs and then activates the version with `asdf set --home`.
+2. `install -p`/`install --parent` installs and then activates the version with `asdf set --parent`.
+3. `-u`/`--home` and `-p`/`--parent` cannot be used together.
+4. `update` with no plugin argument is treated as `update all`.
+5. `update all` updates plugin definitions and upgrades installed versions when newer versions are available.
+6. If `latest` cannot be resolved for a plugin during `update all`, that plugin is skipped and processing continues.
+7. `update <plugin> [version]` compares current vs target, installs and activates target, then removes the previous current version when changed.
+8. Completion keeps base `asdf` behavior and adds extras-aware entries.
 
 ## Without `init` (translation rules)
 
@@ -107,9 +110,9 @@ asdf-extras update ...
 Rule 2:
 
 ```shell
-asdf install -u [plugin] [version]
+asdf install [options] (-u|--home|-p|--parent) [plugin] [version]
 # read as
-asdf-extras install [plugin] [version]
+asdf-extras install [options] [plugin] [version]
 ```
 
 Rule 3:

@@ -14,6 +14,8 @@ _asdf_extras_dispatch() {
 }
 
 asdf() {
+	local arg
+
 	if [[ "${1:-}" == "completion" ]]; then
 		shift
 		_asdf_extras_dispatch completion "$@"
@@ -26,9 +28,15 @@ asdf() {
 		return $?
 	fi
 
-	if [[ "${1:-}" == "install" && "${2:-}" == "-u" ]]; then
-		shift 2
-		_asdf_extras_dispatch install "$@"
+	if [[ "${1:-}" == "install" ]]; then
+		shift
+		for arg in "$@"; do
+			if [[ "$arg" == "-u" || "$arg" == "--home" || "$arg" == "-p" || "$arg" == "--parent" ]]; then
+				_asdf_extras_dispatch install "$@"
+				return $?
+			fi
+		done
+		command asdf install "$@"
 		return $?
 	fi
 

@@ -16,6 +16,7 @@
 
 # Dependencies
 
+- `asdf` `>= 0.16.0`
 - `bash`, `curl`, `tar`, and [POSIX utilities](https://pubs.opengroup.org/onlinepubs/9699919799/idx/utilities.html).
 
 # Install
@@ -28,39 +29,44 @@ asdf plugin add asdf-extras
 asdf plugin add asdf-extras https://github.com/eihu0F/asdf-extras.git
 ```
 
-asdf-extras:
+Install and activate `asdf-extras` itself:
 
 ```shell
 # Show all installable versions
 asdf list-all asdf-extras
 
-# Install specific version
-asdf install asdf-extras latest
+# Bootstrap install via plugin command
+asdf cmd extras install asdf-extras latest
 
-# Set a version globally (on your ~/.tool-versions file)
-asdf global asdf-extras latest
-
-# Now asdf-extras commands are available
+# Now the installed asdf-extras command is available
 asdf-extras --help
 ```
+
+Installation behavior:
+- `download` checks out the requested version from this plugin repository.
+- After installation, the installed version is used when you run `asdf-extras`.
 
 Check [asdf](https://github.com/asdf-vm/asdf) readme for more instructions on how to
 install & manage versions.
 
 # Usage
 
-`asdf-extras` extends existing `asdf` commands.
-
-Base command:
+Default usage is the installed command:
 
 ```shell
-asdf cmd extras [subcommand]
+asdf-extras [subcommand]
 ```
+
+`asdf-extras` and `asdf cmd extras` provide the same subcommands.
+
+Version source difference:
+- `asdf-extras`: runs the installed version selected by asdf.
+- `asdf cmd extras`: runs the version that exists in the plugin checkout.
 
 Shell initialization:
 
 ```shell
-eval "$(asdf cmd extras init bash)"
+eval "$(asdf-extras init bash)"
 ```
 
 `init` defines an `asdf` shell function wrapper to extend `asdf` command behavior and adds extras-aware completion.
@@ -89,7 +95,7 @@ Supported subcommands:
 1. Install and activate a plugin version.
 
 ```shell
-asdf cmd extras install [plugin] [version]
+asdf-extras install [plugin] [version]
 ```
 
 Behavior:
@@ -99,7 +105,7 @@ Behavior:
 2. Update all plugins and refresh installed commands that can be upgraded.
 
 ```shell
-asdf cmd extras update all
+asdf-extras update all
 ```
 
 Behavior:
@@ -109,7 +115,7 @@ Behavior:
 3. Update one plugin and refresh installed commands to latest, then activate.
 
 ```shell
-asdf cmd extras update [plugin]
+asdf-extras update [plugin]
 ```
 
 Behavior:
@@ -120,7 +126,7 @@ Behavior:
 4. Set one plugin to a specific version and activate it.
 
 ```shell
-asdf cmd extras update [plugin] [version]
+asdf-extras update [plugin] [version]
 ```
 
 Behavior:

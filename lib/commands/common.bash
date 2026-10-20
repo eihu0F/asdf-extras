@@ -61,6 +61,54 @@ extras_version_installed() {
 		grep -Fx -- "$version" >/dev/null
 }
 
+extras_plugin_env_suffix() {
+	local plugin="$1"
+	printf "%s\n" "$plugin" |
+		tr '[:lower:]' '[:upper:]' |
+		sed 's/[^A-Z0-9]/_/g'
+}
+
+extras_prepare_install_environment() {
+	local plugin="$1"
+	local version="${2:-}"
+	local suffix data_dir env_dir default_env_file
+	local env_file_var env_file
+	local fn_var fn_name
+
+	suffix="$(extras_plugin_env_suffix "$plugin")"
+	data_dir="${ASDF_DATA_DIR:-$HOME/.asdf}"
+	env_dir="${ASDF_EXTRAS_INSTALL_ENV_DIR:-${data_dir}/asdf-extras/install/env}"
+	default_env_file="${env_dir}/${plugin}.env"
+
+	env_file_var="ASDF_EXTRAS_INSTALL_ENV_FILE_${suffix}"
+	env_file="${!env_file_var-}"
+	if [[ -z "$env_file" ]]; then
+		env_file="$default_env_file"
+	fi
+
+	if [[ -f "$env_file" ]]; then
+		# shellcheck disable=SC1090
+		source "$env_file"
+	fi
+
+	fn_var="ASDF_EXTRAS_INSTALL_ENV_FUNCTION_${suffix}"
+	fn_name="${!fn_var-}"
+	if [[ -z "$fn_name" ]]; then
+		fn_name="${ASDF_EXTRAS_INSTALL_ENV_FUNCTION-}"
+	fi
+	if [[ -z "$fn_name" ]]; then
+		return 0
+	fi
+
+	if ! declare -F "$fn_name" >/dev/null 2>&1; then
+		extras_fail "install env function not found: ${fn_name} (plugin: ${plugin})"
+	fi
+
+	if ! "$fn_name" "$plugin" "$version"; then
+		extras_fail "install env function failed: ${fn_name} (plugin: ${plugin})"
+	fi
+}
+
 extras_current_version() {
 	local plugin="$1"
 	command asdf current "$plugin" 2>/dev/null |

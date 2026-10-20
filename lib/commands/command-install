@@ -50,6 +50,8 @@ main() {
 	plugin="${positional[0]}"
 	version="${positional[1]}"
 
+	extras_prepare_install_environment "$plugin" "$version"
+
 	command asdf install "${install_opts[@]}" "$plugin" "$version"
 	command asdf set "$set_scope" "$plugin" "$version"
 }

@@ -94,6 +94,40 @@ What this provides:
 6. If `latest` cannot be resolved for a plugin during `update all`, that plugin is skipped and processing continues.
 7. `update <plugin> [version]` compares current vs target, installs and activates target, then removes the previous current version when changed.
 8. Completion keeps base `asdf` behavior and adds extras-aware entries.
+9. `install` can source plugin-specific env files and run plugin-specific hook functions before build/install.
+
+Install-time environment hooks:
+
+- Default env file location: `${ASDF_DATA_DIR:-$HOME/.asdf}/asdf-extras/install/env/<plugin>.env`
+- Optional env dir override: `ASDF_EXTRAS_INSTALL_ENV_DIR`
+- Plugin-specific env file override: `ASDF_EXTRAS_INSTALL_ENV_FILE_<PLUGIN_NAME_UPPER>`
+- Plugin-specific hook function: `ASDF_EXTRAS_INSTALL_ENV_FUNCTION_<PLUGIN_NAME_UPPER>`
+- Global hook function fallback: `ASDF_EXTRAS_INSTALL_ENV_FUNCTION`
+
+Notes:
+
+- `<PLUGIN_NAME_UPPER>` is generated from plugin name by uppercasing and replacing non-alphanumeric characters with `_`.
+- If env file exists, it is sourced before install.
+- If hook function variable is set, that function is executed as `<function> <plugin> <version>` before install.
+- Function resolution order is: plugin-specific (`..._FUNCTION_<PLUGIN_NAME_UPPER>`) first, then global (`..._FUNCTION`).
+
+Example:
+
+```shell
+mkdir -p "${ASDF_DATA_DIR:-$HOME/.asdf}/asdf-extras/install/env"
+
+cat >"${ASDF_DATA_DIR:-$HOME/.asdf}/asdf-extras/install/env/nodejs.env" <<'EOF'
+export CC=clang
+export CXX=clang++
+
+nodejs_build_env() {
+	export PYTHON=/usr/bin/python3
+}
+EOF
+
+export ASDF_EXTRAS_INSTALL_ENV_FUNCTION_NODEJS=nodejs_build_env
+asdf-extras install nodejs 24.11.0
+```
 
 ## Without `init` (translation rules)
 

@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.0](https://github.com/eihu0F/asdf-extras/compare/v0.4.0...v0.5.0) (2026-10-20)
+
+
+### Features
+
+* add install-time environment hooks ([#12](https://github.com/eihu0F/asdf-extras/issues/12)) ([54ac3a0](https://github.com/eihu0F/asdf-extras/commit/54ac3a01e2eb6cc3f49d9c83598d50a2774daba2))
+* harden update safety and branch precheck workflow ([#10](https://github.com/eihu0F/asdf-extras/issues/10)) ([fbbf776](https://github.com/eihu0F/asdf-extras/commit/fbbf7762733834cb10fa0edf388bd0ddeeaab400))
+
 ## [0.4.0](https://github.com/eihu0F/asdf-extras/compare/v0.3.0...v0.4.0) (2026-10-19)
 
 

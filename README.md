@@ -96,7 +96,7 @@ What this provides:
 8. Completion keeps base `asdf` behavior and adds extras-aware entries.
 9. `install` can source plugin-specific env files and run plugin-specific hook functions before build/install.
 
-Install-time environment hooks:
+### Install-time environment hooks
 
 - Default env file location: `${ASDF_DATA_DIR:-$HOME/.asdf}/asdf-extras/install/env/<plugin>.env`
 - Optional env dir override: `ASDF_EXTRAS_INSTALL_ENV_DIR`
@@ -133,9 +133,13 @@ asdf-extras install nodejs 24.11.0
 
 If you do not run `init`, command overriding is disabled.
 
+For install customization (env/hooks and examples), see [Install-time environment hooks](#install-time-environment-hooks).
+
 - `asdf update ...` is not provided by asdf-extras.
 - `asdf install ...` is not rewritten by asdf-extras.
 - Use explicit `asdf-extras` commands directly.
+- Install-time environment hooks still work when you run `asdf-extras install ...` directly.
+- Install-time environment hooks do not apply when you run plain `asdf install ...` without `init`.
 
 Rule 1:
 

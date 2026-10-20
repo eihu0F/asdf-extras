@@ -26,6 +26,16 @@ git switch -c issue-<number>-<short-topic>
 bash ./scripts/test-local.bash
 ```
 
+Run install command regression tests without installing asdf:
+
+```shell
+/bin/bash ./scripts/test-install.bash
+```
+
+These tests check option forwarding and argument validation, including empty-array
+handling under `set -u` with macOS system Bash 3.2. CI runs them with system Bash
+on both Linux and macOS.
+
 3. Commit and push the branch.
 
 ```shell

@@ -1,6 +1,6 @@
 ---
 name: branch-precheck-before-edit
-description: Ensure branch safety before making edits. If on main, update from remote and create/switch to an issue/noissue branch from a user-directed base.
+description: Ensure branch safety before making edits. If on main, update from remote and create/switch to an issue/noissue branch using defaults unless the user explicitly specifies a base.
 ---
 
 # Branch Precheck Before Editing
@@ -18,13 +18,15 @@ Prevent accidental edits on `main`, keep new branches based on an up-to-date bas
 
 ## Base Selection Inputs
 
-When creating a branch from `main`, allow these user-directed inputs:
+When creating a branch from `main`, use these defaults unless the user explicitly provides different values:
 
 - `base_branch` (default: `main`)
 - `base_commit` (optional; commit hash, tag, or other valid rev)
 
 Behavior:
 
+- Do not ask for an issue number, `base_branch`, or `base_commit` as routine branch setup.
+- Use an issue number already provided in the task context; otherwise use a `noissue-*` branch.
 - If `base_commit` is provided, create the branch from that commit/revision.
 - If `base_commit` is omitted, create the branch from `origin/<base_branch>` after updating local refs.
 
@@ -42,9 +44,9 @@ git remote -v
 
 3. If current branch is `main`:
 
-- Ask whether an issue number exists.
-- Ask for `base_branch` (default: `main`).
-- Ask for optional `base_commit` (empty means use branch tip).
+- Use the issue number from the task context if available; otherwise select `noissue-*` without asking.
+- Use `base_branch=main` unless the user explicitly specifies another branch.
+- Leave `base_commit` empty unless the user explicitly specifies a revision.
 - Update local refs from remote before branch creation.
 
 ```bash
@@ -59,8 +61,8 @@ fi
 - Resolve base reference:
   - If `base_commit` is set: use `base_ref=<base_commit>`.
   - Else: use `base_ref=origin/<base_branch>`.
-- If yes, create/switch `issue-<number>-<short-topic>` from `base_ref`.
-- If no, create/switch `noissue-<short-topic>` from `base_ref`.
+- If an issue number is available, create/switch `issue-<number>-<short-topic>` from `base_ref`.
+- Otherwise, create/switch `noissue-<short-topic>` from `base_ref`.
 
 Example:
 
@@ -69,16 +71,16 @@ base_branch="main"
 base_commit=""
 base_ref="origin/${base_branch}"
 
-git switch -c issue-123-update-readme "$base_ref"
+git switch --no-track -c issue-123-update-readme "$base_ref"
 # or
-git switch -c noissue-update-readme "$base_ref"
+git switch --no-track -c noissue-update-readme "$base_ref"
 ```
 
 Example with explicit commit:
 
 ```bash
 base_commit="abc1234"
-git switch -c noissue-update-readme "$base_commit"
+git switch --no-track -c noissue-update-readme "$base_commit"
 ```
 
 If the target branch already exists:
@@ -87,11 +89,24 @@ If the target branch already exists:
 git switch <branch-name>
 ```
 
-4. Show final branch and status.
+4. Verify upstream tracking.
+
+- New branches must not inherit the base branch's upstream. Use `--no-track` when creating them.
+- If an existing working branch tracks `origin/main`, remove that incorrect tracking with `git branch --unset-upstream`.
+- When publishing is requested, push explicitly to the same-named remote branch and set its upstream:
+
+```bash
+git push --set-upstream origin HEAD
+```
+
+- Do not push merely to configure tracking during precheck.
+
+5. Show final branch and status.
 
 ```bash
 git status --short --branch
 git branch --show-current
+git branch -vv
 git log --oneline -n 1
 ```
 
@@ -113,3 +128,4 @@ Always report:
 - Selected `base_branch`
 - Selected `base_commit` (or "none")
 - Final base reference used for branch creation
+- Upstream tracking (same-named remote branch or "none"; never `origin/main` for a working branch)

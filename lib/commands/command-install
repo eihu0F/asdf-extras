@@ -45,14 +45,16 @@ main() {
 		set_scope="--parent"
 	fi
 
-	extras_need_args 2 "${#positional[@]}" "asdf-extras install [options] <plugin> <version>"
+	# Bash 3.2 treats empty arrays as unset under nounset; guard their expansion.
+	set -- ${positional[@]+"${positional[@]}"}
+	extras_need_args 2 "$#" "asdf-extras install [options] <plugin> <version>"
 
-	plugin="${positional[0]}"
-	version="${positional[1]}"
+	plugin="$1"
+	version="$2"
 
 	extras_prepare_install_environment "$plugin" "$version"
 
-	command asdf install "${install_opts[@]}" "$plugin" "$version"
+	command asdf install ${install_opts[@]+"${install_opts[@]}"} "$plugin" "$version"
 	command asdf set "$set_scope" "$plugin" "$version"
 }
 

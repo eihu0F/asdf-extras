@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1](https://github.com/eihu0F/asdf-extras/compare/v0.5.0...v0.5.1) (2026-10-20)
+
+
+### Bug Fixes
+
+* support macOS Bash empty arrays during install ([#13](https://github.com/eihu0F/asdf-extras/issues/13)) ([d05ef7e](https://github.com/eihu0F/asdf-extras/commit/d05ef7e4c941f3034bbc7887561690f9119c4781))
+
 ## [0.5.0](https://github.com/eihu0F/asdf-extras/compare/v0.4.0...v0.5.0) (2026-10-20)
 
 

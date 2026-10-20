@@ -34,7 +34,7 @@ update_all() {
 	while IFS= read -r plugin; do
 		[[ -n "$plugin" ]] || continue
 		if ! update_one_internal "$plugin" ""; then
-			printf "asdf-extras: skipped %s (unable to resolve latest version)\n" "$plugin" >&2
+			printf "asdf-extras: skipped %s (update failed; see error above)\n" "$plugin" >&2
 		fi
 	done < <(extras_plugins)
 }
@@ -65,12 +65,25 @@ update_one_internal() {
 		return 0
 	fi
 
-	command asdf install "$plugin" "$target"
-	command asdf set -u "$plugin" "$target"
-	activated="$(extras_current_version "$plugin")"
+	# Callers use conditionals, so errexit does not stop failures in this function.
+	# Subshells also let Bash 3.2 catch failures of the command builtin.
+	if ! (command asdf install "$plugin" "$target"); then
+		printf "asdf-extras: install failed; keep previous version: %s (%s)\n" "$plugin" "${current:-none}" >&2
+		return 1
+	fi
 
 	if ! extras_version_installed "$plugin" "$target"; then
 		printf "asdf-extras: target version is not installed after update: %s (%s)\n" "$plugin" "$target" >&2
+		return 1
+	fi
+
+	if ! (command asdf set -u "$plugin" "$target"); then
+		printf "asdf-extras: activation failed; previous version was not removed: %s (%s)\n" "$plugin" "${current:-none}" >&2
+		return 1
+	fi
+
+	if ! activated="$(extras_current_version "$plugin")"; then
+		printf "asdf-extras: could not verify current version; previous version was not removed: %s (%s)\n" "$plugin" "${current:-none}" >&2
 		return 1
 	fi
 
@@ -80,7 +93,10 @@ update_one_internal() {
 	fi
 
 	if [[ -n "$current" ]]; then
-		command asdf uninstall "$plugin" "$current"
+		if ! (command asdf uninstall "$plugin" "$current"); then
+			printf "asdf-extras: failed to remove previous version: %s (%s)\n" "$plugin" "$current" >&2
+			return 1
+		fi
 	fi
 }
 
@@ -90,7 +106,7 @@ update_one() {
 
 	command asdf plugin update "$plugin"
 	if ! update_one_internal "$plugin" "$version"; then
-		extras_fail "unable to resolve target version for plugin: $plugin"
+		extras_fail "update failed for plugin: $plugin"
 	fi
 }
 

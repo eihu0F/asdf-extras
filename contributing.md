@@ -30,11 +30,15 @@ Run install command regression tests without installing asdf:
 
 ```shell
 /bin/bash ./scripts/test-install.bash
+/bin/bash ./scripts/test-update.bash
 ```
 
 These tests check option forwarding and argument validation, including empty-array
 handling under `set -u` with macOS system Bash 3.2. CI runs them with system Bash
 on both Linux and macOS.
+
+Update regression tests verify that installation and activation failures retain
+the previous version, and that bulk updates continue with subsequent plugins.
 
 3. Commit and push the branch.
 

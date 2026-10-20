@@ -27,6 +27,9 @@ jobs:
       - name: Install command regression tests (system Bash)
         shell: /bin/bash {0}
         run: /bin/bash ./scripts/test-install.bash
+      - name: Update command regression tests (system Bash)
+        shell: /bin/bash {0}
+        run: /bin/bash ./scripts/test-update.bash
       - name: asdf_plugin_test
         uses: asdf-vm/actions/plugin-test@v4
         with:

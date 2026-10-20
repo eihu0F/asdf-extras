@@ -71,16 +71,16 @@ base_branch="main"
 base_commit=""
 base_ref="origin/${base_branch}"
 
-git switch -c issue-123-update-readme "$base_ref"
+git switch --no-track -c issue-123-update-readme "$base_ref"
 # or
-git switch -c noissue-update-readme "$base_ref"
+git switch --no-track -c noissue-update-readme "$base_ref"
 ```
 
 Example with explicit commit:
 
 ```bash
 base_commit="abc1234"
-git switch -c noissue-update-readme "$base_commit"
+git switch --no-track -c noissue-update-readme "$base_commit"
 ```
 
 If the target branch already exists:
@@ -89,11 +89,24 @@ If the target branch already exists:
 git switch <branch-name>
 ```
 
-4. Show final branch and status.
+4. Verify upstream tracking.
+
+- New branches must not inherit the base branch's upstream. Use `--no-track` when creating them.
+- If an existing working branch tracks `origin/main`, remove that incorrect tracking with `git branch --unset-upstream`.
+- When publishing is requested, push explicitly to the same-named remote branch and set its upstream:
+
+```bash
+git push --set-upstream origin HEAD
+```
+
+- Do not push merely to configure tracking during precheck.
+
+5. Show final branch and status.
 
 ```bash
 git status --short --branch
 git branch --show-current
+git branch -vv
 git log --oneline -n 1
 ```
 
@@ -115,3 +128,4 @@ Always report:
 - Selected `base_branch`
 - Selected `base_commit` (or "none")
 - Final base reference used for branch creation
+- Upstream tracking (same-named remote branch or "none"; never `origin/main` for a working branch)

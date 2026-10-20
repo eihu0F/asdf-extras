@@ -96,6 +96,12 @@ What this provides:
 8. Completion keeps base `asdf` behavior and adds extras-aware entries.
 9. `install` can source plugin-specific env files and run plugin-specific hook functions before build/install.
 
+Update safety:
+- The previous version is removed only after installation succeeds, the target is confirmed installed, and activation succeeds and is verified.
+- If installation fails, activation is not attempted and the previous version is retained.
+- If activation fails or cannot be verified, the previous installation is retained.
+- During `update all`, a failed plugin is reported and processing continues with the next plugin.
+
 ### Install-time environment hooks
 
 - Default env file location: `${ASDF_DATA_DIR:-$HOME/.asdf}/asdf-extras/install/env/<plugin>.env`

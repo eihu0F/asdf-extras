@@ -62,6 +62,18 @@ check "asdf-extras up" update
 check "asdf-extras completion --asdf n" nushell
 check "asdf-extras install --local n" nodejs
 check "asdf-extras update nodejs --version 24" "24.0.0"
+check 'asdf-extras update "nodejs" ' "24.0.0"
+check "asdf-extras update 'nodejs' " "24.0.0"
+check 'asdf-extras update `nodejs` ' "24.0.0"
+check 'asdf-extras install "no' nodejs
+check "asdf-extras install 'no" nodejs
+check 'asdf-extras install `no' nodejs
+if (asdf-extras-argument-value '"line\nbreak"') != ("line" + (char newline) + "break") {
+	error make {msg: "double-quoted escapes were not decoded"}
+}
+if (asdf-extras-argument-value '($env.SECRET)') != '($env.SECRET)' {
+	error make {msg: "expression token was evaluated"}
+}
 source combined.nu
 source combined.nu
 check "asdf n" native-marker
@@ -70,6 +82,12 @@ check "asdf install --local n" nodejs
 check "asdf install nodejs --parent 22" "22.0.0"
 check "asdf update --version nodejs --local 24" "24.0.0"
 check "asdf update --all --" "--local"
+check 'asdf update "nodejs" ' "24.0.0"
+check 'asdf install "nodejs" --parent 22' "22.0.0"
+if "--asdf" in ('asdf completion "elvish" --' | commandline complete) {
+	error make {msg: "quoted Elvish offered unsupported mode"}
+}
+check 'asdf completion "nushell" --' "--asdf"
 let record = (asdf plugin list | first)
 if $record.url != native-url { error make {msg: "structured native command lost"} }
 asdf install --local nodejs 22.0.0

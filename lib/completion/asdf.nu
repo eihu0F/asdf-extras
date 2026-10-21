@@ -7,7 +7,8 @@ def asdf-extras-asdf-candidates [place: record] {
 		return ($native | append {value: update, description: "Update asdf, plugins and tool versions"} | uniq-by value)
 	}
 	let mode = (if $subcommand == install { [--delegated] } else { [] })
-	let query = (^bash $env.ASDF_EXTRAS_COMPLETION_HELPER ...$mode $subcommand ...$args | complete)
+	let values = ($args | each {|word| asdf-extras-argument-value $word })
+	let query = (^bash $env.ASDF_EXTRAS_COMPLETION_HELPER ...$mode $subcommand ...$values | complete)
 	if $query.exit_code != 0 {
 		error make {msg: $"asdf-extras: completion failed: ($query.stderr | str trim)"}
 	}
@@ -15,13 +16,14 @@ def asdf-extras-asdf-candidates [place: record] {
 	if $subcommand != install {
 		return $extras
 	}
-	let normalized = ($args | where {|arg| $arg not-in [-u --home -p --parent --local] })
+	let normalized = ($args | where {|arg| (asdf-extras-argument-value $arg) not-in [-u --home -p --parent --local] })
 	let native = ("asdf-extras-native-install " + ($normalized | str join " ") | commandline complete --detailed | each {|item| $item | reject span })
 	$native | append ($extras | each {|value| {value: $value} }) | uniq-by value
 }
 
 def asdf-extras-completion-candidates [place: record] {
-	let result = (^bash $env.ASDF_EXTRAS_COMPLETION_HELPER --standalone completion ...($place.command | skip 1) | complete)
+	let values = ($place.command | skip 1 | each {|word| asdf-extras-argument-value $word })
+	let result = (^bash $env.ASDF_EXTRAS_COMPLETION_HELPER --standalone completion ...$values | complete)
 	if $result.exit_code != 0 {
 		error make {msg: $"asdf-extras: completion failed: ($result.stderr | str trim)"}
 	}

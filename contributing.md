@@ -62,6 +62,8 @@ Nushell completion tests require `nu` >= 0.116.1 (otherwise they skip). They use
 the real completion engine and a mock native module to verify signature
 delegation, structured native output, standalone isolation, repeated setup,
 option positions, initialized routing, and native-loading/query failures.
+Quoted literal arguments and unfinished quoted prefixes are tested without
+evaluating expressions; native delegation retains the original source tokens.
 They exercise Bash 3.2-compatible behavior and each available Zsh/Fish shell;
 no real plugins are installed or updated.
 

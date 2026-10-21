@@ -10,18 +10,23 @@ source "${plugin_dir}/lib/commands/common.bash"
 
 update_one() {
 	local plugin="$1" version="$2" scope="$3" file="$4"
-	local previous target old_version
+	local previous="" target old_version
 	local -a previous_versions=()
-	if ! previous="$(extras_configured_version "$file" "$plugin")"; then
-		printf "asdf-extras: could not read configuration: %s\n" "$file" >&2
-		return 1
+	if ((update_versions)); then
+		if ! previous="$(extras_configured_version "$file" "$plugin")"; then
+			printf "asdf-extras: could not read configuration: %s\n" "$file" >&2
+			return 1
+		fi
 	fi
 
 	# Subshells allow Bash 3.2 to catch command builtin failures.
-	if ! (command asdf plugin update "$plugin"); then
-		printf "asdf-extras: plugin update failed: %s\n" "$plugin" >&2
-		return 1
+	if ((update_plugins)); then
+		if ! (command asdf plugin update "$plugin"); then
+			printf "asdf-extras: plugin update failed: %s\n" "$plugin" >&2
+			return 1
+		fi
 	fi
+	((update_versions)) || return 0
 	if ! "$BASH" "${plugin_dir}/lib/commands/command-install" "$scope" "$plugin" "$version"; then
 		printf "asdf-extras: update failed; previous installation retained: %s\n" "$plugin" >&2
 		return 1
@@ -49,9 +54,23 @@ update_one() {
 
 main() {
 	local arg scope="" explicit_scope=0 file plugins plugin
+	local update_asdf=0 update_plugins=0 update_versions=0 selected=0 all=0 failed=0
 	local -a positional=()
 	for arg in "$@"; do
 		case "$arg" in
+		--all) all=1 ;;
+		--asdf)
+			update_asdf=1
+			selected=1
+			;;
+		--plugin)
+			update_plugins=1
+			selected=1
+			;;
+		--version)
+			update_versions=1
+			selected=1
+			;;
 		-u | --home)
 			scope="$(extras_select_scope "$scope" --home)"
 			explicit_scope=1
@@ -69,27 +88,68 @@ main() {
 		esac
 	done
 	set -- ${positional[@]+"${positional[@]}"}
-	[[ $# -le 2 ]] || extras_fail "usage: asdf-extras update [--home|--parent|--local] [<plugin> [<version>]]"
+	if ((all && selected)); then
+		extras_fail "--all cannot be combined with --asdf, --plugin or --version"
+	fi
+	[[ "${1:-}" != all ]] || extras_fail "use --all instead of the all positional argument"
+	[[ $# -le 2 ]] || extras_fail "usage: asdf-extras update [--all|--asdf|--plugin|--version] [--home|--parent|--local] [<plugin> [<version>]]"
+	if ((all)); then
+		[[ $# -eq 0 ]] || extras_fail "--all does not accept a plugin or version"
+	fi
+	if ((selected == 0)); then
+		update_plugins=1
+		update_versions=1
+		if [[ $# -eq 0 ]] && ((explicit_scope == 0)); then
+			update_asdf=1
+		fi
+	fi
+	if ((all)); then
+		update_asdf=1
+	fi
+	if ((update_versions == 0)) && [[ $# -gt 1 ]]; then
+		extras_fail "a target version requires --version"
+	fi
+	if ((update_plugins == 0 && update_versions == 0)) && [[ $# -gt 0 ]]; then
+		extras_fail "a plugin requires --plugin or --version"
+	fi
 	scope="${scope:---home}"
-	file="$(extras_scope_file "$scope")"
-	if [[ "${1:-all}" == all ]]; then
-		[[ $# -le 1 ]] || extras_fail "update all does not accept a version"
-		if ((explicit_scope)); then
+	# Resolve relevant scope inputs before performing any updates.
+	file=""
+	plugins=""
+	if ((update_versions || update_plugins)); then
+		if ((update_versions)); then
+			file="$(extras_scope_file "$scope")"
+		fi
+		if [[ $# -eq 0 ]] && ((explicit_scope && update_versions)); then
 			[[ -f "$file" ]] || extras_fail "scope file does not exist: $file"
 			plugins="$(awk 'NF && $1 !~ /^#/ {print $1}' "$file")"
-		else
+		elif [[ $# -eq 0 ]]; then
 			plugins="$(command asdf plugin list)"
 		fi
+	fi
+	if ((update_asdf)); then
+		if ! "$BASH" "${plugin_dir}/lib/commands/update-asdf.bash"; then
+			printf "asdf-extras: asdf itself could not be updated; continuing remaining updates\n" >&2
+			failed=1
+		fi
+	fi
+	if ((update_plugins == 0 && update_versions == 0)); then
+		return "$failed"
+	fi
+	if [[ $# -eq 0 ]]; then
 		while IFS= read -r plugin; do
 			[[ -n "$plugin" ]] || continue
 			if ! update_one "$plugin" latest "$scope" "$file"; then
 				printf "asdf-extras: skipped %s (update failed; see error above)\n" "$plugin" >&2
+				failed=1
 			fi
 		done <<<"$plugins"
 	else
-		update_one "$1" "${2:-latest}" "$scope" "$file" ||
-			extras_fail "update failed for plugin: $1"
+		if ! update_one "$1" "${2:-latest}" "$scope" "$file"; then
+			failed=1
+		fi
 	fi
+	return "$failed"
 }
 
 main "$@"

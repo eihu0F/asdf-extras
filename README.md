@@ -10,7 +10,7 @@ asdf-extras extends [asdf](https://asdf-vm.com) with commands for updating tools
 and installing and activating versions in one step. Initialize your shell once,
 then use the extensions through normal `asdf` commands:
 
-- `asdf update`: update plugin definitions, install the latest tool versions,
+- `asdf update`: update asdf itself and plugin definitions, install the latest tool versions,
   and activate them in your home configuration. Previous versions are removed
   only after successful installation and verified activation.
 - `asdf install -u` / `asdf install -p` / `asdf install --local`: install a
@@ -27,6 +27,7 @@ Other `asdf` commands retain their native behavior.
   - [Update plugins and tools](#update-plugins-and-tools)
   - [Install and activate a version](#install-and-activate-a-version)
 - [Advanced usage](#advanced-usage)
+  - [Updating asdf itself](#updating-asdf-itself)
   - [Direct invocation without init](#direct-invocation-without-init)
   - [Install-time environment hooks](#install-time-environment-hooks)
   - [Completion output](#completion-output)
@@ -36,6 +37,8 @@ Other `asdf` commands retain their native behavior.
 # Dependencies
 
 - `asdf` `>= 0.16.0`
+- `jq` for built-in standalone asdf executable updates (not required for custom
+  update scripts, Homebrew updates, or plugin/tool-only updates).
 - `bash`, `curl`, `tar`, and [POSIX utilities](https://pubs.opengroup.org/onlinepubs/9699919799/idx/utilities.html).
 
 # Quick start
@@ -75,7 +78,7 @@ initialization code using their own syntax.
 After initialization, use normal `asdf` commands:
 
 ```shell
-# Update all plugins and upgrade tools
+# Update asdf itself, plugins and tools
 asdf update
 
 # Update one plugin and activate its latest version
@@ -88,7 +91,8 @@ asdf install -u nodejs 24.11.0
 asdf install -p nodejs 24.11.0
 ```
 
-`asdf update` is equivalent to `asdf update all`. If a plugin's latest version
+`asdf update` is equivalent to `asdf update --all`: it updates asdf itself as well
+as plugins and tools. If a plugin's latest version
 cannot be resolved, it is reported and skipped so other plugins can still update.
 Successful updates remove the previous version only after installation and
 verified activation; failed installation or activation retains the previous installation.
@@ -103,10 +107,10 @@ The examples in this section assume shell initialization is enabled.
 ## Update plugins and tools
 
 ```shell
-# Update all plugins and upgrade their tools to the latest versions
+# Update asdf itself, plugins and tools to the latest versions
 asdf update
 # Equivalent explicit form
-asdf update all
+asdf update --all
 
 # Update one plugin and use its latest version
 asdf update nodejs
@@ -117,13 +121,33 @@ asdf update nodejs 24.11.0
 # Update only the tools listed in the selected project configuration
 asdf update --local
 asdf update --parent nodejs
+
+# Select update targets (these flags can be combined)
+asdf update --asdf
+asdf update --plugin
+asdf update --version nodejs
+asdf update --plugin --version
 ```
 
-An omitted plugin means `all`; an omitted version means the plugin's latest
-available version. Bulk updates report failures (including an unresolved latest
-version) and continue with the next plugin.
+`--all` updates asdf itself, plugin definitions and tool versions, in that order.
+It cannot be combined with other target flags or a plugin/version argument.
+Use `--all` instead of the former positional `all`.
+`--asdf`, `--plugin`, and `--version` select those targets individually and can be
+combined. The standalone `--version` here selects tool updates; it is not the
+top-level extras version command.
 
-For each plugin, extras updates its plugin definition, then delegates installation
+With no target flags, specifying a plugin or scope updates plugin definitions and
+tool versions; with no arguments, all three targets are selected. An omitted
+plugin processes the applicable plugin set; an omitted version means latest.
+A target version argument requires tool version updates. Scope options have no
+effect when tool version updates are not selected.
+
+Failures are reported and remaining updates continue, including when updating
+asdf itself fails. The command returns nonzero if any requested update fails.
+This also applies to unresolved latest versions during bulk updates.
+
+When both plugin and tool targets are selected, extras updates each plugin
+definition, then delegates installation
 and activation to extras install. It does not run `asdf plugin update --all`.
 Install compares the version in the selected configuration with the target;
 if they match and the version is installed, no installation or setting change
@@ -144,7 +168,7 @@ before installation if no parent configuration file exists. Files are named
 `.tool-versions`, or use `ASDF_DEFAULT_TOOL_VERSIONS_FILENAME` when set.
 `--current` is not a scope option.
 
-With an explicit scope, `update all` (or an omitted plugin) only updates plugins
+With an explicit scope and tool version updates selected, an omitted plugin only updates plugins
 listed in that configuration file; a missing file is an error for bulk updates.
 Without a scope option, bulk updates retain the existing behavior of processing
 all installed plugins and writing the home configuration.
@@ -179,6 +203,50 @@ Extras installs can load plugin-specific environment files and run hook function
 before installation. See [Install-time environment hooks](#install-time-environment-hooks).
 
 # Advanced usage
+
+## Updating asdf itself
+
+`asdf update --asdf` (or direct `asdf-extras update --asdf`) updates the asdf
+executable, not the asdf-extras plugin or runtime. Only the latest stable release
+is supported. Without target flags, `asdf update` now includes this step; use
+`--plugin --version` to retain plugin/tool-only updates.
+
+The updater selects the first applicable method:
+
+1. If `${ASDF_DATA_DIR:-$HOME/.asdf}/asdf-extras/update-asdf.bash` exists, run it
+   with Bash and pass the absolute path of the active asdf executable as `$1`.
+   It is a user-maintained script, not sourced shell code. It must return nonzero
+   on failure and is responsible for safe installation and validation.
+2. If the resolved executable is inside the asdf formula's Homebrew cellar,
+   run `brew upgrade asdf`. Merely having `brew` on PATH does not select it.
+3. Otherwise, update a user-owned, writable, non-symlink standalone executable
+   under the home directory from official Linux/macOS release assets.
+
+Standalone updates require `jq` and either `sha256sum` or `shasum`. They check the
+GitHub release's SHA-256 digest, extract and execute the candidate to verify its
+version, then replace the old executable with a same-filesystem rename. Failures
+before replacement retain the original binary; installed versions newer than or
+equal to the latest release are not downgraded. No privileged commands are run.
+GitHub API/network failures are reported, not treated as successful updates.
+
+Other package managers, symlink layouts, system-wide installations, and unsupported
+platforms require a custom script. For example, adapt the following to your
+installation method:
+
+```shell
+mkdir -p "${ASDF_DATA_DIR:-$HOME/.asdf}/asdf-extras"
+cat >"${ASDF_DATA_DIR:-$HOME/.asdf}/asdf-extras/update-asdf.bash" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+# Example for an asdf installation managed by Homebrew.
+brew upgrade asdf
+"$1" --version
+EOF
+```
+
+The updater does not edit shell startup files or refresh extras initialization
+in the current shell. Executable discovery ignores the initialized `asdf` shell
+function and uses the first executable on PATH.
 
 ## Direct invocation without init
 
@@ -253,7 +321,7 @@ This emits native `asdf completion` output followed by extras initialization cod
 After initialization, `asdf completion <shell>` routes to this command as well.
 Initialization alone does not load completion definitions, and the current
 overlay does not add extras-specific completion candidates.
-The shared scope flags described above therefore work at execution time but are
+The scope and update-target flags described above therefore work at execution time but are
 not yet offered as additional completion candidates.
 
 # Contributing

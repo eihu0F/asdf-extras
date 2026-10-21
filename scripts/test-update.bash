@@ -9,7 +9,13 @@ trap 'rm -rf "$test_dir"' EXIT
 export ASDF_TEST_DIR="$test_dir"
 export HOME="${test_dir}/home"
 export ASDF_EXTRAS_INSTALL_ENV_DIR="${test_dir}/env"
+export ASDF_DATA_DIR="${test_dir}/data"
 mkdir -p "$HOME" "${test_dir}/project/child"
+mkdir -p "$ASDF_DATA_DIR/asdf-extras"
+cat >"$ASDF_DATA_DIR/asdf-extras/update-asdf.bash" <<'EOF'
+printf 'self-update\n' >>"$ASDF_TEST_DIR/log"
+[[ "$ASDF_TEST_SCENARIO" != self-update-fails ]]
+EOF
 cd "${test_dir}/project/child"
 export PATH="${test_dir}:$PATH"
 
@@ -146,19 +152,52 @@ run_case() {
 			fi
 			;;
 		esac
-		if [[ "$mode" == test ]]; then
-			[[ $rc -ne 0 ]] || fail "$mode/$scenario: failure was not propagated"
-		else
+		[[ $rc -ne 0 ]] || fail "$mode/$scenario: failure was not propagated"
+		if [[ "$mode" != test ]]; then
 			[[ "$(<"${test_dir}/next-current")" == 2.0 ]] || fail "$mode/$scenario: next plugin was not updated"
 		fi
 	fi
 }
 
 printf 'Testing update with Bash %s\n' "$BASH_VERSION"
-for mode in test all default; do
+for mode in test --all default; do
 	for scenario in success plugin-update-fails install-fails partial-install-fails missing-install set-fails set-ineffective unresolved; do
 		run_case "$scenario" "$mode"
 	done
+
+	export ASDF_TEST_SCENARIO=success
+	for targets in '--plugin' '--version' '--plugin --version' '--asdf --plugin --version'; do
+		printf 'test 1.0\n' >"$HOME/.tool-versions"
+		printf '1.0\n' >"${test_dir}/test-installed"
+		: >"${test_dir}/log"
+		read -r -a target_args <<<"$targets"
+		"$BASH" "${repo_dir}/lib/commands/command-update" "${target_args[@]}" test
+		if [[ "$targets" == *--plugin* ]]; then
+			grep -Fx 'plugin update test' "${test_dir}/log" >/dev/null || fail "plugin flag ignored"
+		elif grep -q '^plugin update' "${test_dir}/log"; then
+			fail "version-only updated plugin definitions"
+		fi
+		if [[ "$targets" == *--version* ]]; then
+			grep -Fx 'install test 2.0' "${test_dir}/log" >/dev/null || fail "version flag ignored"
+		elif grep -q '^install ' "${test_dir}/log"; then
+			fail "plugin-only installed a tool"
+		fi
+	done
+	export ASDF_TEST_SCENARIO=self-update-fails
+	: >"${test_dir}/log"
+	if "$BASH" "${repo_dir}/lib/commands/command-update" --all >"${test_dir}/error" 2>&1; then
+		fail "self-update failure was not propagated"
+	fi
+	grep -Fx 'plugin update next' "${test_dir}/log" >/dev/null || fail "self-update failure stopped plugin updates"
+	export ASDF_TEST_SCENARIO=success
+	: >"${test_dir}/log"
+	"$BASH" "${repo_dir}/lib/commands/command-update" --asdf --parent
+	[[ "$(<"${test_dir}/log")" == self-update ]] || fail "asdf-only update used irrelevant scope"
+	: >"${test_dir}/log"
+	"$BASH" "${repo_dir}/lib/commands/command-update" --plugin --parent
+	if grep -Eq '^(self-update|install|set|uninstall)' "${test_dir}/log"; then
+		fail "plugin-only update did not ignore irrelevant scope"
+	fi
 done
 
 for scope in --home --parent --local; do
@@ -202,7 +241,7 @@ for scope in --home --parent --local; do
 done
 
 export ASDF_TEST_SCENARIO=success
-for args in '--home --local test' '--parent --local test' '--current test' 'all 2.0' 'test 2.0 extra'; do
+for args in '--home --local test' '--parent --local test' '--current test' 'all 2.0' 'test 2.0 extra' '--all --plugin' '--all test' '--asdf test' '--plugin test 2.0'; do
 	: >"${test_dir}/log"
 	# Intentional splitting of fixed test arguments.
 	read -r -a invalid_args <<<"$args"

@@ -17,10 +17,12 @@ emit_source_line() {
 	bash | zsh)
 		printf "ASDF_EXTRAS_DISPATCHER=%q\n" "$dispatcher"
 		printf "source %q\n" "$file_path"
+		bash "${extras_root}/lib/commands/command-completion" --asdf "$shell"
 		;;
 	fish)
 		printf "set -gx ASDF_EXTRAS_DISPATCHER '%s'\n" "$dispatcher"
 		printf "source '%s'\n" "$file_path"
+		bash "${extras_root}/lib/commands/command-completion" --asdf "$shell"
 		;;
 	elvish)
 		printf "set-env ASDF_EXTRAS_DISPATCHER '%s'\n" "$dispatcher"

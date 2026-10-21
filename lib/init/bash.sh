@@ -36,7 +36,7 @@ asdf() {
 
 	if [[ "${1:-}" == "completion" ]]; then
 		shift
-		_asdf_extras_dispatch completion "$@"
+		_asdf_extras_dispatch completion --asdf "$@"
 		return $?
 	fi
 

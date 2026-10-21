@@ -90,8 +90,8 @@ not direct `asdf-extras update` calls. Elvish and Nushell wrappers display a
 reminder after every update, including failures, to start a new shell session if
 extras changed. This reloads startup initialization without referencing a removed
 runtime. They do not automatically reload definitions in the current shell.
-The Bash/Zsh/Fish refresh reloads extras'
-initialization code; it does not reload native completion definitions by itself.
+The Bash/Zsh/Fish refresh reloads extras initialization and its completion overlay.
+Existing native completion definitions are retained.
 
 ## 3. Use the extended commands
 
@@ -338,12 +338,66 @@ asdf-extras install nodejs 24.11.0
 asdf-extras completion bash
 ```
 
-This emits native `asdf completion` output followed by extras initialization code.
+For Bash, Zsh, and Fish, normal `asdf-extras init <shell>` already enables
+completion for both `asdf` and `asdf-extras`: no separate completion file or
+additional startup command is needed.
 After initialization, `asdf completion <shell>` routes to this command as well.
-Initialization alone does not load completion definitions, and the current
-overlay does not add extras-specific completion candidates.
-The scope and update-target flags described above therefore work at execution time but are
-not yet offered as additional completion candidates.
+The initialized wrapper automatically adds `--asdf` to include the `asdf` overlay.
+
+Without init, load completion for `asdf-extras` alone:
+
+```bash
+# Bash
+eval "$(asdf-extras completion bash)"
+```
+
+```zsh
+# Zsh (after framework/completion setup, if any)
+eval "$(asdf-extras completion zsh)"
+```
+
+```fish
+# Fish
+asdf-extras completion fish | source
+```
+
+These commands register completion for `asdf-extras` without installing command
+wrappers, loading native asdf completion, or changing its existing registration.
+They complete extras subcommands, shell names, scopes, update targets, plugins,
+and versions. Repeated loading does not duplicate registrations.
+
+Use `asdf-extras completion --asdf <shell>` to register both `asdf-extras`
+completion and the `asdf` overlay without installing command wrappers.
+The default, with no `--asdf`, registers only `asdf-extras` completion.
+Normal init uses `--asdf` mode automatically. This mode is supported for Bash,
+Zsh, and Fish; Elvish and Nushell retain their legacy completion output pending
+the follow-up integrations below.
+
+When init is used, the additional `asdf` overlay works as follows:
+
+The overlay adds `update`, install/update scope flags, update-target flags, and
+plugin/version candidates even when scope flags appear between arguments.
+It preserves upstream definitions and delegates ordinary commands to the existing
+native completion handler. Repeated initialization does not stack wrappers.
+
+- **Bash:** discovers the registered function using `complete -p asdf`, retaining
+  its registration options. If no completion is registered, it loads native
+  `asdf completion bash`. External-command (`-C`) or other non-function
+  registrations are left unchanged with an explicit error.
+- **Zsh:** retains the handler registered by `compinit`, Oh My Zsh, or another
+  framework. If none is registered, it loads native completion. Place extras init
+  **after** framework/completion setup; if a framework replaces the registration
+  later, run extras init again.
+- **Fish:** adds conditional rules without erasing existing native registrations.
+  Native completion is loaded only when no rules are registered.
+
+Native completion loading and candidate-query failures are reported rather than
+silently replaced with empty results. Elvish and Nushell initialization still
+provides command wrappers only; extras completion overlays are not yet supported
+for those shells.
+Their shell-specific integrations are tracked in
+[Elvish #27](https://github.com/eihu0F/asdf-extras/issues/27) and
+[Nushell #28](https://github.com/eihu0F/asdf-extras/issues/28).
 
 # Contributing
 

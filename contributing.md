@@ -33,6 +33,7 @@ Run install command regression tests without installing asdf:
 /bin/bash ./scripts/test-update.bash
 /bin/bash ./scripts/test-update-asdf.bash
 /bin/bash ./scripts/test-init-refresh.bash
+/bin/bash ./scripts/test-completion.bash
 ```
 
 These tests check option forwarding and argument validation, including empty-array
@@ -50,6 +51,14 @@ Shell refresh tests exercise each available Bash/Zsh/Fish shell using isolated
 old/new runtimes, including removal of the old runtime and partial update failures.
 When Elvish or Nushell is available, they also verify reload reminders on successful
 and failed updates without suppressing update output or failures.
+Completion tests verify native handler discovery and registration preservation,
+repeated initialization, scope/target argument positions, and explicit failures.
+They also verify that standalone completion registers `asdf-extras` without
+installing command wrappers or changing native `asdf` completion.
+Combined-mode tests verify `--asdf` with either option position, both registrations
+without command wrappers, and automatic mode selection by initialized wrappers.
+They exercise Bash 3.2-compatible behavior and each available Zsh/Fish shell;
+no real plugins are installed or updated.
 
 3. Commit and push the branch.
 

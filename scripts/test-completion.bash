@@ -137,16 +137,19 @@ fail() {
 	run_completion asdf update --asdf ""
 	absent nodejs
 	contains --plugin
+	contains --use-latest
 	absent --asdf
 	run_completion asdf update --all ""
 	contains --local
 	contains --home
 	absent --version
+	absent --use-latest
 	absent nodejs
 	run_completion asdf update --all --local ""
 	[[ -z "${COMPREPLY[*]-}" ]] || fail "--all with scope accepted more targets"
 	run_completion asdf update --version --
 	contains --plugin
+	contains --use-latest
 	absent --all
 	ASDF_COMPLETION_FAIL=plugins
 	export ASDF_COMPLETION_FAIL

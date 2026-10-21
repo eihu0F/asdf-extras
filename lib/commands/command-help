@@ -62,7 +62,7 @@ Subcommands:
   init <bash|zsh|fish|elvish|nushell>
   install [--home|-u|--parent|-p|--local] <plugin> <version>
   prune [<plugin>]
-  update [--all | --asdf --plugin --version] [scope] [<plugin> [version]]
+	update [--all | --asdf --plugin --version] [--use-latest] [scope] [<plugin> [version]]
   version
 
 Completion (Bash, Zsh, Fish, Elvish and Nushell):

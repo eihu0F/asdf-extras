@@ -54,8 +54,8 @@ EOF
 extras_help_update() {
 	cat <<'EOF'
 asdf-extras update:
-  asdf update [--all | --asdf --plugin --version] [scope] [<plugin> [version]]
-  asdf-extras update [--all | --asdf --plugin --version] [scope] [<plugin> [version]]
+  asdf update [--all | --asdf --plugin --version] [--use-latest] [scope] [<plugin> [version]]
+  asdf-extras update [--all | --asdf --plugin --version] [--use-latest] [scope] [<plugin> [version]]
 
 Update targets:
   --all         Update asdf itself, plugin definitions and tool versions
@@ -67,7 +67,12 @@ Update targets:
   A version requires --version when selecting explicit targets.
   With no targets, a plugin/scope selects plugin and version updates.
   With no arguments, update is equivalent to update --all.
-  An omitted version resolves to latest.
+  Without --use-latest, an omitted version uses ASDF_EXTRAS_UPDATE_DEFAULT_VERSION
+  (default: latest). ASDF_EXTRAS_UPDATE_DEFAULT_VERSION_<PLUGIN> overrides it.
+  <PLUGIN> uses uppercase plugin name with non-alnum converted to _.
+  With --use-latest (or ASDF_EXTRAS_UPDATE_USE_LATEST), value is a latest prefix.
+  Omitted prefix uses ASDF_EXTRAS_UPDATE_DEFAULT_LATEST_PREFIX (default: empty).
+  ASDF_EXTRAS_UPDATE_DEFAULT_LATEST_PREFIX_<PLUGIN> overrides it per plugin.
   Bulk updates skip plugins whose latest version cannot be resolved, with a warning.
   Other failures do not stop subsequent plugins; any failure returns nonzero.
   Plugins are processed sequentially, with activation verified before cleanup.

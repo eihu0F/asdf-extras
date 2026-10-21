@@ -288,10 +288,13 @@ before installation. See [Install-time environment hooks](#install-time-environm
 
 ```shell
 asdf-extras prune
+# Prune only selected plugins
+asdf-extras prune nodejs
 ```
 
-Prune compares all installed plugins and versions with the home configuration
-file (`.tool-versions` by default, or
+With no plugin argument, prune checks all installed plugins. When a plugin name
+is provided, it checks only that plugin. It compares installed versions with the
+home configuration file (`.tool-versions` by default, or
 `ASDF_DEFAULT_TOOL_VERSIONS_FILENAME` when set) and uninstalls versions not
 listed there. Every version configured for a plugin is retained, including
 fallback versions. Plugins absent from the home configuration have all installed

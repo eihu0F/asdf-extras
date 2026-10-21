@@ -61,7 +61,7 @@ Subcommands:
   help [install|update|prune|completion]
   init <bash|zsh|fish|elvish|nushell>
   install [--home|-u|--parent|-p|--local] <plugin> <version>
-  prune
+  prune [<plugin>]
   update [--all | --asdf --plugin --version] [scope] [<plugin> [version]]
   version
 

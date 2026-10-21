@@ -94,9 +94,12 @@ EOF
 extras_help_prune() {
 	cat <<'EOF'
 asdf-extras prune:
+  asdf-extras prune [<plugin>]
+
   Remove installed versions that are not configured in the home .tool-versions.
-  Every installed plugin is checked; plugins missing from the home configuration
-  have all their installed versions removed.
+  With no plugin argument, every installed plugin is checked; plugins absent
+  from the home configuration have all their installed versions removed.
+  With a plugin argument, only that plugin is checked.
   All versions configured for a plugin are retained, including fallback versions.
   A missing or unreadable home configuration stops pruning.
   Uninstall failures are reported; pruning continues for remaining versions.
@@ -104,6 +107,7 @@ asdf-extras prune:
 
 Examples:
   asdf-extras prune
+  asdf-extras prune nodejs
   asdf-extras prune --help
 EOF
 }

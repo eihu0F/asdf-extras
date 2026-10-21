@@ -29,7 +29,7 @@ fn asdf [@args]{
 
 	if (== $args[0] install) {
 		for arg $args[1..] {
-			if (or (== $arg -u) (== $arg --home) (== $arg -p) (== $arg --parent)) {
+			if (or (== $arg -u) (== $arg --home) (== $arg -p) (== $arg --parent) (== $arg --local)) {
 				asdf-extras-dispatch install $@args[1..]
 				return
 			}

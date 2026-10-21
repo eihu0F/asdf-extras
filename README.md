@@ -13,8 +13,8 @@ then use the extensions through normal `asdf` commands:
 - `asdf update`: update plugin definitions, install the latest tool versions,
   and activate them in your home configuration. Previous versions are removed
   only after successful installation and verified activation.
-- `asdf install -u` / `asdf install -p`: install a version and activate it in
-  your home or a parent directory's configuration.
+- `asdf install -u` / `asdf install -p` / `asdf install --local`: install a
+  version and activate it in your home, a parent, or the current directory's configuration.
 - Customize extras installs with plugin-specific environment files and hooks.
 
 Other `asdf` commands retain their native behavior.
@@ -113,32 +113,64 @@ asdf update nodejs
 
 # Update one plugin and use a specific version
 asdf update nodejs 24.11.0
+
+# Update only the tools listed in the selected project configuration
+asdf update --local
+asdf update --parent nodejs
 ```
 
 An omitted plugin means `all`; an omitted version means the plugin's latest
 available version. Bulk updates report failures (including an unresolved latest
 version) and continue with the next plugin.
 
-For each plugin, extras compares the currently active version with the target.
-If they match, no installation or version switch is needed. Otherwise it installs
-the target and activates it in the **home configuration** with `asdf set -u`.
-Update does not currently accept the install scope options.
+For each plugin, extras updates its plugin definition, then delegates installation
+and activation to extras install. It does not run `asdf plugin update --all`.
+Install compares the version in the selected configuration with the target;
+if they match and the version is installed, no installation or setting change
+is needed. Otherwise it installs the target and writes the selected configuration,
+even when another configuration or environment variable shadows it.
 
-The previous version is uninstalled only after installation succeeds, the target
+Both install and update accept these mutually exclusive scope options in any
+argument position:
+
+| Scope | Configuration | Previous versions after update |
+| --- | --- | --- |
+| `-u` / `--home` (default) | Home directory | Removed after success |
+| `-p` / `--parent` | Closest existing configuration in a parent directory | Retained |
+| `--local` | Current directory | Retained |
+
+Home and local configuration files are created when needed. Parent scope fails
+before installation if no parent configuration file exists. Files are named
+`.tool-versions`, or use `ASDF_DEFAULT_TOOL_VERSIONS_FILENAME` when set.
+`--current` is not a scope option.
+
+With an explicit scope, `update all` (or an omitted plugin) only updates plugins
+listed in that configuration file; a missing file is an error for bulk updates.
+Without a scope option, bulk updates retain the existing behavior of processing
+all installed plugins and writing the home configuration.
+
+In home scope, the previous configured versions are uninstalled only after installation succeeds, the target
 is confirmed installed, and activation succeeds and is verified. If installation
 fails, activation is not attempted. If activation fails or cannot be verified,
-the previous installation is retained.
+the previous installation is retained. Parent and local updates never remove
+previous versions. Home cleanup can affect projects that still reference an old
+version; use a project scope when those versions must be retained.
 
 ## Install and activate a version
 
 ```shell
 asdf install -u nodejs 24.11.0
 asdf install -p nodejs 24.11.0
+asdf install --local nodejs latest
 ```
 
 - `-u` / `--home`: install, then activate with `asdf set --home`.
 - `-p` / `--parent`: install, then activate with `asdf set --parent`.
-- Home and parent options cannot be combined.
+- `--local`: install, then write the current directory's configuration with `asdf set`.
+- Scope options cannot be combined. See the scope rules above.
+
+`latest` and `latest:<prefix>` are resolved before comparison and installation.
+Install never removes previous versions; home-scoped update performs cleanup.
 
 Only installs with one of these scope options are routed through extras.
 Plain `asdf install` keeps native asdf behavior, even after initialization.
@@ -160,7 +192,7 @@ asdf-extras install nodejs 24.11.0
 ```
 
 The same [command behavior](#commands) applies. Direct `asdf-extras install`
-activates in the home configuration by default; `--home` and `--parent` can also
+activates in the home configuration by default; `--home`, `--parent`, and `--local` can also
 be specified explicitly.
 
 Without initialization, ordinary `asdf` commands are not extended: `asdf update`
@@ -175,9 +207,10 @@ different code:
 
 ## Install-time environment hooks
 
-Hooks apply to installs routed through extras (`asdf install -u/-p` after init,
-or direct `asdf-extras install`). They do not apply to plain `asdf install`
-or the internal installation step of `update`.
+Hooks apply to installs routed through extras (`asdf install -u/-p/--local` after
+init, direct `asdf-extras install`, and the installation step of `update`).
+They do not apply to plain `asdf install`. Already-configured, installed versions
+are skipped without running hooks.
 
 - Default env file location: `${ASDF_DATA_DIR:-$HOME/.asdf}/asdf-extras/install/env/<plugin>.env`
 - Optional env dir override: `ASDF_EXTRAS_INSTALL_ENV_DIR`
@@ -220,6 +253,8 @@ This emits native `asdf completion` output followed by extras initialization cod
 After initialization, `asdf completion <shell>` routes to this command as well.
 Initialization alone does not load completion definitions, and the current
 overlay does not add extras-specific completion candidates.
+The shared scope flags described above therefore work at execution time but are
+not yet offered as additional completion candidates.
 
 # Contributing
 

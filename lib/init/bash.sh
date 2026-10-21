@@ -31,7 +31,7 @@ asdf() {
 	if [[ "${1:-}" == "install" ]]; then
 		shift
 		for arg in "$@"; do
-			if [[ "$arg" == "-u" || "$arg" == "--home" || "$arg" == "-p" || "$arg" == "--parent" ]]; then
+			if [[ "$arg" == "-u" || "$arg" == "--home" || "$arg" == "-p" || "$arg" == "--parent" || "$arg" == "--local" ]]; then
 				_asdf_extras_dispatch install "$@"
 				return $?
 			fi

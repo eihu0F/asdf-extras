@@ -7,6 +7,10 @@ test_dir="$(mktemp -d)"
 trap 'rm -rf "$test_dir"' EXIT
 
 export ASDF_TEST_DIR="$test_dir"
+export HOME="${test_dir}/home"
+export ASDF_EXTRAS_INSTALL_ENV_DIR="${test_dir}/env"
+mkdir -p "$HOME" "${test_dir}/project/child"
+cd "${test_dir}/project/child"
 export PATH="${test_dir}:$PATH"
 
 cat >"${test_dir}/asdf" <<'EOF'
@@ -15,6 +19,9 @@ set -euo pipefail
 printf '%s\n' "$*" >>"$ASDF_TEST_DIR/log"
 case "$1" in
 plugin)
+	if [[ "$2" == update && "${3:-}" == test && "$ASDF_TEST_SCENARIO" == plugin-update-fails ]]; then
+		exit 1
+	fi
 	if [[ "$2" == list ]]; then
 		printf 'test\nnext\n'
 	fi
@@ -47,13 +54,34 @@ install)
 	printf '2.0\n' >>"$ASDF_TEST_DIR/$2-installed"
 	;;
 set)
-	if [[ "$3" == test ]]; then
+	scope=--local
+	shift
+	case "$1" in
+	--home | --parent)
+		scope="$1"
+		shift
+		;;
+	esac
+	plugin="$1"
+	version="$2"
+	if [[ "$plugin" == test ]]; then
 		case "$ASDF_TEST_SCENARIO" in
 		set-fails) exit 1 ;;
 		set-ineffective) exit 0 ;;
 		esac
 	fi
-	printf '%s\n' "$4" >"$ASDF_TEST_DIR/$3-current"
+	case "$scope" in
+	--home) file="$HOME/.tool-versions" ;;
+	--parent) file="$ASDF_TEST_DIR/project/.tool-versions" ;;
+	--local) file="$PWD/.tool-versions" ;;
+	esac
+	: >"$file.tmp"
+	if [[ -f "$file" ]]; then
+		awk -v plugin="$plugin" '$1 != plugin' "$file" >"$file.tmp"
+	fi
+	printf '%s %s\n' "$plugin" "$version" >>"$file.tmp"
+	mv "$file.tmp" "$file"
+	printf '%s\n' "$version" >"$ASDF_TEST_DIR/$plugin-current"
 	;;
 uninstall)
 	printf '%s\n' "$3" >"$ASDF_TEST_DIR/$2-removed"
@@ -75,6 +103,7 @@ run_case() {
 	export ASDF_TEST_SCENARIO="$scenario"
 
 	: >"${test_dir}/log"
+	printf 'test 1.0\nnext 1.0\n' >"$HOME/.tool-versions"
 	for plugin in test next; do
 		printf '1.0\n' >"${test_dir}/$plugin-current"
 		printf '1.0\n' >"${test_dir}/$plugin-installed"
@@ -96,16 +125,23 @@ run_case() {
 		[[ $rc -eq 0 ]] || fail "$mode/$scenario: $output"
 		[[ "$(<"${test_dir}/test-current")" == 2.0 ]] || fail "target was not activated"
 		[[ "$(<"${test_dir}/test-removed")" == 1.0 ]] || fail "previous version was not removed"
-		expected="$(printf 'install test 2.0\nset -u test 2.0\nuninstall test 1.0')"
+		expected="$(printf 'install test 2.0\nset --home test 2.0\nuninstall test 1.0')"
 		[[ "$(grep -E '^(install|set|uninstall) .*test ' "${test_dir}/log")" == "$expected" ]] ||
 			fail "incorrect install/activation/removal order"
+		if grep -q '^plugin update --all' "${test_dir}/log"; then
+			fail "bulk plugin update used"
+		fi
+		if [[ "$mode" != test ]]; then
+			[[ "$(grep -E '^(plugin update|install|set|uninstall) ' "${test_dir}/log")" == "$(printf 'plugin update test\ninstall test 2.0\nset --home test 2.0\nuninstall test 1.0\nplugin update next\ninstall next 2.0\nset --home next 2.0\nuninstall next 1.0')" ]] ||
+				fail "plugin update/install operations were not interleaved"
+		fi
 	else
 		[[ ! -s "${test_dir}/test-removed" ]] || fail "$mode/$scenario: previous version was removed"
 		[[ "$(<"${test_dir}/test-current")" == 1.0 ]] || fail "$mode/$scenario: selection changed"
 		[[ "$output" == *"asdf-extras:"* ]] || fail "$mode/$scenario: no error reported"
 		case "$scenario" in
-		install-fails | partial-install-fails | missing-install | unresolved)
-			if grep -q '^set -u test ' "${test_dir}/log"; then
+		plugin-update-fails | install-fails | partial-install-fails | missing-install | unresolved)
+			if grep -q '^set --home test ' "${test_dir}/log"; then
 				fail "$mode/$scenario: activation attempted after install failure"
 			fi
 			;;
@@ -120,8 +156,85 @@ run_case() {
 
 printf 'Testing update with Bash %s\n' "$BASH_VERSION"
 for mode in test all default; do
-	for scenario in success install-fails partial-install-fails missing-install set-fails set-ineffective unresolved; do
+	for scenario in success plugin-update-fails install-fails partial-install-fails missing-install set-fails set-ineffective unresolved; do
 		run_case "$scenario" "$mode"
 	done
 done
+
+for scope in --home --parent --local; do
+	case "$scope" in
+	--home) file="$HOME/.tool-versions" ;;
+	--parent) file="${test_dir}/project/.tool-versions" ;;
+	--local) file="$PWD/.tool-versions" ;;
+	esac
+	export ASDF_TEST_SCENARIO=success
+	printf 'test 7.0\n' >"$HOME/.tool-versions"
+	printf 'test 1.0\n' >"$file"
+	printf '1.0\n' >"${test_dir}/test-installed"
+	: >"${test_dir}/test-removed"
+	: >"${test_dir}/log"
+	"$BASH" "${repo_dir}/lib/commands/command-update" test "$scope" 2.0
+	grep -Fx 'test 2.0' "$file" >/dev/null || fail "$scope: incorrect scope file"
+	if [[ "$scope" != --home ]]; then
+		[[ ! -s "${test_dir}/test-removed" ]] || fail "$scope: removed old version"
+		grep -Fx 'test 7.0' "$HOME/.tool-versions" >/dev/null || fail "$scope: home configuration changed"
+	fi
+	: >"${test_dir}/log"
+	"$BASH" "${repo_dir}/lib/commands/command-install" "$scope" test 2.0
+	if grep -Eq '^(install|set) ' "${test_dir}/log"; then
+		fail "$scope: already-configured install was not skipped"
+	fi
+	"$BASH" "${repo_dir}/lib/commands/command-update" "$scope"
+	if grep -q '^plugin update next' "${test_dir}/log"; then
+		fail "$scope: bulk update escaped selected configuration"
+	fi
+	for scenario in install-fails partial-install-fails set-fails set-ineffective; do
+		export ASDF_TEST_SCENARIO="$scenario"
+		printf 'test 1.0\n' >"$file"
+		printf '1.0\n' >"${test_dir}/test-installed"
+		: >"${test_dir}/test-removed"
+		if "$BASH" "${repo_dir}/lib/commands/command-update" "$scope" test 2.0 >"${test_dir}/error" 2>&1; then
+			fail "$scope/$scenario: failure was accepted"
+		fi
+		grep -Fx 'test 1.0' "$file" >/dev/null || fail "$scope/$scenario: configuration changed"
+		[[ ! -s "${test_dir}/test-removed" ]] || fail "$scope/$scenario: previous version removed"
+	done
+done
+
+export ASDF_TEST_SCENARIO=success
+for args in '--home --local test' '--parent --local test' '--current test' 'all 2.0' 'test 2.0 extra'; do
+	: >"${test_dir}/log"
+	# Intentional splitting of fixed test arguments.
+	read -r -a invalid_args <<<"$args"
+	if "$BASH" "${repo_dir}/lib/commands/command-update" "${invalid_args[@]}" >"${test_dir}/error" 2>&1; then
+		fail "invalid update arguments accepted: $args"
+	fi
+	[[ ! -s "${test_dir}/log" ]] || fail "invalid update had side effects"
+done
+
+rm "${test_dir}/project/.tool-versions"
+if "$BASH" "${repo_dir}/lib/commands/command-update" --parent test >"${test_dir}/error" 2>&1; then
+	fail "missing parent accepted"
+fi
+rm "$PWD/.tool-versions"
+if "$BASH" "${repo_dir}/lib/commands/command-update" --local >"${test_dir}/error" 2>&1; then
+	fail "missing local bulk configuration accepted"
+fi
+"$BASH" "${repo_dir}/lib/commands/command-update" --local test 2.0
+grep -Fx 'test 2.0' "$PWD/.tool-versions" >/dev/null || fail "local configuration not created"
+
+mkdir -p "$ASDF_EXTRAS_INSTALL_ENV_DIR"
+cat >"$ASDF_EXTRAS_INSTALL_ENV_DIR/test.env" <<'EOF'
+test_install_hook() {
+	printf '%s %s\n' "$1" "$2" >>"$ASDF_TEST_DIR/hooks"
+}
+ASDF_EXTRAS_INSTALL_ENV_FUNCTION_TEST=test_install_hook
+EOF
+printf 'test 1.0\n' >.tool-versions
+"$BASH" "${repo_dir}/lib/commands/command-update" --local test
+[[ "$(<"${test_dir}/hooks")" == "test 2.0" ]] || fail "update did not delegate install hooks"
+"$BASH" "${repo_dir}/lib/commands/command-update" --local test
+[[ "$(wc -l <"${test_dir}/hooks" | tr -d ' ')" == 1 ]] || fail "no-op update ran hooks"
+"${repo_dir}/libexec/asdf-extras" update --local test
+
 printf 'update regression tests: PASS\n'

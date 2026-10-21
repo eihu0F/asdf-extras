@@ -69,6 +69,14 @@ eval "$(asdf-extras init bash)"
 
 For Zsh, use `eval "$(asdf-extras init zsh)"` instead.
 
+For Nushell 0.116.1 or newer, generate a file and source it from `config.nu`:
+
+```nu
+^asdf-extras init nushell | save --force ~/.asdf-extras-init.nu
+# Add this line to config.nu, then start a new session:
+source ~/.asdf-extras-init.nu
+```
+
 Supported shells for `init`: `bash`, `elvish`, `fish`, `nushell`, `zsh`.
 The examples above use Bash/Zsh syntax; other shells must load the generated
 initialization code using their own syntax.
@@ -338,12 +346,12 @@ asdf-extras install nodejs 24.11.0
 asdf-extras completion bash
 ```
 
-For Bash, Zsh, and Fish, normal `asdf-extras init <shell>` already enables
+For Bash, Zsh, Fish, and Nushell, normal `asdf-extras init <shell>` already enables
 completion for both `asdf` and `asdf-extras`: no separate completion file or
 additional startup command is needed.
 After initialization, `asdf completion <shell>` routes to this command as well.
-For Bash/Zsh/Fish requests, the initialized wrapper automatically adds `--asdf`
-to include the `asdf` overlay. Elvish/Nushell requests are forwarded without
+For Bash/Zsh/Fish/Nushell requests, the initialized wrapper automatically adds `--asdf`
+to include the `asdf` overlay. Elvish requests are forwarded without
 that option to retain their legacy output.
 
 Without init, load completion for `asdf-extras` alone:
@@ -372,8 +380,36 @@ Use `asdf-extras completion --asdf <shell>` to register both `asdf-extras`
 completion and the `asdf` overlay without installing command wrappers.
 The default, with no `--asdf`, registers only `asdf-extras` completion.
 Normal init uses `--asdf` mode automatically. This mode is supported for Bash,
-Zsh, and Fish; Elvish and Nushell retain their legacy completion output pending
-the follow-up integrations below.
+Zsh, Fish, and Nushell; Elvish retains its legacy completion output pending
+the follow-up integration below.
+
+### Nushell setup and native coexistence
+
+Completion requires **Nushell 0.116.1 or newer**. Save generated code before
+sourcing it, because Nushell resolves source paths and command definitions at
+parse time:
+
+```nu
+# Standalone completion only; does not install asdf wrappers.
+^asdf-extras completion nushell | save --force ~/.asdf-extras-completion.nu
+# Add this line to config.nu:
+source ~/.asdf-extras-completion.nu
+```
+
+For the initialized workflow, use the Quick start's saved `init nushell` output
+instead. Initialization already includes both completion modes.
+Regenerate the saved file when changing the extras runtime, then start a new
+Nushell session.
+
+Combined mode embeds the output of `asdf completion nushell` unchanged and imports
+its definitions before the extras overlay. Load any existing native asdf module
+before extras initialization; do not import it again afterward, as that would
+replace the extras signatures. The generated module is the native baseline.
+Native commands such as `asdf plugin list` retain their structured return values.
+Private aliases retain native root/install signatures for completion delegation;
+extras does not copy the upstream completers. Only root, install, update and
+completion signatures are extended, and initialized wrappers route the extended
+commands to extras. Standalone completion does not load the native module.
 
 When init is used, the additional `asdf` overlay works as follows:
 
@@ -397,12 +433,9 @@ excluding incompatible update targets and positional arguments.
   Native completion is loaded only when no rules are registered.
 
 Native completion loading and candidate-query failures are reported rather than
-silently replaced with empty results. Elvish and Nushell initialization still
-provides command wrappers only; extras completion overlays are not yet supported
-for those shells.
-Their shell-specific integrations are tracked in
-[Elvish #27](https://github.com/eihu0F/asdf-extras/issues/27) and
-[Nushell #28](https://github.com/eihu0F/asdf-extras/issues/28).
+silently replaced with empty results. Elvish initialization still provides
+command wrappers only; its completion integration is tracked in
+[Elvish #27](https://github.com/eihu0F/asdf-extras/issues/27).
 
 # Contributing
 

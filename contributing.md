@@ -34,6 +34,7 @@ Run install command regression tests without installing asdf:
 /bin/bash ./scripts/test-update-asdf.bash
 /bin/bash ./scripts/test-init-refresh.bash
 /bin/bash ./scripts/test-completion.bash
+/bin/bash ./scripts/test-completion-nushell.bash
 ```
 
 These tests check option forwarding and argument validation, including empty-array
@@ -57,6 +58,14 @@ They also verify that standalone completion registers `asdf-extras` without
 installing command wrappers or changing native `asdf` completion.
 Combined-mode tests verify `--asdf` with either option position, both registrations
 without command wrappers, and automatic mode selection by initialized wrappers.
+Nushell completion tests require `nu` >= 0.116.1 (otherwise they skip). They use
+the real completion engine and a mock native module to verify signature
+delegation, structured native output, standalone isolation, repeated setup,
+option positions, initialized routing, and native-loading/query failures.
+Quoted literal arguments and unfinished quoted prefixes are tested without
+evaluating expressions; native delegation retains the original source tokens.
+Failure tests also invoke `commandline complete` in default-config-free sessions
+and assert visible stderr diagnostics for all three Bash query paths.
 They exercise Bash 3.2-compatible behavior and each available Zsh/Fish shell;
 no real plugins are installed or updated.
 

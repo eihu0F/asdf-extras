@@ -299,6 +299,8 @@ GitHub release's SHA-256 digest, extract and execute the candidate to verify its
 version, then replace the old executable with a same-filesystem rename. Failures
 before replacement retain the original binary; installed versions newer than or
 equal to the latest release are not downgraded. No privileged commands are run.
+Version checks accept both plain versions (such as `v0.20.2`) and the
+`asdf version v0.20.2 (revision ...)` output used by current asdf binaries.
 GitHub API/network failures are reported, not treated as successful updates.
 
 Other package managers, symlink layouts, system-wide installations, and unsupported

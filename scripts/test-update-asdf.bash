@@ -64,10 +64,7 @@ EOF
 chmod +x "$test_dir/mocks/uname" "$test_dir/mocks/od" "$test_dir/mocks/brew" "$test_dir/mocks/curl"
 
 reset_binary() {
-	cat >"$HOME/bin/asdf" <<'EOF'
-#!/bin/sh
-printf 'v0.20.1\n'
-EOF
+	printf '#!/bin/sh\nprintf "%%s\\n" "%s"\n' "${1:-v0.20.1}" >"$HOME/bin/asdf"
 	chmod +x "$HOME/bin/asdf"
 	: >"$test_dir/log"
 }
@@ -87,12 +84,13 @@ make_release() {
 }
 
 assert_failure_preserves_binary() {
-	local output
+	local output previous
+	previous="$("$HOME/bin/asdf" --version)"
 	if output="$("$BASH" "$repo_dir/lib/commands/update-asdf.bash" 2>&1)"; then
 		fail "expected update failure"
 	fi
 	[[ -n "$output" ]] || fail "failure did not report an error"
-	[[ "$("$HOME/bin/asdf" --version)" == v0.20.1 ]] || fail "failure replaced the existing asdf"
+	[[ "$("$HOME/bin/asdf" --version)" == "$previous" ]] || fail "failure replaced the existing asdf"
 	[[ -z "$(find "$HOME/bin" -name '.asdf-update.*' -print)" ]] || fail "staging files leaked"
 }
 
@@ -104,6 +102,37 @@ make_release v0.20.2
 : >"$test_dir/log"
 "$BASH" "$repo_dir/lib/commands/update-asdf.bash"
 [[ "$(wc -l <"$test_dir/log" | tr -d ' ')" == 1 ]] || fail "already-current release was downloaded"
+
+for format in 'v0.20.1' '0.20.1' 'asdf version v0.20.1 (revision old)' 'asdf version 0.20.1'; do
+	reset_binary "$format"
+	make_release 'asdf version v0.20.2 (revision cb72590)'
+	"$BASH" "$repo_dir/lib/commands/update-asdf.bash"
+	[[ "$("$HOME/bin/asdf" --version)" == 'asdf version v0.20.2 (revision cb72590)' ]] ||
+		fail "prefixed release was not activated"
+	: >"$test_dir/log"
+	"$BASH" "$repo_dir/lib/commands/update-asdf.bash"
+	[[ "$(wc -l <"$test_dir/log" | tr -d ' ')" == 1 ]] || fail "prefixed current version was downloaded again"
+done
+for format in '0.20.2' 'asdf version 0.20.2' 'v0.20.2 (revision test)'; do
+	reset_binary 'asdf version v0.20.1 (revision old)'
+	make_release "$format"
+	"$BASH" "$repo_dir/lib/commands/update-asdf.bash"
+	[[ "$("$HOME/bin/asdf" --version)" == "$format" ]] || fail "release format rejected: $format"
+done
+for invalid in 'unknown' 'asdf version v0.20' 'v0.20.20' 'v0.20.2-rc1' 'asdf version v0.99.0'; do
+	reset_binary 'asdf version v0.20.1 (revision old)'
+	make_release "$invalid"
+	assert_failure_preserves_binary
+done
+for invalid in 'unknown' 'asdf version v0.20' 'v0.20.1-rc1'; do
+	reset_binary "$invalid"
+	make_release v0.20.2
+	assert_failure_preserves_binary
+done
+reset_binary 'asdf version v0.21.0 (revision newer)'
+make_release v0.20.2
+"$BASH" "$repo_dir/lib/commands/update-asdf.bash"
+[[ "$(wc -l <"$test_dir/log" | tr -d ' ')" == 1 ]] || fail "newer installed version was downgraded"
 
 reset_binary
 export ASDF_SELF_TEST_NETWORK_FAIL=1

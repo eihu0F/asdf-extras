@@ -7,6 +7,12 @@ fail() {
 	exit 1
 }
 
+parse_version() {
+	local pattern='^(asdf version )?v?([0-9]+\.[0-9]+\.[0-9]+)([[:space:]].*)?$'
+	[[ "$1" != *$'\n'* && "$1" =~ $pattern ]] || return 1
+	printf '%s\n' "${BASH_REMATCH[2]}"
+}
+
 asdf_bin="$(type -P asdf)" || fail "asdf executable not found"
 asdf_bin="$(cd "$(dirname "$asdf_bin")" && pwd -P)/$(basename "$asdf_bin")"
 script="${ASDF_DATA_DIR:-$HOME/.asdf}/asdf-extras/update-asdf.bash"
@@ -81,8 +87,7 @@ curl --fail --silent --show-error --location --proto '=https' --proto-redir '=ht
 tag="$(jq -er '.tag_name | select(test("^v[0-9]+\\.[0-9]+\\.[0-9]+$"))' "$stage/release.json")" ||
 	fail "could not determine the latest stable asdf release"
 current="$("$asdf_bin" --version)" || fail "could not determine the installed asdf version"
-current="$(printf '%s\n' "$current" | sed -n 's/^v\{0,1\}\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\).*$/\1/p')"
-[[ -n "$current" ]] || fail "unrecognized installed asdf version"
+current="$(parse_version "$current")" || fail "unrecognized installed asdf version"
 if ! awk -v old="$current" -v new="${tag#v}" 'BEGIN {
 	split(old,a,"."); split(new,b,".");
 	for (i=1;i<=3;i++) {if (b[i]+0>a[i]+0) exit 0; if (b[i]+0<a[i]+0) exit 1}
@@ -107,7 +112,8 @@ fi
 tar -xOf "$stage/release.tar.gz" asdf >"$stage/asdf"
 chmod +x "$stage/asdf"
 candidate="$("$stage/asdf" --version)" || fail "downloaded asdf executable failed validation"
-[[ "$candidate" == "$tag" || "$candidate" == "$tag "* || "$candidate" == "${tag#v}" || "$candidate" == "${tag#v} "* ]] ||
+candidate="$(parse_version "$candidate")" || fail "unrecognized downloaded asdf version"
+[[ "$candidate" == "${tag#v}" ]] ||
 	fail "downloaded asdf version does not match $tag"
 
 # Same-filesystem rename replaces the executable only after full validation.

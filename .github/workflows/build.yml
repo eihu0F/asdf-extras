@@ -14,6 +14,22 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  elvish_completion:
+    name: Elvish completion
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Elvish 0.21.0
+        run: |
+          mkdir -p "$RUNNER_TEMP/elvish-completion"
+          curl --fail --location \
+            https://dl.elv.sh/linux-amd64/elvish-v0.21.0.tar.gz \
+            --output "$RUNNER_TEMP/elvish-completion/elvish.tar.gz"
+          tar -xzf "$RUNNER_TEMP/elvish-completion/elvish.tar.gz" \
+            -C "$RUNNER_TEMP/elvish-completion"
+          echo "$RUNNER_TEMP/elvish-completion" >> "$GITHUB_PATH"
+      - name: Elvish completion regression tests
+        run: bash ./scripts/test-completion-elvish.bash
   nushell_completion:
     name: Nushell completion
     runs-on: ubuntu-latest

@@ -84,9 +84,7 @@ check "asdf update --version nodejs --local 24" "24.0.0"
 check "asdf update --all --" "--local"
 check 'asdf update "nodejs" ' "24.0.0"
 check 'asdf install "nodejs" --parent 22' "22.0.0"
-if "--asdf" in ('asdf completion "elvish" --' | commandline complete) {
-	error make {msg: "quoted Elvish offered unsupported mode"}
-}
+check 'asdf completion "elvish" --' "--asdf"
 check 'asdf completion "nushell" --' "--asdf"
 let record = (asdf plugin list | first)
 if $record.url != native-url { error make {msg: "structured native command lost"} }
@@ -106,7 +104,7 @@ asdf update --version nodejs
 asdf completion nushell
 asdf completion elvish
 let calls = (open --raw ($env.ASDF_NU_TEST_ROOT | path join dispatch.log) | lines)
-if $calls != ["install --local nodejs 22.0.0" "update --version nodejs" "completion --asdf nushell" "completion elvish"] {
+if $calls != ["install --local nodejs 22.0.0" "update --version nodejs" "completion --asdf nushell" "completion --asdf elvish"] {
 	error make {msg: $"incorrect wrapper routing: ($calls | to nuon)"}
 }
 $env.ASDF_NU_FAILURE = "query"

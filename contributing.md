@@ -34,6 +34,7 @@ Run install command regression tests without installing asdf:
 /bin/bash ./scripts/test-update-asdf.bash
 /bin/bash ./scripts/test-init-refresh.bash
 /bin/bash ./scripts/test-completion.bash
+/bin/bash ./scripts/test-completion-elvish.bash
 /bin/bash ./scripts/test-completion-nushell.bash
 ```
 
@@ -58,6 +59,13 @@ They also verify that standalone completion registers `asdf-extras` without
 installing command wrappers or changing native `asdf` completion.
 Combined-mode tests verify `--asdf` with either option position, both registrations
 without command wrappers, and automatic mode selection by initialized wrappers.
+Elvish completion tests require Elvish >= 0.21.0, util-linux `script`, and
+coreutils `timeout` (Linux). They use a real interactive editor under a pseudo-terminal to
+verify standalone isolation, native function discovery/loading, rich candidate
+preservation, scope normalization, repeated registration, initialized routing,
+and visible native-loading/query failures. They also send real TAB keystrokes
+and verify both command names' completion through the editor.
+The dedicated CI job pins Elvish 0.21.0.
 Nushell completion tests require `nu` >= 0.116.1 (otherwise they skip). They use
 the real completion engine and a mock native module to verify signature
 delegation, structured native output, standalone isolation, repeated setup,

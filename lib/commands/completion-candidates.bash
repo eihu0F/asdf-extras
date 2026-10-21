@@ -34,14 +34,11 @@ main() {
 				fi
 				shift
 			done
-			if ((completion_asdf == 0)) && [[ "$completion_shell" != elvish && --asdf == "$current"* ]]; then
+			if ((completion_asdf == 0)) && [[ --asdf == "$current"* ]]; then
 				printf '%s\n' --asdf
 			fi
 			if [[ -z "$completion_shell" ]]; then
 				for candidate in bash zsh fish elvish nushell; do
-					if ((completion_asdf)) && [[ "$candidate" == elvish ]]; then
-						continue
-					fi
 					[[ "$candidate" != "$current"* ]] || printf '%s\n' "$candidate"
 				done
 			fi

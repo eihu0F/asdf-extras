@@ -27,12 +27,14 @@ Subcommands:
   update [--all | --asdf --plugin --version] [scope] [<plugin> [version]]
   version
 
-Completion (Bash, Zsh, Fish and Nushell):
+Completion (Bash, Zsh, Fish, Elvish and Nushell):
   completion registers asdf-extras completion without enabling command wrappers.
   --asdf also registers the asdf completion overlay (without command wrappers).
   init enables wrappers and completion for both asdf and asdf-extras.
   Initialized asdf completion automatically selects --asdf mode.
   Nushell completion requires Nushell >= 0.116.1; save the output and source it.
+  Elvish completion requires Elvish >= 0.21.0 in an interactive shell.
+  Load existing native Elvish completion before init; see README for eval setup.
 
 Scopes (install and update):
   --home, -u    Home configuration (default); update removes replaced versions

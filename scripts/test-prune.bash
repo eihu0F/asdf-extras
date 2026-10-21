@@ -59,13 +59,33 @@ expected="$(printf 'alpha 3.0\norphan 4.0\norphan 5.0')"
 [[ "$output" == *"removing unused version: orphan 4.0"* ]] || fail "home-unlisted plugin version not pruned"
 [[ "$output" == *"removing unused version: orphan 5.0"* ]] || fail "all versions of home-unlisted plugin not pruned"
 
-if bash "$dispatch" prune extra >"$test_dir/output" 2>"$test_dir/error"; then
-	fail 'unexpected positional argument accepted'
+: >"$test_dir/uninstall.log"
+output="$(bash "$dispatch" prune alpha)"
+[[ "$(<"$test_dir/uninstall.log")" == 'alpha 3.0' ]] || fail "selected plugin prune touched other plugins: $(<"$test_dir/uninstall.log")"
+[[ "$output" != *'removing unused version: orphan'* ]] || fail 'selected plugin prune processed unselected plugin'
+
+: >"$test_dir/uninstall.log"
+output="$(bash "$dispatch" prune beta)"
+[[ ! -s "$test_dir/uninstall.log" ]] || fail "selected plugin prune touched an unselected plugin: $(<"$test_dir/uninstall.log")"
+[[ "$output" == *'pruning complete'* ]] || fail 'selected plugin with no unused versions did not complete'
+
+: >"$test_dir/uninstall.log"
+if bash "$dispatch" prune alpha missing >"$test_dir/output" 2>"$test_dir/error"; then
+	fail 'unknown plugin accepted'
 fi
-grep -q 'usage: asdf-extras prune' "$test_dir/error" || fail 'invalid usage not reported'
+grep -q 'usage: asdf-extras prune \[<plugin>\]' "$test_dir/error" || fail 'too many plugin arguments were accepted'
+[[ ! -s "$test_dir/uninstall.log" ]] || fail 'pruning started with invalid arguments'
+
+: >"$test_dir/uninstall.log"
+if bash "$dispatch" prune missing >"$test_dir/output" 2>"$test_dir/error"; then
+	fail 'unknown plugin accepted'
+fi
+grep -q 'plugin is not installed: missing' "$test_dir/error" || fail 'unknown plugin error not reported'
+[[ ! -s "$test_dir/uninstall.log" ]] || fail 'pruning started for unknown plugin'
 
 if bash "$dispatch" prune --help >"$test_dir/output"; then
 	grep -q 'All versions configured' "$test_dir/output" || fail 'prune help missing fallback version behavior'
+	grep -q 'only that plugin' "$test_dir/output" || fail 'prune help missing plugin argument behavior'
 else
 	fail 'prune help failed'
 fi
@@ -102,5 +122,10 @@ if ASDF_PRUNE_UNINSTALL_FAIL=alpha:3.0 bash "$dispatch" prune >"$test_dir/output
 fi
 grep -q 'failed to remove version: alpha 3.0' "$test_dir/error" || fail 'uninstall failure not reported'
 grep -Fx 'orphan 4.0' "$test_dir/uninstall.log" >/dev/null || fail 'pruning did not continue after uninstall failure'
+
+[[ "$(bash "$repo_dir/lib/commands/completion-candidates.bash" --standalone prune a)" == alpha ]] ||
+	fail 'prune plugin completion missing'
+[[ -z "$(bash "$repo_dir/lib/commands/completion-candidates.bash" --standalone prune alpha b)" ]] ||
+	fail 'prune offered a second plugin argument'
 
 printf 'prune regression tests: PASS\n'

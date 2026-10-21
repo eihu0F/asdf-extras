@@ -65,7 +65,7 @@ main() {
 		return 0
 	}
 	shift
-	[[ "$subcommand" == install || "$subcommand" == update ]] || return 0
+	[[ "$subcommand" == install || "$subcommand" == update || "$subcommand" == prune ]] || return 0
 	while [[ $# -gt 1 ]]; do
 		arg="$1"
 		shift
@@ -82,6 +82,17 @@ main() {
 	done
 	if [[ -z "$scope" ]]; then
 		options="-u --home -p --parent --local"
+	fi
+	if [[ "$subcommand" == prune ]]; then
+		((position == 0)) || return 0
+		candidates="$(command asdf plugin list)" || {
+			printf 'asdf-extras: could not list plugins for completion\n' >&2
+			return 1
+		}
+		while IFS= read -r candidate; do
+			[[ -z "$candidate" || "$candidate" != "$current"* ]] || printf '%s\n' "$candidate"
+		done <<<"$candidates"
+		return 0
 	fi
 	if [[ "$subcommand" == update ]] && ((all == 0)); then
 		[[ -n "$targets" || $position -gt 0 ]] || options="$options --all"

@@ -56,17 +56,28 @@ prune_plugin() {
 }
 
 main() {
-	local file plugins plugin failed=0
-	[[ $# -eq 0 ]] || extras_fail "usage: asdf-extras prune"
+	local file plugins installed_plugins plugin failed=0
+	[[ $# -le 1 ]] || extras_fail "usage: asdf-extras prune [<plugin>]"
+	plugin="${1:-}"
+	[[ "$plugin" != -* ]] || extras_fail "usage: asdf-extras prune [<plugin>]"
 
 	file="$(extras_scope_file --home)"
 	[[ -r "$file" ]] || extras_fail "home configuration does not exist or is not readable: $file"
-	if ! plugins="$(command asdf plugin list)"; then
+	if ! installed_plugins="$(command asdf plugin list)"; then
 		extras_fail "could not list plugins"
 	fi
-	if [[ -z "${plugins//[[:space:]]/}" ]]; then
+	if [[ -z "${installed_plugins//[[:space:]]/}" && -z "$plugin" ]]; then
 		printf "asdf-extras: no plugins installed\n"
 		return 0
+	fi
+
+	if [[ -n "$plugin" ]]; then
+		if ! grep -Fx -- "$plugin" <<<"$installed_plugins" >/dev/null; then
+			extras_fail "plugin is not installed: $plugin"
+		fi
+		plugins="$plugin"
+	else
+		plugins="$installed_plugins"
 	fi
 
 	while IFS= read -r plugin; do

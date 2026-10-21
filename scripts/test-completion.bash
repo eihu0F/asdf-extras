@@ -178,6 +178,8 @@ output="$(bash "$repo_dir/lib/commands/completion-candidates.bash" --standalone 
 	code="$(bash "$ASDF_COMPLETION_REPO/lib/commands/command-completion" bash)"
 	eval "$code"
 	eval "$code"
+	standalone_registration="$(complete -p asdf-extras)"
+	[[ "$standalone_registration" == *"-o bashdefault"* && "$standalone_registration" == *"-o default"* ]] || fail "standalone registration options lost"
 	! declare -F asdf >/dev/null || fail "completion installed command wrapper"
 	! declare -F _asdf_extras_complete >/dev/null || fail "standalone loaded overlay definitions"
 	[[ "$(complete -p asdf)" == "$registration" ]] || fail "native registration changed"

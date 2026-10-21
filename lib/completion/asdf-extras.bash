@@ -7,4 +7,4 @@ _asdf_extras_standalone_complete() {
 	done <<<"$output"
 }
 
-complete -F _asdf_extras_standalone_complete asdf-extras
+complete -o bashdefault -o default -F _asdf_extras_standalone_complete asdf-extras

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.1](https://github.com/eihu0F/asdf-extras/compare/v0.6.0...v0.6.1) (2026-10-21)
+
+
+### Bug Fixes
+
+* recognize prefixed asdf version output ([#34](https://github.com/eihu0F/asdf-extras/issues/34)) ([818c4ce](https://github.com/eihu0F/asdf-extras/commit/818c4ce2a633917f857f1d0b6cf8aaa1a37f8c3e))
+
 ## [0.6.0](https://github.com/eihu0F/asdf-extras/compare/v0.5.1...v0.6.0) (2026-10-21)
 
 

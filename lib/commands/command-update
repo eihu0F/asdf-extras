@@ -8,116 +8,88 @@ plugin_dir=$(dirname "$(dirname "$(dirname "$current_script_path")")")
 # shellcheck source=./common.bash
 source "${plugin_dir}/lib/commands/common.bash"
 
-resolve_latest_target() {
-	local plugin="$1"
-	local latest_output target
-
-	latest_output="$(command asdf latest "$plugin" 2>/dev/null || true)"
-	target="$(printf "%s\n" "$latest_output" | awk 'NR==1 {print $NF}')"
-
-	if [[ -z "$target" || "$target" == ")" || "$target" == "(" ]]; then
-		return 1
-	fi
-
-	if ! extras_version_exists "$plugin" "$target"; then
-		return 1
-	fi
-
-	printf "%s\n" "$target"
-}
-
-update_all() {
-	local plugin
-
-	command asdf plugin update --all
-
-	while IFS= read -r plugin; do
-		[[ -n "$plugin" ]] || continue
-		if ! update_one_internal "$plugin" ""; then
-			printf "asdf-extras: skipped %s (update failed; see error above)\n" "$plugin" >&2
-		fi
-	done < <(extras_plugins)
-}
-
-update_one_internal() {
-	local plugin="$1"
-	local version="${2:-}"
-	local current target activated
-
-	current="$(extras_current_version "$plugin")"
-
-	if [[ -n "$version" ]]; then
-		target="$version"
-		if ! extras_version_exists "$plugin" "$target"; then
-			printf "asdf-extras: target version is unavailable for plugin: %s (%s)\n" "$plugin" "$target" >&2
-			return 1
-		fi
-	else
-		target="$(resolve_latest_target "$plugin" || true)"
-		if [[ -z "$target" ]]; then
-			printf "asdf-extras: no available version for plugin: %s\n" "$plugin" >&2
-			return 1
-		fi
-	fi
-
-	if [[ "$current" == "$target" ]]; then
-		printf "asdf-extras: %s already current at %s\n" "$plugin" "$target"
-		return 0
-	fi
-
-	# Callers use conditionals, so errexit does not stop failures in this function.
-	# Subshells also let Bash 3.2 catch failures of the command builtin.
-	if ! (command asdf install "$plugin" "$target"); then
-		printf "asdf-extras: install failed; keep previous version: %s (%s)\n" "$plugin" "${current:-none}" >&2
-		return 1
-	fi
-
-	if ! extras_version_installed "$plugin" "$target"; then
-		printf "asdf-extras: target version is not installed after update: %s (%s)\n" "$plugin" "$target" >&2
-		return 1
-	fi
-
-	if ! (command asdf set -u "$plugin" "$target"); then
-		printf "asdf-extras: activation failed; previous version was not removed: %s (%s)\n" "$plugin" "${current:-none}" >&2
-		return 1
-	fi
-
-	if ! activated="$(extras_current_version "$plugin")"; then
-		printf "asdf-extras: could not verify current version; previous version was not removed: %s (%s)\n" "$plugin" "${current:-none}" >&2
-		return 1
-	fi
-
-	if [[ "$activated" != "$target" ]]; then
-		printf "asdf-extras: target version did not become current; keep previous version: %s (current=%s, target=%s)\n" "$plugin" "${activated:-none}" "$target" >&2
-		return 1
-	fi
-
-	if [[ -n "$current" ]]; then
-		if ! (command asdf uninstall "$plugin" "$current"); then
-			printf "asdf-extras: failed to remove previous version: %s (%s)\n" "$plugin" "$current" >&2
-			return 1
-		fi
-	fi
-}
-
 update_one() {
-	local plugin="$1"
-	local version="${2:-}"
+	local plugin="$1" version="$2" scope="$3" file="$4"
+	local previous target old_version
+	local -a previous_versions=()
+	if ! previous="$(extras_configured_version "$file" "$plugin")"; then
+		printf "asdf-extras: could not read configuration: %s\n" "$file" >&2
+		return 1
+	fi
 
-	command asdf plugin update "$plugin"
-	if ! update_one_internal "$plugin" "$version"; then
-		extras_fail "update failed for plugin: $plugin"
+	# Subshells allow Bash 3.2 to catch command builtin failures.
+	if ! (command asdf plugin update "$plugin"); then
+		printf "asdf-extras: plugin update failed: %s\n" "$plugin" >&2
+		return 1
+	fi
+	if ! "$BASH" "${plugin_dir}/lib/commands/command-install" "$scope" "$plugin" "$version"; then
+		printf "asdf-extras: update failed; previous installation retained: %s\n" "$plugin" >&2
+		return 1
+	fi
+
+	if [[ "$scope" == --home ]]; then
+		if ! target="$(extras_configured_version "$file" "$plugin")" || [[ -z "$target" ]]; then
+			printf "asdf-extras: could not verify configuration; previous versions retained: %s\n" "$plugin" >&2
+			return 1
+		fi
+		# A home entry may contain multiple fallback versions.
+		read -r -a previous_versions <<<"$previous"
+		for old_version in ${previous_versions[@]+"${previous_versions[@]}"}; do
+			[[ "$old_version" != "$target" && "$old_version" != system ]] || continue
+			case "$old_version" in
+			path:* | ref:*) continue ;;
+			esac
+			if ! (command asdf uninstall "$plugin" "$old_version"); then
+				printf "asdf-extras: failed to remove previous version: %s (%s)\n" "$plugin" "$old_version" >&2
+				return 1
+			fi
+		done
 	fi
 }
 
 main() {
-	local target="${1:-all}"
-	if [[ "$target" == "all" ]]; then
-		update_all
-		return 0
+	local arg scope="" explicit_scope=0 file plugins plugin
+	local -a positional=()
+	for arg in "$@"; do
+		case "$arg" in
+		-u | --home)
+			scope="$(extras_select_scope "$scope" --home)"
+			explicit_scope=1
+			;;
+		-p | --parent)
+			scope="$(extras_select_scope "$scope" --parent)"
+			explicit_scope=1
+			;;
+		--local)
+			scope="$(extras_select_scope "$scope" --local)"
+			explicit_scope=1
+			;;
+		-*) extras_fail "unknown update option: $arg" ;;
+		*) positional+=("$arg") ;;
+		esac
+	done
+	set -- ${positional[@]+"${positional[@]}"}
+	[[ $# -le 2 ]] || extras_fail "usage: asdf-extras update [--home|--parent|--local] [<plugin> [<version>]]"
+	scope="${scope:---home}"
+	file="$(extras_scope_file "$scope")"
+	if [[ "${1:-all}" == all ]]; then
+		[[ $# -le 1 ]] || extras_fail "update all does not accept a version"
+		if ((explicit_scope)); then
+			[[ -f "$file" ]] || extras_fail "scope file does not exist: $file"
+			plugins="$(awk 'NF && $1 !~ /^#/ {print $1}' "$file")"
+		else
+			plugins="$(command asdf plugin list)"
+		fi
+		while IFS= read -r plugin; do
+			[[ -n "$plugin" ]] || continue
+			if ! update_one "$plugin" latest "$scope" "$file"; then
+				printf "asdf-extras: skipped %s (update failed; see error above)\n" "$plugin" >&2
+			fi
+		done <<<"$plugins"
+	else
+		update_one "$1" "${2:-latest}" "$scope" "$file" ||
+			extras_fail "update failed for plugin: $1"
 	fi
-
-	update_one "$target" "${2:-}"
 }
 
 main "$@"

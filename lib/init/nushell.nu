@@ -23,7 +23,7 @@ def --wrapped asdf [...args] {
 
 	if (($args | length) >= 1 and ($args | get 0) == "install") {
 		let install_args = ($args | skip 1)
-		let has_scope_flag = ($install_args | any {|x| $x == "-u" or $x == "--home" or $x == "-p" or $x == "--parent"})
+		let has_scope_flag = ($install_args | any {|x| $x == "-u" or $x == "--home" or $x == "-p" or $x == "--parent" or $x == "--local"})
 		if $has_scope_flag {
 			asdf-extras-dispatch install ...$install_args
 			return

@@ -26,7 +26,7 @@ function asdf
 
 	if test (count $argv) -ge 1; and test "$argv[1]" = "install"
 		for arg in $argv[2..-1]
-			if test "$arg" = "-u"; or test "$arg" = "--home"; or test "$arg" = "-p"; or test "$arg" = "--parent"
+			if test "$arg" = "-u"; or test "$arg" = "--home"; or test "$arg" = "-p"; or test "$arg" = "--parent"; or test "$arg" = "--local"
 				__asdf_extras_dispatch install $argv[2..-1]
 				return $status
 			end

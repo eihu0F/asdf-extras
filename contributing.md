@@ -39,6 +39,9 @@ on both Linux and macOS.
 
 Update regression tests verify that installation and activation failures retain
 the previous version, and that bulk updates continue with subsequent plugins.
+They also cover scope selection, home-only cleanup, sequential plugin updates,
+and shared install hooks. Install tests exercise Bash/Zsh/Fish routing when those
+shells are available and native `asdf set` when asdf is installed.
 
 3. Commit and push the branch.
 

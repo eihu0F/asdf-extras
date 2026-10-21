@@ -17,6 +17,48 @@ extras_need_args() {
 	fi
 }
 
+extras_select_scope() {
+	local previous="$1" requested="$2"
+	if [[ -n "$previous" && "$previous" != "$requested" ]]; then
+		extras_fail "--home, --parent and --local cannot be used together"
+	fi
+	printf "%s\n" "$requested"
+}
+
+extras_scope_file() {
+	local scope="$1" directory filename
+	filename="${ASDF_DEFAULT_TOOL_VERSIONS_FILENAME:-.tool-versions}"
+	case "$scope" in
+	--home) printf "%s/%s\n" "$HOME" "$filename" ;;
+	--local) printf "%s/%s\n" "$PWD" "$filename" ;;
+	--parent)
+		directory="$(dirname "$PWD")"
+		while :; do
+			if [[ -f "$directory/$filename" ]]; then
+				printf "%s/%s\n" "$directory" "$filename"
+				return 0
+			fi
+			[[ "$directory" != / ]] || break
+			directory="$(dirname "$directory")"
+		done
+		extras_fail "no ${filename} found in a parent directory"
+		;;
+	esac
+}
+
+extras_configured_version() {
+	local file="$1" plugin="$2"
+	[[ -f "$file" ]] || return 0
+	awk -v plugin="$plugin" '
+		$1 == plugin {
+			for (i = 2; i <= NF && $i !~ /^#/; i++)
+				printf "%s%s", (i == 2 ? "" : " "), $i
+			print ""
+			exit
+		}
+	' "$file"
+}
+
 extras_plugins() {
 	command asdf plugin list 2>/dev/null || true
 }

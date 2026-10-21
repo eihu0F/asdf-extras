@@ -61,18 +61,19 @@ Requirements:
 - Before starting edits, run the skill `branch-precheck-before-edit`.
 - If current branch is `main`, create/switch to an `issue-*` or `noissue-*` branch before modifying files.
 - Before opening a PR, run local validation commands documented in `contributing.md`.
+- Before creating a PR, read `.github/PULL_REQUEST_TEMPLATE.md` and use its headings and checklist. Fill in every section; write `None` for no related issue, report actual test commands/results, and mark checklist boxes only when true.
+- Use the `create-pull-request` skill when opening a PR, and verify the resulting title and body follow the repository's PR title rules and template.
 
 ## asdf-extras Behavior Rules
 
 - Keep command behavior aligned with current README and command-help output.
-- `asdf-extras update` with no plugin argument must be treated as `asdf-extras update all`.
-- For `update all`, continue processing even if a plugin cannot resolve `latest`; skip with a clear warning.
+- `asdf-extras update` with no arguments is equivalent to `asdf-extras update --all`.
+- Do not infer `--all` merely because a plugin argument is omitted when target or scope options are provided; follow the command's explicit target and scope semantics.
+- Bulk version updates must continue when a plugin cannot resolve `latest`; skip it with a clear warning.
 - Do not introduce behavior that only passes `asdf plugin test` but breaks normal user workflows.
 
 ## Formatting and Linting
 
 - Follow `.editorconfig` as the minimum baseline for whitespace, indentation, and line endings.
 - Follow project-defined lint/format commands and settings when editing files.
-- Before finishing shell-related changes, run:
-  - `./scripts/format.bash`
-  - `./scripts/lint.bash`
+- Before finishing shell-related changes, follow `.github/skills/shell-lint/SKILL.md` to activate the exact `shellcheck` and `shfmt` versions pinned in `.tool-versions`, then run formatting and lint checks.

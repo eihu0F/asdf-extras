@@ -1,4 +1,4 @@
-<!-- Use a Conventional Commit title: <type>: <short action-oriented subject>. -->
+<!-- Title: <type>: <short action-oriented subject>, using a type allowed by .github/copilot-instructions.md. -->
 
 ## Summary
 
@@ -6,21 +6,21 @@
 
 ## Related issue
 
-<!-- Link related issues, if any. -->
+<!-- Link related issues, or write "None". -->
 
 ## Changes
 
-<!-- List notable behavior or implementation changes. -->
+<!-- List notable behavior or implementation changes, or write "None". -->
 
 ## Testing
 
-<!-- List the commands you ran and their results. For docs-only changes, say so. -->
+<!-- List validation commands and results. For docs-only changes, state that no tests were needed. -->
 
-- [ ] `bash ./scripts/test-local.bash`
-- [ ] Relevant regression tests from `contributing.md`
+- [ ] `bash ./scripts/test-local.bash` (or state why it was not run)
+- [ ] Relevant regression tests from `contributing.md` (or state why none apply)
 
 ## Checklist
 
-- [ ] Documentation is updated for user-visible changes.
-- [ ] Tests cover the behavior change, or this change does not require tests.
+- [ ] Documentation is updated for user-visible changes, or no documentation change is needed.
+- [ ] Tests cover the behavior change, or no tests are needed.
 - [ ] I checked the diff for unrelated changes.

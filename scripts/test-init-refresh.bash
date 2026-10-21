@@ -19,6 +19,12 @@ if [[ "$*" == "which asdf-extras" ]]; then
 		exit 4
 	fi
 	cat "$ASDF_REFRESH_TEST_DIR/selected"
+elif [[ "$*" == "completion bash" ]]; then
+	printf '_test_native_complete() { COMPREPLY=(); }\ncomplete -F _test_native_complete asdf\n'
+elif [[ "$*" == "completion zsh" ]]; then
+	printf 'return 0\n'
+elif [[ "$*" == "completion fish" ]]; then
+	printf 'complete -c asdf -f\n'
 else
 	printf 'native %s\n' "$*" >>"$ASDF_REFRESH_TEST_DIR/log"
 fi

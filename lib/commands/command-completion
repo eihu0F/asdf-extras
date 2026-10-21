@@ -10,12 +10,36 @@ extras_bin="${plugin_dir}/libexec/asdf-extras"
 source "${plugin_dir}/lib/commands/common.bash"
 
 main() {
-	extras_need_args 1 "$#" "asdf-extras completion <bash|zsh|fish|elvish|nushell>"
-
-	local shell_name="$1"
+	local shell_name="" arg include_asdf=0
+	for arg in "$@"; do
+		case "$arg" in
+		--asdf) include_asdf=1 ;;
+		-*) extras_fail "unknown completion option: $arg" ;;
+		*)
+			[[ -z "$shell_name" ]] || extras_fail "completion accepts only one shell"
+			shell_name="$arg"
+			;;
+		esac
+	done
+	[[ -n "$shell_name" ]] || extras_fail "usage: asdf-extras completion [--asdf] <bash|zsh|fish|elvish|nushell>"
 
 	case "$shell_name" in
-	bash | zsh | fish | elvish | nushell)
+	bash | zsh)
+		printf 'ASDF_EXTRAS_COMPLETION_HELPER=%q\n' "${plugin_dir}/lib/commands/completion-candidates.bash"
+		printf 'source %q\n' "${plugin_dir}/lib/completion/asdf-extras.${shell_name}"
+		if ((include_asdf)); then
+			printf 'source %q\n' "${plugin_dir}/lib/completion/asdf.${shell_name}"
+		fi
+		;;
+	fish)
+		printf "set -gx ASDF_EXTRAS_COMPLETION_HELPER '%s'\n" "${plugin_dir}/lib/commands/completion-candidates.bash"
+		printf "source '%s'\n" "${plugin_dir}/lib/completion/asdf-extras.fish"
+		if ((include_asdf)); then
+			printf "source '%s'\n" "${plugin_dir}/lib/completion/asdf.fish"
+		fi
+		;;
+	elvish | nushell)
+		((include_asdf == 0)) || extras_fail "--asdf completion mode is not yet supported for $shell_name"
 		command asdf completion "$shell_name"
 		printf "\n# asdf-extras init overlay\n"
 		"$extras_bin" init "$shell_name"

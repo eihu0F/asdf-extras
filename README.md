@@ -228,6 +228,8 @@ as an `asdf latest` prefix. Prefix defaults are configured separately with
 `ASDF_EXTRAS_UPDATE_DEFAULT_LATEST_PREFIX` and
 `ASDF_EXTRAS_UPDATE_DEFAULT_LATEST_PREFIX_<PLUGIN>`. If the prefix is omitted,
 `asdf latest <plugin>` is used without a prefix.
+You can also control this mode per plugin with
+`ASDF_EXTRAS_UPDATE_USE_LATEST_<PLUGIN>` (nonzero enables, `0` disables).
 A target version argument requires tool version updates. Scope options have no
 effect when tool version updates are not selected.
 

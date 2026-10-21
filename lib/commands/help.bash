@@ -71,6 +71,7 @@ Update targets:
   (default: latest). ASDF_EXTRAS_UPDATE_DEFAULT_VERSION_<PLUGIN> overrides it.
   <PLUGIN> uses uppercase plugin name with non-alnum converted to _.
   With --use-latest (or ASDF_EXTRAS_UPDATE_USE_LATEST), value is a latest prefix.
+  ASDF_EXTRAS_UPDATE_USE_LATEST_<PLUGIN> can enable/disable this per plugin.
   Omitted prefix uses ASDF_EXTRAS_UPDATE_DEFAULT_LATEST_PREFIX (default: empty).
   ASDF_EXTRAS_UPDATE_DEFAULT_LATEST_PREFIX_<PLUGIN> overrides it per plugin.
   Bulk updates skip plugins whose latest version cannot be resolved, with a warning.

@@ -60,18 +60,19 @@ main() {
 	local arg scope="" explicit_scope=0 file plugins plugin
 	local extras_plugin="${ASDF_EXTRAS_PLUGIN_NAME:-asdf-extras}"
 	local update_asdf=0 update_plugins=0 update_versions=0 selected=0 all=0 failed=0
-	local use_latest=0
+	local force_use_latest=0 global_use_latest=0
 	local -a positional=()
-	local plugin_env_suffix plugin_version_var plugin_prefix_var
+	local plugin_env_suffix plugin_version_var plugin_prefix_var plugin_use_latest_var
 	local implicit_version implicit_prefix candidate_version requested_version
+	local use_latest_for_plugin
 
 	if [[ "${ASDF_EXTRAS_UPDATE_USE_LATEST:-0}" != 0 ]]; then
-		use_latest=1
+		global_use_latest=1
 	fi
 	for arg in "$@"; do
 		case "$arg" in
 		--all) all=1 ;;
-		--use-latest) use_latest=1 ;;
+		--use-latest) force_use_latest=1 ;;
 		--asdf)
 			update_asdf=1
 			selected=1
@@ -154,9 +155,33 @@ main() {
 		printf '%s\n' "$implicit_prefix"
 	}
 
+	resolve_use_latest_mode() {
+		local plugin_name="$1"
+		if ((force_use_latest)); then
+			printf '1\n'
+			return 0
+		fi
+		plugin_env_suffix="$(extras_plugin_env_suffix "$plugin_name")"
+		plugin_use_latest_var="ASDF_EXTRAS_UPDATE_USE_LATEST_${plugin_env_suffix}"
+		if [[ "${!plugin_use_latest_var+x}" == x ]]; then
+			if [[ "${!plugin_use_latest_var}" != 0 ]]; then
+				printf '1\n'
+			else
+				printf '0\n'
+			fi
+			return 0
+		fi
+		if ((global_use_latest)); then
+			printf '1\n'
+		else
+			printf '0\n'
+		fi
+	}
+
 	resolve_install_target_version() {
 		local plugin_name="$1" version_value="$2"
-		if ((use_latest)); then
+		use_latest_for_plugin="$(resolve_use_latest_mode "$plugin_name")"
+		if [[ "$use_latest_for_plugin" == 1 ]]; then
 			candidate_version="$version_value"
 			if [[ -z "$candidate_version" ]]; then
 				candidate_version="$(resolve_default_latest_prefix "$plugin_name")"

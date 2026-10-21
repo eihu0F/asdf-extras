@@ -335,6 +335,29 @@ ASDF_EXTRAS_UPDATE_DEFAULT_LATEST_PREFIX=2 ASDF_EXTRAS_UPDATE_DEFAULT_LATEST_PRE
 grep -Fx 'latest test 1' "${test_dir}/log" >/dev/null || fail "plugin latest-prefix override missing"
 grep -Fx 'latest next 2' "${test_dir}/log" >/dev/null || fail "global latest-prefix missing"
 
+printf 'test 0.9\nnext 0.9\n' >"$HOME/.tool-versions"
+printf '0.9\n' >"${test_dir}/test-current"
+printf '0.9\n' >"${test_dir}/next-current"
+printf '0.9\n' >"${test_dir}/test-installed"
+printf '0.9\n' >"${test_dir}/next-installed"
+: >"${test_dir}/log"
+ASDF_EXTRAS_UPDATE_DEFAULT_VERSION=2.0 ASDF_EXTRAS_UPDATE_DEFAULT_LATEST_PREFIX=24 \
+	ASDF_EXTRAS_UPDATE_USE_LATEST_TEST=1 "$BASH" "${repo_dir}/lib/commands/command-update" --version
+grep -Fx 'latest test 24' "${test_dir}/log" >/dev/null || fail "plugin use-latest flag missing"
+grep -Fx 'install next 2.0' "${test_dir}/log" >/dev/null || fail "non-selected plugin should use version mode"
+
+printf 'test 0.9\nnext 0.9\n' >"$HOME/.tool-versions"
+printf '0.9\n' >"${test_dir}/test-current"
+printf '0.9\n' >"${test_dir}/next-current"
+printf '0.9\n' >"${test_dir}/test-installed"
+printf '0.9\n' >"${test_dir}/next-installed"
+: >"${test_dir}/log"
+ASDF_EXTRAS_UPDATE_DEFAULT_VERSION=2.0 ASDF_EXTRAS_UPDATE_DEFAULT_LATEST_PREFIX=24 \
+	ASDF_EXTRAS_UPDATE_USE_LATEST=1 ASDF_EXTRAS_UPDATE_USE_LATEST_NEXT=0 \
+	"$BASH" "${repo_dir}/lib/commands/command-update" --version
+grep -Fx 'latest test 24' "${test_dir}/log" >/dev/null || fail "global use-latest should apply to test"
+grep -Fx 'install next 2.0' "${test_dir}/log" >/dev/null || fail "plugin use-latest override should disable next"
+
 rm "${test_dir}/project/.tool-versions"
 if "$BASH" "${repo_dir}/lib/commands/command-update" --parent test >"${test_dir}/error" 2>&1; then
 	fail "missing parent accepted"

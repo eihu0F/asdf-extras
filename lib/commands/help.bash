@@ -72,6 +72,8 @@ Update targets:
   Plugins are processed sequentially, with activation verified before cleanup.
   Previously configured versions are removed only after successful installation
   and verified activation in home scope. Parent/local updates retain previous versions.
+  Home-scoped bulk tool updates process extras last to keep its runtime available.
+  ASDF_EXTRAS_PLUGIN_NAME selects its plugin name (default: asdf-extras).
   Custom asdf updater: ${ASDF_DATA_DIR:-$HOME/.asdf}/asdf-extras/update-asdf.bash
   Otherwise detect Homebrew, or update an owned standalone binary under HOME.
   Standalone updates require jq and SHA-256 verification.

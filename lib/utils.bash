@@ -111,6 +111,7 @@ install_version() {
 		chmod +x "$runtime_path/lib/commands/command-help"
 		chmod +x "$runtime_path/lib/commands/command-init"
 		chmod +x "$runtime_path/lib/commands/command-install"
+		chmod +x "$runtime_path/lib/commands/command-prune"
 		chmod +x "$runtime_path/lib/commands/command-update"
 		chmod +x "$runtime_path/lib/commands/command-version"
 

@@ -63,6 +63,9 @@ jobs:
       - name: Install command regression tests (system Bash)
         shell: /bin/bash {0}
         run: /bin/bash ./scripts/test-install.bash
+      - name: Prune command regression tests (system Bash)
+        shell: /bin/bash {0}
+        run: /bin/bash ./scripts/test-prune.bash
       - name: Update command regression tests (system Bash)
         shell: /bin/bash {0}
         run: /bin/bash ./scripts/test-update.bash

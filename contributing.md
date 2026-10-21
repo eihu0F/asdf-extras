@@ -30,6 +30,7 @@ Run install command regression tests without installing asdf:
 
 ```shell
 /bin/bash ./scripts/test-install.bash
+/bin/bash ./scripts/test-prune.bash
 /bin/bash ./scripts/test-update.bash
 /bin/bash ./scripts/test-update-asdf.bash
 /bin/bash ./scripts/test-init-refresh.bash

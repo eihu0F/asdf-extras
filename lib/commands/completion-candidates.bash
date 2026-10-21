@@ -72,6 +72,7 @@ main() {
 		case "$arg" in
 		-u | --home | -p | --parent | --local) scope="$arg" ;;
 		--all) all=1 ;;
+		--use-latest) ;;
 		--asdf | --plugin | --version) targets="$targets $arg" ;;
 		-*) ;;
 		*)
@@ -99,6 +100,9 @@ main() {
 		for arg in --asdf --plugin --version; do
 			[[ " $targets " == *" $arg "* ]] || options="$options $arg"
 		done
+		if [[ " ${*} " != *" --use-latest "* ]]; then
+			options="$options --use-latest"
+		fi
 	fi
 	if [[ "$current" == -* || -z "$current" ]]; then
 		for candidate in $options; do

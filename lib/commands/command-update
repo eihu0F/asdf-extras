@@ -60,10 +60,18 @@ main() {
 	local arg scope="" explicit_scope=0 file plugins plugin
 	local extras_plugin="${ASDF_EXTRAS_PLUGIN_NAME:-asdf-extras}"
 	local update_asdf=0 update_plugins=0 update_versions=0 selected=0 all=0 failed=0
+	local use_latest=0
 	local -a positional=()
+	local plugin_env_suffix plugin_version_var plugin_prefix_var
+	local implicit_version implicit_prefix candidate_version requested_version
+
+	if [[ "${ASDF_EXTRAS_UPDATE_USE_LATEST:-0}" != 0 ]]; then
+		use_latest=1
+	fi
 	for arg in "$@"; do
 		case "$arg" in
 		--all) all=1 ;;
+		--use-latest) use_latest=1 ;;
 		--asdf)
 			update_asdf=1
 			selected=1
@@ -97,7 +105,7 @@ main() {
 		extras_fail "--all cannot be combined with --asdf, --plugin or --version"
 	fi
 	[[ "${1:-}" != all ]] || extras_fail "use --all instead of the all positional argument"
-	[[ $# -le 2 ]] || extras_fail "usage: asdf-extras update [--all|--asdf|--plugin|--version] [--home|--parent|--local] [<plugin> [<version>]]"
+	[[ $# -le 2 ]] || extras_fail "usage: asdf-extras update [--all|--asdf|--plugin|--version] [--use-latest] [--home|--parent|--local] [<plugin> [<version>]]"
 	if ((all)); then
 		[[ $# -eq 0 ]] || extras_fail "--all does not accept a plugin or version"
 	fi
@@ -117,6 +125,59 @@ main() {
 	if ((update_plugins == 0 && update_versions == 0)) && [[ $# -gt 0 ]]; then
 		extras_fail "a plugin requires --plugin or --version"
 	fi
+
+	resolve_default_version() {
+		local plugin_name="$1"
+		plugin_env_suffix="$(extras_plugin_env_suffix "$plugin_name")"
+		plugin_version_var="ASDF_EXTRAS_UPDATE_DEFAULT_VERSION_${plugin_env_suffix}"
+		if [[ "${!plugin_version_var+x}" == x ]]; then
+			implicit_version="${!plugin_version_var}"
+		elif [[ "${ASDF_EXTRAS_UPDATE_DEFAULT_VERSION+x}" == x ]]; then
+			implicit_version="$ASDF_EXTRAS_UPDATE_DEFAULT_VERSION"
+		else
+			implicit_version=latest
+		fi
+		printf '%s\n' "$implicit_version"
+	}
+
+	resolve_default_latest_prefix() {
+		local plugin_name="$1"
+		plugin_env_suffix="$(extras_plugin_env_suffix "$plugin_name")"
+		plugin_prefix_var="ASDF_EXTRAS_UPDATE_DEFAULT_LATEST_PREFIX_${plugin_env_suffix}"
+		if [[ "${!plugin_prefix_var+x}" == x ]]; then
+			implicit_prefix="${!plugin_prefix_var}"
+		elif [[ "${ASDF_EXTRAS_UPDATE_DEFAULT_LATEST_PREFIX+x}" == x ]]; then
+			implicit_prefix="$ASDF_EXTRAS_UPDATE_DEFAULT_LATEST_PREFIX"
+		else
+			implicit_prefix=""
+		fi
+		printf '%s\n' "$implicit_prefix"
+	}
+
+	resolve_install_target_version() {
+		local plugin_name="$1" version_value="$2"
+		if ((use_latest)); then
+			candidate_version="$version_value"
+			if [[ -z "$candidate_version" ]]; then
+				candidate_version="$(resolve_default_latest_prefix "$plugin_name")"
+			fi
+			if [[ -z "$candidate_version" ]]; then
+				printf '%s\n' latest
+			else
+				printf 'latest:%s\n' "$candidate_version"
+			fi
+			return 0
+		fi
+		candidate_version="$version_value"
+		if [[ -z "$candidate_version" ]]; then
+			candidate_version="$(resolve_default_version "$plugin_name")"
+		fi
+		if [[ -z "$candidate_version" ]]; then
+			candidate_version=latest
+		fi
+		printf '%s\n' "$candidate_version"
+	}
+
 	scope="${scope:---home}"
 	# Resolve relevant scope inputs before performing any updates.
 	file=""
@@ -152,13 +213,14 @@ main() {
 	if [[ $# -eq 0 ]]; then
 		while IFS= read -r plugin; do
 			[[ -n "$plugin" ]] || continue
-			if ! update_one "$plugin" latest "$scope" "$file"; then
+			if ! update_one "$plugin" "$(resolve_install_target_version "$plugin" "")" "$scope" "$file"; then
 				printf "asdf-extras: skipped %s (update failed; see error above)\n" "$plugin" >&2
 				failed=1
 			fi
 		done <<<"$plugins"
 	else
-		if ! update_one "$1" "${2:-latest}" "$scope" "$file"; then
+		requested_version="${2-}"
+		if ! update_one "$1" "$(resolve_install_target_version "$1" "$requested_version")" "$scope" "$file"; then
 			failed=1
 		fi
 	fi

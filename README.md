@@ -191,6 +191,9 @@ asdf update --all
 # Update one plugin and use its latest version
 asdf update nodejs
 
+# Resolve latest with an explicit prefix
+asdf update --use-latest nodejs 24
+
 # Update one plugin and use a specific version
 asdf update nodejs 24.11.0
 
@@ -214,7 +217,17 @@ top-level extras version command.
 
 With no target flags, specifying a plugin or scope updates plugin definitions and
 tool versions; with no arguments, all three targets are selected. An omitted
-plugin processes the applicable plugin set; an omitted version means latest.
+plugin processes the applicable plugin set.
+A missing version is resolved from `ASDF_EXTRAS_UPDATE_DEFAULT_VERSION`
+(default: `latest`). For plugin-specific defaults, set
+`ASDF_EXTRAS_UPDATE_DEFAULT_VERSION_<PLUGIN>` where `<PLUGIN>` is the uppercase
+plugin name with non-alphanumeric characters replaced by `_`
+(for example, `ASDF_EXTRAS_UPDATE_DEFAULT_VERSION_NODEJS=24.11.0`).
+Set `ASDF_EXTRAS_UPDATE_USE_LATEST=1` or pass `--use-latest` to treat the value
+as an `asdf latest` prefix. Prefix defaults are configured separately with
+`ASDF_EXTRAS_UPDATE_DEFAULT_LATEST_PREFIX` and
+`ASDF_EXTRAS_UPDATE_DEFAULT_LATEST_PREFIX_<PLUGIN>`. If the prefix is omitted,
+`asdf latest <plugin>` is used without a prefix.
 A target version argument requires tool version updates. Scope options have no
 effect when tool version updates are not selected.
 

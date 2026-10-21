@@ -65,13 +65,13 @@ install)
 		case "$ASDF_TEST_SCENARIO" in
 		install-fails) exit 1 ;;
 		partial-install-fails)
-			printf '2.0\n' >>"$ASDF_TEST_DIR/$2-installed"
+			printf '%s\n' "$3" >>"$ASDF_TEST_DIR/$2-installed"
 			exit 1
 			;;
 		missing-install) exit 0 ;;
 		esac
 	fi
-	printf '2.0\n' >>"$ASDF_TEST_DIR/$2-installed"
+	printf '%s\n' "$3" >>"$ASDF_TEST_DIR/$2-installed"
 	;;
 set)
 	scope=--local
@@ -271,6 +271,69 @@ for args in '--home --local test' '--parent --local test' '--current test' 'all 
 	fi
 	[[ ! -s "${test_dir}/log" ]] || fail "invalid update had side effects"
 done
+
+export ASDF_TEST_SCENARIO=unresolved
+printf 'test 0.9\nnext 0.9\n' >"$HOME/.tool-versions"
+printf '0.9\n' >"${test_dir}/test-current"
+printf '0.9\n' >"${test_dir}/test-installed"
+: >"${test_dir}/log"
+if ! ASDF_EXTRAS_UPDATE_DEFAULT_VERSION=1.0 "$BASH" "${repo_dir}/lib/commands/command-update" test >"${test_dir}/output" 2>&1; then
+	fail "global implicit version fallback failed: $(cat "${test_dir}/output")"
+fi
+grep -Fx 'install test 1.0' "${test_dir}/log" >/dev/null || fail "global implicit version was not used"
+if grep -q '^latest test' "${test_dir}/log"; then
+	fail "latest resolution ran despite global implicit version"
+fi
+
+: >"${test_dir}/log"
+if ASDF_EXTRAS_UPDATE_DEFAULT_VERSION=1.0 ASDF_EXTRAS_UPDATE_DEFAULT_LATEST_PREFIX=24 ASDF_EXTRAS_UPDATE_USE_LATEST=1 "$BASH" "${repo_dir}/lib/commands/command-update" test >"${test_dir}/output" 2>&1; then
+	fail "forced latest did not propagate unresolved latest failure"
+fi
+grep -Fx 'latest test 24' "${test_dir}/log" >/dev/null || fail "forced latest did not use latest-prefix defaults"
+
+export ASDF_TEST_SCENARIO=success
+printf 'test 0.9\nnext 0.9\n' >"$HOME/.tool-versions"
+printf '0.9\n' >"${test_dir}/test-current"
+printf '0.9\n' >"${test_dir}/next-current"
+printf '0.9\n' >"${test_dir}/test-installed"
+printf '0.9\n' >"${test_dir}/next-installed"
+: >"${test_dir}/log"
+ASDF_EXTRAS_UPDATE_DEFAULT_VERSION=2.0 ASDF_EXTRAS_UPDATE_DEFAULT_VERSION_TEST=1.0 \
+	"$BASH" "${repo_dir}/lib/commands/command-update" --version
+grep -Fx 'install test 1.0' "${test_dir}/log" >/dev/null || fail "plugin implicit version override missing"
+grep -Fx 'install next 2.0' "${test_dir}/log" >/dev/null || fail "global implicit version missing"
+
+: >"${test_dir}/log"
+printf 'test 0.9\n' >"$HOME/.tool-versions"
+printf '0.9\n' >"${test_dir}/test-current"
+printf '0.9\n' >"${test_dir}/test-installed"
+ASDF_EXTRAS_UPDATE_DEFAULT_VERSION=1.0 "$BASH" "${repo_dir}/lib/commands/command-update" --use-latest test
+grep -Fx 'latest test' "${test_dir}/log" >/dev/null || fail "--use-latest should use no prefix by default"
+
+: >"${test_dir}/log"
+printf 'test 0.9\n' >"$HOME/.tool-versions"
+printf '0.9\n' >"${test_dir}/test-current"
+printf '0.9\n' >"${test_dir}/test-installed"
+"$BASH" "${repo_dir}/lib/commands/command-update" --use-latest test 24
+grep -Fx 'latest test 24' "${test_dir}/log" >/dev/null || fail "--use-latest explicit version was not used as prefix"
+
+: >"${test_dir}/log"
+printf 'test 0.9\n' >"$HOME/.tool-versions"
+printf '0.9\n' >"${test_dir}/test-current"
+printf '0.9\n' >"${test_dir}/test-installed"
+ASDF_EXTRAS_UPDATE_DEFAULT_VERSION=latest "$BASH" "${repo_dir}/lib/commands/command-update" --use-latest test
+grep -Fx 'latest test' "${test_dir}/log" >/dev/null || fail "latest implicit value should resolve without prefix"
+
+printf 'test 0.9\nnext 0.9\n' >"$HOME/.tool-versions"
+printf '0.9\n' >"${test_dir}/test-current"
+printf '0.9\n' >"${test_dir}/next-current"
+printf '0.9\n' >"${test_dir}/test-installed"
+printf '0.9\n' >"${test_dir}/next-installed"
+: >"${test_dir}/log"
+ASDF_EXTRAS_UPDATE_DEFAULT_LATEST_PREFIX=2 ASDF_EXTRAS_UPDATE_DEFAULT_LATEST_PREFIX_TEST=1 \
+	"$BASH" "${repo_dir}/lib/commands/command-update" --use-latest --version
+grep -Fx 'latest test 1' "${test_dir}/log" >/dev/null || fail "plugin latest-prefix override missing"
+grep -Fx 'latest next 2' "${test_dir}/log" >/dev/null || fail "global latest-prefix missing"
 
 rm "${test_dir}/project/.tool-versions"
 if "$BASH" "${repo_dir}/lib/commands/command-update" --parent test >"${test_dir}/error" 2>&1; then

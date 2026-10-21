@@ -39,7 +39,7 @@ asdf() {
 	if [[ "${1:-}" == "completion" ]]; then
 		shift
 		case "${1:-}" in
-		bash | zsh | fish | nushell) _asdf_extras_dispatch completion --asdf "$@" ;;
+		bash | zsh | fish | nushell | elvish) _asdf_extras_dispatch completion --asdf "$@" ;;
 		*) _asdf_extras_dispatch completion "$@" ;;
 		esac
 		return $?

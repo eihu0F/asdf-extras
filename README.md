@@ -69,6 +69,19 @@ eval "$(asdf-extras init bash)"
 
 For Zsh, use `eval "$(asdf-extras init zsh)"` instead.
 
+For Elvish 0.21.0 or newer, add the following to `rc.elv`, **after** any native
+asdf completion setup:
+
+```elvish
+var asdf~ = $nil
+eval (asdf-extras init elvish | slurp) &on-end={|ns| set asdf~ = $ns[asdf~]}
+```
+
+The `on-end` callback exposes the generated command wrapper outside `eval`.
+Completion needs the interactive editor; see
+[Elvish setup and native coexistence](#elvish-setup-and-native-coexistence)
+for native-loading requirements.
+
 For Nushell 0.116.1 or newer, generate a file and source it from `config.nu`:
 
 ```nu
@@ -346,13 +359,12 @@ asdf-extras install nodejs 24.11.0
 asdf-extras completion bash
 ```
 
-For Bash, Zsh, Fish, and Nushell, normal `asdf-extras init <shell>` already enables
+For all supported shells, normal `asdf-extras init <shell>` already enables
 completion for both `asdf` and `asdf-extras`: no separate completion file or
 additional startup command is needed.
 After initialization, `asdf completion <shell>` routes to this command as well.
-For Bash/Zsh/Fish/Nushell requests, the initialized wrapper automatically adds `--asdf`
-to include the `asdf` overlay. Elvish requests are forwarded without
-that option to retain their legacy output.
+The initialized wrapper automatically adds `--asdf` to include the `asdf`
+overlay.
 
 Without init, load completion for `asdf-extras` alone:
 
@@ -371,6 +383,11 @@ eval "$(asdf-extras completion zsh)"
 asdf-extras completion fish | source
 ```
 
+```elvish
+# Elvish (interactive shell)
+eval (asdf-extras completion elvish | slurp)
+```
+
 These commands register completion for `asdf-extras` without installing command
 wrappers, loading native asdf completion, or changing its existing registration.
 They complete extras subcommands, shell names, scopes, update targets, plugins,
@@ -379,9 +396,45 @@ and versions. Repeated loading does not duplicate registrations.
 Use `asdf-extras completion --asdf <shell>` to register both `asdf-extras`
 completion and the `asdf` overlay without installing command wrappers.
 The default, with no `--asdf`, registers only `asdf-extras` completion.
-Normal init uses `--asdf` mode automatically. This mode is supported for Bash,
-Zsh, Fish, and Nushell; Elvish retains its legacy completion output pending
-the follow-up integration below.
+Normal init uses `--asdf` mode automatically. This mode is supported for all five
+shells.
+
+### Elvish setup and native coexistence
+
+Completion requires **Elvish 0.21.0 or newer** and its interactive editor.
+Standalone completion uses `eval (asdf-extras completion elvish | slurp)` and
+does not load or alter native `asdf` completion.
+For both commands' completion without command wrappers, use:
+
+```elvish
+eval (asdf-extras completion --asdf elvish | slurp)
+```
+
+Combined mode retains the function already registered in
+`$edit:completion:arg-completer[asdf]`. Load framework/native registration
+**before** extras setup. If a framework replaces it later, run extras setup again
+to capture the replacement. Repeated setup does not stack wrappers.
+
+If nothing is registered, extras evaluates `asdf completion elvish` unchanged
+and retains its registered handler or exported `arg-completer` function.
+Generation errors, empty output, compilation failures, missing handlers, and
+non-function registrations are explicit errors, not empty-result fallbacks.
+The native handler's rich candidate values and failures are preserved; scoped
+install completion removes completed scope arguments before native delegation.
+Elvish supplies decoded argument values, including quoted plugin/version names.
+
+Complete the native Elvish setup described in the
+[asdf getting-started guide](https://asdf-vm.com/guide/getting-started.html)
+before extras initialization. Native completion may depend on variables and
+helpers provided by that setup. A loading failure in an unconfigured session
+does not by itself establish an upstream defect.
+An existing registered handler retains its original setup context when extras
+delegates to it; automatic loading runs in the extras module's evaluation context
+and does not inherit variables declared in `rc.elv`.
+If automatic loading cannot resolve native prerequisites, load and register the
+native completer in its required context before extras setup.
+Standalone extras completion remains usable without native setup.
+Extras does not repair or copy upstream completion logic.
 
 ### Nushell setup and native coexistence
 
@@ -433,9 +486,7 @@ excluding incompatible update targets and positional arguments.
   Native completion is loaded only when no rules are registered.
 
 Native completion loading and candidate-query failures are reported rather than
-silently replaced with empty results. Elvish initialization still provides
-command wrappers only; its completion integration is tracked in
-[Elvish #27](https://github.com/eihu0F/asdf-extras/issues/27).
+silently replaced with empty results.
 
 # Contributing
 

@@ -13,7 +13,7 @@ def --env "asdf-extras-dispatch" [...args] {
 def --env --wrapped asdf-extras-run [...args] {
 	if (($args | length) >= 1 and ($args | get 0) == "completion") {
 		let completion_args = ($args | skip 1)
-		if (($completion_args | get --optional 0 | default "") in [bash zsh fish nushell]) {
+		if (($completion_args | get --optional 0 | default "") in [bash zsh fish nushell elvish]) {
 			asdf-extras-dispatch completion "--asdf" ...$completion_args
 		} else {
 			asdf-extras-dispatch completion ...$completion_args

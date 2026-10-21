@@ -3,8 +3,7 @@
 set -euo pipefail
 
 current_script_path=${BASH_SOURCE[0]}
-plugin_dir=$(dirname "$(dirname "$(dirname "$current_script_path")")")
-extras_bin="${plugin_dir}/libexec/asdf-extras"
+plugin_dir="$(cd "$(dirname "$current_script_path")/../.." && pwd)"
 
 # shellcheck source=./common.bash
 source "${plugin_dir}/lib/commands/common.bash"
@@ -54,10 +53,13 @@ main() {
 		fi
 		;;
 	elvish)
-		((include_asdf == 0)) || extras_fail "--asdf completion mode is not yet supported for $shell_name"
-		command asdf completion "$shell_name"
-		printf "\n# asdf-extras init overlay\n"
-		"$extras_bin" init "$shell_name"
+		local elvish_root="${plugin_dir//\'/\'\'}"
+		printf "set-env ASDF_EXTRAS_COMPLETION_HELPER '%s'\n" "${elvish_root}/lib/commands/completion-candidates.bash"
+		cat "${plugin_dir}/lib/completion/load.elv"
+		printf "asdf-extras-load-completion '%s'\n" "${elvish_root}/lib/completion/asdf-extras"
+		if ((include_asdf)); then
+			printf "asdf-extras-load-completion '%s'\n" "${elvish_root}/lib/completion/asdf"
+		fi
 		;;
 	*)
 		extras_fail "unsupported shell: $shell_name"

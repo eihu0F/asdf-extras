@@ -32,6 +32,7 @@ Run install command regression tests without installing asdf:
 /bin/bash ./scripts/test-install.bash
 /bin/bash ./scripts/test-update.bash
 /bin/bash ./scripts/test-update-asdf.bash
+/bin/bash ./scripts/test-init-refresh.bash
 ```
 
 These tests check option forwarding and argument validation, including empty-array
@@ -45,6 +46,10 @@ and shared install hooks. Install tests exercise Bash/Zsh/Fish routing when thos
 shells are available and native `asdf set` when asdf is installed.
 Self-update tests require jq and use isolated mock downloads, Homebrew and custom
 scripts; they never update the developer's asdf installation or access the network.
+Shell refresh tests exercise each available Bash/Zsh/Fish shell using isolated
+old/new runtimes, including removal of the old runtime and partial update failures.
+When Elvish or Nushell is available, they also verify reload reminders on successful
+and failed updates without suppressing update output or failures.
 
 3. Commit and push the branch.
 

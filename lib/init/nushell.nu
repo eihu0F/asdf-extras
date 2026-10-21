@@ -1,6 +1,6 @@
 # asdf-extras init overlay for nushell
 
-def "asdf-extras-dispatch" [...args] {
+def --env "asdf-extras-dispatch" [...args] {
 	let dispatcher = ($env.ASDF_EXTRAS_DISPATCHER? | default "")
 
 	if $dispatcher == "" {
@@ -10,14 +10,22 @@ def "asdf-extras-dispatch" [...args] {
 	^bash $dispatcher ...$args
 }
 
-def --wrapped asdf [...args] {
+def --env --wrapped asdf [...args] {
 	if (($args | length) >= 1 and ($args | get 0) == "completion") {
 		asdf-extras-dispatch completion ...($args | skip 1)
 		return
 	}
 
 	if (($args | length) >= 1 and ($args | get 0) == "update") {
-		asdf-extras-dispatch update ...($args | skip 1)
+		try {
+			asdf-extras-dispatch update ...($args | skip 1)
+		} catch {|err|
+			print --stderr 'asdf-extras: if asdf-extras was updated, start a new Nushell session to reload its initialization before using extras commands again.'
+			error make $err
+		}
+		let update_status = $env.LAST_EXIT_CODE
+		print --stderr 'asdf-extras: if asdf-extras was updated, start a new Nushell session to reload its initialization before using extras commands again.'
+		$env.LAST_EXIT_CODE = $update_status
 		return
 	}
 

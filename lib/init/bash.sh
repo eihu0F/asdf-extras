@@ -13,8 +13,26 @@ _asdf_extras_dispatch() {
 	command bash "$dispatcher" "$@"
 }
 
+_asdf_extras_refresh() {
+	local previous="$1" update_rc="$2" executable init_code
+	if ! executable="$(command asdf which asdf-extras)"; then
+		printf 'asdf-extras: cannot resolve updated executable; retry eval "$(asdf-extras init bash)" after fixing version selection\n' >&2
+		return 1
+	fi
+	[[ "$executable" != "$previous" ]] || return "$update_rc"
+	if ! init_code="$("$executable" init bash)" || [[ -z "$init_code" ]]; then
+		printf 'asdf-extras: cannot generate initialization; retry eval "$(asdf-extras init bash)"\n' >&2
+		return 1
+	fi
+	if ! eval "$init_code"; then
+		printf 'asdf-extras: initialization failed; retry eval "$(asdf-extras init bash)"\n' >&2
+		return 1
+	fi
+	return "$update_rc"
+}
+
 asdf() {
-	local arg
+	local arg previous update_rc
 
 	if [[ "${1:-}" == "completion" ]]; then
 		shift
@@ -24,7 +42,16 @@ asdf() {
 
 	if [[ "${1:-}" == "update" ]]; then
 		shift
-		_asdf_extras_dispatch update "$@"
+		if ! previous="$(command asdf which asdf-extras)"; then
+			printf 'asdf-extras: cannot resolve current executable before update\n' >&2
+			return 1
+		fi
+		if _asdf_extras_dispatch update "$@"; then
+			update_rc=0
+		else
+			update_rc=$?
+		fi
+		_asdf_extras_refresh "$previous" "$update_rc"
 		return $?
 	fi
 

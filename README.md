@@ -73,6 +73,26 @@ Supported shells for `init`: `bash`, `elvish`, `fish`, `nushell`, `zsh`.
 The examples above use Bash/Zsh syntax; other shells must load the generated
 initialization code using their own syntax.
 
+In Bash, Zsh, and Fish, the initialized `asdf update` wrapper reloads initialization
+from the newly selected asdf-extras executable when its path changes. This keeps
+the current shell usable after an update removes the old installed runtime.
+The wrapper resolves the new executable with `asdf which asdf-extras`, rather
+than using the old shim or dispatcher.
+
+If a bulk update reports a failure but successfully changes the selected extras
+installation, initialization is still refreshed and the update's failure status
+is preserved. If extras remains unchanged, no initialization is evaluated.
+Refresh failures report an error and return nonzero. Startup configuration files
+are never rewritten.
+
+Automatic refresh currently applies only to initialized Bash/Zsh/Fish wrappers,
+not direct `asdf-extras update` calls. Elvish and Nushell wrappers display a
+reminder after every update, including failures, to start a new shell session if
+extras changed. This reloads startup initialization without referencing a removed
+runtime. They do not automatically reload definitions in the current shell.
+The Bash/Zsh/Fish refresh reloads extras'
+initialization code; it does not reload native completion definitions by itself.
+
 ## 3. Use the extended commands
 
 After initialization, use normal `asdf` commands:
@@ -244,8 +264,9 @@ brew upgrade asdf
 EOF
 ```
 
-The updater does not edit shell startup files or refresh extras initialization
-in the current shell. Executable discovery ignores the initialized `asdf` shell
+The asdf executable updater does not edit shell startup files or refresh extras
+initialization itself; the initialized Bash/Zsh/Fish update wrapper refreshes it
+when the selected extras installation changes. Executable discovery ignores the initialized `asdf` shell
 function and uses the first executable on PATH.
 
 ## Direct invocation without init

@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.6.0](https://github.com/eihu0F/asdf-extras/compare/v0.5.1...v0.6.0) (2026-10-21)
+
+
+### Features
+
+* add native-delegating Elvish completion ([#32](https://github.com/eihu0F/asdf-extras/issues/32)) ([56f7661](https://github.com/eihu0F/asdf-extras/commit/56f766157ca100fcefec88ed4f54faf4024b6bd6))
+* add shell initialization refresh functionality ([#26](https://github.com/eihu0F/asdf-extras/issues/26)) ([fc464ac](https://github.com/eihu0F/asdf-extras/commit/fc464ac87260c7f48cd42ff80406d188640d9421))
+* add support for local installation scope ([#23](https://github.com/eihu0F/asdf-extras/issues/23)) ([bd8305c](https://github.com/eihu0F/asdf-extras/commit/bd8305cee96e236999e2694c54436990b5e19e36))
+* enhance asdf self-update functionality ([#25](https://github.com/eihu0F/asdf-extras/issues/25)) ([06a2a52](https://github.com/eihu0F/asdf-extras/commit/06a2a529bd62a03934cac87ddec5f2c1d47fd4b5))
+* enhance update command safety and testing ([#15](https://github.com/eihu0F/asdf-extras/issues/15)) ([bb0f3e7](https://github.com/eihu0F/asdf-extras/commit/bb0f3e76c5d40421c377215f0611a64ffbcc267a))
+* expose extras guidance through native asdf help ([#33](https://github.com/eihu0F/asdf-extras/issues/33)) ([8eda138](https://github.com/eihu0F/asdf-extras/commit/8eda1381f504a96f27ef16f3535c91d2108cc9a0))
+* extend completion while preserving native handlers ([#29](https://github.com/eihu0F/asdf-extras/issues/29)) ([64c50f6](https://github.com/eihu0F/asdf-extras/commit/64c50f64dac86abd85142ee630e901cd79d58f67))
+* integrate Nushell completion with native definitions ([#30](https://github.com/eihu0F/asdf-extras/issues/30)) ([8a2e86a](https://github.com/eihu0F/asdf-extras/commit/8a2e86a51287fc28aadffe160cb106313e20c8a4))
+
 ## [0.5.1](https://github.com/eihu0F/asdf-extras/compare/v0.5.0...v0.5.1) (2026-10-20)
 
 

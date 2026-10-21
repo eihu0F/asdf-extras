@@ -32,6 +32,21 @@ Requirements:
   - `test`
   - `chore`
 
+## Release Versioning Rules
+
+- This repository uses `release-please` with Conventional Commits for version bumps.
+- Releasable commit intent:
+  - `fix:` => patch bump
+  - `feat:` => minor bump
+  - `feat!:` / `fix!:` (or `BREAKING CHANGE`) => major bump
+- Non-breaking `docs`, `style`, `test`, `chore`, and `refactor` commits should not be used when the intent is to trigger a release bump.
+- Runtime release scope is limited to installed asdf-extras runtime paths:
+  - `bin/**`
+  - `lib/**`
+  - `libexec/**`
+  - `init/**`
+- Changes only outside runtime scope should use non-releasable commit types unless an intentional release is required.
+
 ## Pull Request Title Rules
 
 - PR titles must follow Conventional Commits style: `<type>: <subject>`.

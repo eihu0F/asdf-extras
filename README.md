@@ -342,7 +342,9 @@ For Bash, Zsh, and Fish, normal `asdf-extras init <shell>` already enables
 completion for both `asdf` and `asdf-extras`: no separate completion file or
 additional startup command is needed.
 After initialization, `asdf completion <shell>` routes to this command as well.
-The initialized wrapper automatically adds `--asdf` to include the `asdf` overlay.
+For Bash/Zsh/Fish requests, the initialized wrapper automatically adds `--asdf`
+to include the `asdf` overlay. Elvish/Nushell requests are forwarded without
+that option to retain their legacy output.
 
 Without init, load completion for `asdf-extras` alone:
 
@@ -379,6 +381,9 @@ The overlay adds `update`, install/update scope flags, update-target flags, and
 plugin/version candidates even when scope flags appear between arguments.
 It preserves upstream definitions and delegates ordinary commands to the existing
 native completion handler. Repeated initialization does not stack wrappers.
+Scoped install delegation retains arguments after the cursor as well as before
+it. Update completion still offers unselected scope flags after `--all`, while
+excluding incompatible update targets and positional arguments.
 
 - **Bash:** discovers the registered function using `complete -p asdf`, retaining
   its registration options. If no completion is registered, it loads native

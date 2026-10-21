@@ -24,21 +24,24 @@ main() {
 		fi
 		case "$subcommand" in
 		completion)
-			local completion_asdf=0 completion_shell=0
+			local completion_asdf=0 completion_shell=""
 			shift
 			while [[ $# -gt 1 ]]; do
 				if [[ "$1" == --asdf ]]; then
 					completion_asdf=1
 				else
-					completion_shell=1
+					completion_shell="$1"
 				fi
 				shift
 			done
-			if ((completion_asdf == 0)) && [[ --asdf == "$current"* ]]; then
+			if ((completion_asdf == 0)) && [[ "$completion_shell" != elvish && "$completion_shell" != nushell && --asdf == "$current"* ]]; then
 				printf '%s\n' --asdf
 			fi
-			if ((completion_shell == 0)); then
+			if [[ -z "$completion_shell" ]]; then
 				for candidate in bash zsh fish elvish nushell; do
+					if ((completion_asdf)) && [[ "$candidate" == elvish || "$candidate" == nushell ]]; then
+						continue
+					fi
 					[[ "$candidate" != "$current"* ]] || printf '%s\n' "$candidate"
 				done
 			fi
@@ -83,11 +86,9 @@ main() {
 		done
 	fi
 	if [[ "$current" == -* || -z "$current" ]]; then
-		if ((all == 0)); then
-			for candidate in $options; do
-				[[ "$candidate" != "$current"* ]] || printf '%s\n' "$candidate"
-			done
-		fi
+		for candidate in $options; do
+			[[ "$candidate" != "$current"* ]] || printf '%s\n' "$candidate"
+		done
 	fi
 	[[ "$current" != -* ]] || return 0
 	((all == 0)) || return 0

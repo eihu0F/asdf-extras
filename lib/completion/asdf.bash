@@ -1,6 +1,6 @@
 _asdf_extras_complete() {
 	local cur="${COMP_WORDS[COMP_CWORD]}" cmd="${COMP_WORDS[1]:-}"
-	local candidate output rc=0 i scoped=0
+	local candidate output rc=0 i scoped=0 normalized_cword="$COMP_CWORD"
 	local -a normalized=() mode=()
 	local original_cword="$COMP_CWORD"
 	COMPREPLY=()
@@ -11,21 +11,29 @@ _asdf_extras_complete() {
 		fi
 		# Strip extras flags only in a local completion context; leave the input untouched.
 		normalized=("${COMP_WORDS[0]}" install)
-		for ((i = 2; i < COMP_CWORD; i++)); do
+		for ((i = 2; i < ${#COMP_WORDS[@]}; i++)); do
 			case "${COMP_WORDS[i]}" in
-			-u | --home | -p | --parent | --local | --all | --asdf | --plugin | --version) scoped=1 ;;
+			-u | --home | -p | --parent | --local)
+				if ((i != original_cword)); then
+					scoped=1
+					((i >= original_cword)) || normalized_cword=$((normalized_cword - 1))
+					continue
+				fi
+				normalized+=("${COMP_WORDS[i]}")
+				;;
 			*) normalized+=("${COMP_WORDS[i]}") ;;
 			esac
 		done
-		normalized+=("$cur")
 		if [[ "$cmd" == install && -n "${_ASDF_EXTRAS_NATIVE_COMPLETE:-}" ]]; then
 			if ((scoped)); then
 				local -a COMP_WORDS=("${normalized[@]}")
-				local COMP_CWORD=$((${#normalized[@]} - 1))
+				local COMP_CWORD="$normalized_cword"
 				local COMP_LINE COMP_POINT
 				printf -v COMP_LINE '%q ' "${normalized[@]}"
 				COMP_LINE="${COMP_LINE% }"
-				COMP_POINT=${#COMP_LINE}
+				local prefix
+				printf -v prefix '%q ' "${normalized[@]:0:COMP_CWORD+1}"
+				COMP_POINT=$((${#prefix} - 1))
 				"$_ASDF_EXTRAS_NATIVE_COMPLETE" "${normalized[0]}" "$cur" "${normalized[COMP_CWORD - 1]}" || rc=$?
 			else
 				"$_ASDF_EXTRAS_NATIVE_COMPLETE" "$@" || rc=$?

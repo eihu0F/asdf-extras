@@ -39,7 +39,11 @@ end
 
 function asdf
 	if test (count $argv) -ge 1; and test "$argv[1]" = "completion"
-		__asdf_extras_dispatch completion --asdf $argv[2..-1]
+		if test (count $argv) -ge 2; and contains -- "$argv[2]" bash zsh fish
+			__asdf_extras_dispatch completion --asdf $argv[2..-1]
+		else
+			__asdf_extras_dispatch completion $argv[2..-1]
+		end
 		return $status
 	end
 

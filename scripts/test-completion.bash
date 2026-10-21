@@ -25,6 +25,7 @@ native_alternate_name() {
 			COMPREPLY=(native-version)
 		fi
 		printf '%s\n' "${COMP_WORDS[@]}" >"$ASDF_COMPLETION_TEST/context"
+		printf '%s\n%s\n%s\n' "$COMP_CWORD" "$COMP_LINE" "$COMP_POINT" >"$ASDF_COMPLETION_TEST/cursor"
 		;;
 	*) COMPREPLY=(native-command) ;;
 	esac
@@ -40,6 +41,9 @@ BASH
 "completion fish")
 	[[ "${ASDF_COMPLETION_FAIL:-}" != generator ]] || exit 8
 	printf "complete -c asdf -f -n '__fish_seen_subcommand_from version' -a native-command\n"
+	;;
+"completion elvish" | "completion nushell")
+	printf '# native legacy completion\n'
 	;;
 "plugin list")
 	[[ "${ASDF_COMPLETION_FAIL:-}" != plugins ]] || exit 6
@@ -87,6 +91,9 @@ fail() {
 	eval "$code"
 	[[ "$_ASDF_EXTRAS_NATIVE_COMPLETE" == native_alternate_name ]] || fail "recursive delegation"
 	[[ "$(asdf completion bash)" == "$(bash "$ASDF_COMPLETION_REPO/lib/commands/command-completion" --asdf bash)" ]] || fail "initialized completion mode"
+	for shell in elvish nushell; do
+		[[ "$(asdf completion "$shell")" == "$(bash "$ASDF_COMPLETION_REPO/lib/commands/command-completion" "$shell")" ]] || fail "legacy completion forwarding"
+	done
 	run_completion asdf ""
 	contains update
 	contains native-command
@@ -104,6 +111,14 @@ fail() {
 	contains latest
 	[[ "$(cat "$ASDF_COMPLETION_TEST/context")" == "$(printf "asdf\ninstall\nnodejs\n")" ]] || fail "normalized native context"
 	[[ "${COMP_WORDS[*]}" == "asdf install --local nodejs " && "$COMP_CWORD" == 4 ]] || fail "completion context leaked"
+	COMP_WORDS=(asdf install --local n 22.0.0 --parent)
+	COMP_CWORD=3
+	COMP_LINE="asdf install --local n 22.0.0 --parent"
+	COMP_POINT=22
+	_asdf_extras_complete asdf n --local
+	[[ "$(cat "$ASDF_COMPLETION_TEST/context")" == "$(printf "asdf\ninstall\nn\n22.0.0\n")" ]] || fail "post-cursor arguments lost"
+	[[ "$(cat "$ASDF_COMPLETION_TEST/cursor")" == "$(printf "2\nasdf install n 22.0.0\n14\n")" ]] || fail "normalized cursor"
+	[[ "$COMP_CWORD" == 3 && "$COMP_LINE" == "asdf install --local n 22.0.0 --parent" && "$COMP_POINT" == 22 ]] || fail "cursor context leaked"
 	run_completion asdf install nodejs --parent ""
 	contains native-version
 	absent --home
@@ -123,7 +138,12 @@ fail() {
 	contains --plugin
 	absent --asdf
 	run_completion asdf update --all ""
-	[[ -z "${COMPREPLY[*]-}" ]] || fail "--all accepted more targets"
+	contains --local
+	contains --home
+	absent --version
+	absent nodejs
+	run_completion asdf update --all --local ""
+	[[ -z "${COMPREPLY[*]-}" ]] || fail "--all with scope accepted more targets"
 	run_completion asdf update --version --
 	contains --plugin
 	absent --all
@@ -143,6 +163,14 @@ fail() {
 	if eval "$code"; then fail "non-function registration accepted"; fi
 	[[ "$(complete -p asdf)" == "$external_registration" ]] || fail "external registration overwritten"
 '
+
+for context in "completion --asdf n" "completion elvish --" "completion nushell --"; do
+	# shellcheck disable=SC2086
+	output="$(bash "$repo_dir/lib/commands/completion-candidates.bash" --standalone $context)"
+	[[ -z "$output" ]] || fail "unsupported completion combination: $context"
+done
+output="$(bash "$repo_dir/lib/commands/completion-candidates.bash" --standalone update --all --)"
+[[ "$output" == "$(printf '%s\n' --home --parent --local)" ]] || fail "standalone --all scopes"
 
 # shellcheck disable=SC2016
 "$BASH" -eu -c '
@@ -224,6 +252,9 @@ if command -v zsh >/dev/null; then
 		eval "$code"
 		[[ "$_ASDF_EXTRAS_NATIVE_COMPLETE" == native_framework_handler ]] || fail "framework handler lost"
 		[[ "$(asdf completion zsh)" == "$(bash "$ASDF_COMPLETION_REPO/lib/commands/command-completion" --asdf zsh)" ]] || fail "initialized completion mode"
+		for shell in elvish nushell; do
+			[[ "$(asdf completion "$shell")" == "$(bash "$ASDF_COMPLETION_REPO/lib/commands/command-completion" "$shell")" ]] || fail "legacy completion forwarding"
+		done
 		words=(asdf ""); CURRENT=2
 		_asdf_extras_complete
 		grep -qx update "$ASDF_COMPLETION_TEST/zsh-candidates"
@@ -235,6 +266,10 @@ if command -v zsh >/dev/null; then
 		_asdf_extras_complete
 		[[ "$(<"$ASDF_COMPLETION_TEST/zsh-context")" == "asdf install nodejs :4" ]] || fail "normalized native context"
 		[[ "${words[*]}" == "asdf install --parent nodejs " && "$CURRENT" == 5 ]] || fail "context leaked"
+		words=(asdf install --parent n 22.0.0 --local); CURRENT=4
+		_asdf_extras_complete
+		[[ "$(<"$ASDF_COMPLETION_TEST/zsh-context")" == "asdf install n 22.0.0:3" ]] || fail "post-cursor arguments lost"
+		[[ "${words[*]}" == "asdf install --parent n 22.0.0 --local" && "$CURRENT" == 4 ]] || fail "middle cursor context leaked"
 		words=(asdf install "" later); CURRENT=3
 		_asdf_extras_complete
 		[[ "$(<"$ASDF_COMPLETION_TEST/zsh-context")" == "asdf install  later:3" ]] || fail "ordinary context changed"
@@ -289,6 +324,11 @@ if command -v fish >/dev/null; then
 		set -l initialized (asdf completion fish)
 		set -l expected (bash "$ASDF_COMPLETION_REPO/lib/commands/command-completion" --asdf fish)
 		test "$initialized" = "$expected"; or fail "initialized completion mode"
+		for shell in elvish nushell
+			set -l actual (asdf completion $shell)
+			set -l legacy (bash "$ASDF_COMPLETION_REPO/lib/commands/command-completion" $shell)
+			test "$actual" = "$legacy"; or fail "legacy completion forwarding"
+		end
 		set -l registrations (complete -c asdf)
 		bash "$ASDF_COMPLETION_REPO/lib/commands/command-completion" fish | source
 		test (count (complete -c asdf)) -eq (count $registrations); or fail "duplicate registration"

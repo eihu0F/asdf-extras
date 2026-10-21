@@ -27,11 +27,12 @@ Subcommands:
   update [--all | --asdf --plugin --version] [scope] [<plugin> [version]]
   version
 
-Completion (Bash, Zsh and Fish):
+Completion (Bash, Zsh, Fish and Nushell):
   completion registers asdf-extras completion without enabling command wrappers.
   --asdf also registers the asdf completion overlay (without command wrappers).
   init enables wrappers and completion for both asdf and asdf-extras.
   Initialized asdf completion automatically selects --asdf mode.
+  Nushell completion requires Nushell >= 0.116.1; save the output and source it.
 
 Scopes (install and update):
   --home, -u    Home configuration (default); update removes replaced versions

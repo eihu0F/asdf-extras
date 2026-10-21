@@ -38,7 +38,22 @@ main() {
 			printf "source '%s'\n" "${plugin_dir}/lib/completion/asdf.fish"
 		fi
 		;;
-	elvish | nushell)
+	nushell)
+		local native=""
+		if ((include_asdf)); then
+			native="$(command asdf completion nushell)" || extras_fail "could not generate native Nushell completion"
+			[[ -n "$native" ]] || extras_fail "native Nushell completion is empty"
+		fi
+		printf "\$env.ASDF_EXTRAS_COMPLETION_HELPER = '%s'\n" "${plugin_dir}/lib/commands/completion-candidates.bash"
+		printf "source '%s'\n" "${plugin_dir}/lib/completion/asdf-extras.nu"
+		if ((include_asdf)); then
+			printf '%s\n' "$native"
+			printf 'alias asdf-extras-native-root = asdf\n'
+			printf 'alias asdf-extras-native-install = asdf install\n'
+			printf "source '%s'\n" "${plugin_dir}/lib/completion/asdf.nu"
+		fi
+		;;
+	elvish)
 		((include_asdf == 0)) || extras_fail "--asdf completion mode is not yet supported for $shell_name"
 		command asdf completion "$shell_name"
 		printf "\n# asdf-extras init overlay\n"

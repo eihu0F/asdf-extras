@@ -91,7 +91,8 @@ fail() {
 	eval "$code"
 	[[ "$_ASDF_EXTRAS_NATIVE_COMPLETE" == native_alternate_name ]] || fail "recursive delegation"
 	[[ "$(asdf completion bash)" == "$(bash "$ASDF_COMPLETION_REPO/lib/commands/command-completion" --asdf bash)" ]] || fail "initialized completion mode"
-	for shell in elvish nushell; do
+	[[ "$(asdf completion nushell)" == "$(bash "$ASDF_COMPLETION_REPO/lib/commands/command-completion" --asdf nushell)" ]] || fail "Nushell combined mode"
+	for shell in elvish; do
 		[[ "$(asdf completion "$shell")" == "$(bash "$ASDF_COMPLETION_REPO/lib/commands/command-completion" "$shell")" ]] || fail "legacy completion forwarding"
 	done
 	run_completion asdf ""
@@ -164,11 +165,8 @@ fail() {
 	[[ "$(complete -p asdf)" == "$external_registration" ]] || fail "external registration overwritten"
 '
 
-for context in "completion --asdf n" "completion elvish --" "completion nushell --"; do
-	# shellcheck disable=SC2086
-	output="$(bash "$repo_dir/lib/commands/completion-candidates.bash" --standalone $context)"
-	[[ -z "$output" ]] || fail "unsupported completion combination: $context"
-done
+output="$(bash "$repo_dir/lib/commands/completion-candidates.bash" --standalone completion elvish --)"
+[[ -z "$output" ]] || fail "unsupported Elvish completion combination"
 output="$(bash "$repo_dir/lib/commands/completion-candidates.bash" --standalone update --all --)"
 [[ "$output" == "$(printf '%s\n' --home --parent --local)" ]] || fail "standalone --all scopes"
 
@@ -210,7 +208,7 @@ output="$(bash "$repo_dir/lib/commands/completion-candidates.bash" --standalone 
 	[[ "$(bash "$ASDF_COMPLETION_REPO/lib/commands/command-completion" bash --asdf)" == "$code" ]] || fail "option position"
 '
 
-for args in "" "--unknown bash" "bash zsh" "--asdf" "--asdf elvish" "--asdf nushell"; do
+for args in "" "--unknown bash" "bash zsh" "--asdf" "--asdf elvish"; do
 	# Test inputs are intentionally split into command arguments.
 	# shellcheck disable=SC2086
 	if bash "$repo_dir/lib/commands/command-completion" $args >"$test_root/output" 2>"$test_root/error"; then
@@ -252,7 +250,8 @@ if command -v zsh >/dev/null; then
 		eval "$code"
 		[[ "$_ASDF_EXTRAS_NATIVE_COMPLETE" == native_framework_handler ]] || fail "framework handler lost"
 		[[ "$(asdf completion zsh)" == "$(bash "$ASDF_COMPLETION_REPO/lib/commands/command-completion" --asdf zsh)" ]] || fail "initialized completion mode"
-		for shell in elvish nushell; do
+		[[ "$(asdf completion nushell)" == "$(bash "$ASDF_COMPLETION_REPO/lib/commands/command-completion" --asdf nushell)" ]] || fail "Nushell combined mode"
+		for shell in elvish; do
 			[[ "$(asdf completion "$shell")" == "$(bash "$ASDF_COMPLETION_REPO/lib/commands/command-completion" "$shell")" ]] || fail "legacy completion forwarding"
 		done
 		words=(asdf ""); CURRENT=2
@@ -324,7 +323,10 @@ if command -v fish >/dev/null; then
 		set -l initialized (asdf completion fish)
 		set -l expected (bash "$ASDF_COMPLETION_REPO/lib/commands/command-completion" --asdf fish)
 		test "$initialized" = "$expected"; or fail "initialized completion mode"
-		for shell in elvish nushell
+		set -l nu_actual (asdf completion nushell)
+		set -l nu_expected (bash "$ASDF_COMPLETION_REPO/lib/commands/command-completion" --asdf nushell)
+		test "$nu_actual" = "$nu_expected"; or fail "Nushell combined mode"
+		for shell in elvish
 			set -l actual (asdf completion $shell)
 			set -l legacy (bash "$ASDF_COMPLETION_REPO/lib/commands/command-completion" $shell)
 			test "$actual" = "$legacy"; or fail "legacy completion forwarding"

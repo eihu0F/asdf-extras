@@ -25,6 +25,7 @@ applyTo: "**/*.{sh,bash,zsh,ksh}"
 
 - Follow the project-defined linter/formatter settings and commands.
 - Use `scripts/lint.bash` as the source of truth for shell lint/format checks.
+- Before running formatter or linter, follow `.github/skills/shell-lint/SKILL.md` to activate the exact tool versions pinned in `.tool-versions`.
 - Do not introduce style that conflicts with ShellCheck or shfmt rules used by this project.
 
 ## Change Scope

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/eihu0F/asdf-extras/compare/v0.7.0...v0.8.0) (2026-10-21)
+
+
+### Features
+
+* enhance prune command with plugin selection ([#41](https://github.com/eihu0F/asdf-extras/issues/41)) ([eff59bf](https://github.com/eihu0F/asdf-extras/commit/eff59bf80c1ac6f7991d228dc4b7fd244967bd62))
+
 ## [0.7.0](https://github.com/eihu0F/asdf-extras/compare/v0.6.2...v0.7.0) (2026-10-21)
 
 

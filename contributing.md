@@ -31,6 +31,7 @@ Run install command regression tests without installing asdf:
 ```shell
 /bin/bash ./scripts/test-install.bash
 /bin/bash ./scripts/test-update.bash
+/bin/bash ./scripts/test-update-asdf.bash
 ```
 
 These tests check option forwarding and argument validation, including empty-array
@@ -42,6 +43,8 @@ the previous version, and that bulk updates continue with subsequent plugins.
 They also cover scope selection, home-only cleanup, sequential plugin updates,
 and shared install hooks. Install tests exercise Bash/Zsh/Fish routing when those
 shells are available and native `asdf set` when asdf is installed.
+Self-update tests require jq and use isolated mock downloads, Homebrew and custom
+scripts; they never update the developer's asdf installation or access the network.
 
 3. Commit and push the branch.
 

@@ -24,7 +24,7 @@ Subcommands:
   completion <bash|zsh|fish|elvish|nushell>
   init bash
   install [--home|-u|--parent|-p|--local] <plugin> <version>
-  update [--home|-u|--parent|-p|--local] [all|<plugin> [version]]
+  update [--all | --asdf --plugin --version] [scope] [<plugin> [version]]
   version
 
 Scopes (install and update):
@@ -33,6 +33,19 @@ Scopes (install and update):
   --local       Current directory configuration; keep previous versions
   Scope options cannot be combined. Home/local files are created when needed.
   Parent scope fails if no parent configuration exists.
-  Explicitly scoped bulk updates only process plugins listed in that scope file.
-  Unscoped update processes all plugins, one plugin update/install at a time.
+  Scopes have no effect when tool versions are not being updated.
+  Explicitly scoped bulk version updates only process plugins listed in that scope file.
+
+Update targets:
+  --all         Update asdf itself, plugin definitions and tool versions
+  --asdf        Update asdf itself to the latest stable release
+  --plugin      Update plugin definitions
+  --version     Update tool versions
+  Combine target flags except --all. Use --all, not positional "all".
+  With no targets, a plugin/scope selects plugin and version updates.
+  With no arguments, update is equivalent to update --all.
+  Updates continue after failures and return nonzero if any update fails.
+  Custom asdf updater: ${ASDF_DATA_DIR:-$HOME/.asdf}/asdf-extras/update-asdf.bash
+  Otherwise detect Homebrew, or update an owned standalone binary under HOME.
+  Standalone updates require jq and SHA-256 verification.
 EOF

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.2](https://github.com/eihu0F/asdf-extras/compare/v0.6.1...v0.6.2) (2026-10-21)
+
+
+### Bug Fixes
+
+* preserve running extras runtime during bulk updates ([#36](https://github.com/eihu0F/asdf-extras/issues/36)) ([1db23f6](https://github.com/eihu0F/asdf-extras/commit/1db23f65b2f1dd03088ea404b0656ddff62889e8))
+
 ## [0.6.1](https://github.com/eihu0F/asdf-extras/compare/v0.6.0...v0.6.1) (2026-10-21)
 
 

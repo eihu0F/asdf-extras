@@ -8,6 +8,7 @@ extras_maybe_help() {
 			case "$topic" in
 			install) extras_help_install ;;
 			update) extras_help_update ;;
+			prune) extras_help_prune ;;
 			completion) extras_help_completion ;;
 			esac
 			exit 0
@@ -90,6 +91,23 @@ EOF
 	extras_help_scopes
 }
 
+extras_help_prune() {
+	cat <<'EOF'
+asdf-extras prune:
+  Remove installed versions that are not configured in the home .tool-versions.
+  Every installed plugin is checked; plugins missing from the home configuration
+  have all their installed versions removed.
+  All versions configured for a plugin are retained, including fallback versions.
+  A missing or unreadable home configuration stops pruning.
+  Uninstall failures are reported; pruning continues for remaining versions.
+  Prune uninstalls versions immediately without a confirmation prompt or dry run.
+
+Examples:
+  asdf-extras prune
+  asdf-extras prune --help
+EOF
+}
+
 extras_help_completion() {
 	cat <<'EOF'
 asdf-extras completion:
@@ -115,9 +133,13 @@ asdf-extras extensions (enabled by init):
     No arguments updates asdf, plugins and tools (--all).
   asdf install [--home|-u|--parent|-p|--local] <plugin> <version>
     Scoped install also activates the version; unscoped install stays native.
+  asdf-extras prune
+    Removes installed versions not used by the home configuration.
   asdf completion <bash|zsh|fish|elvish|nushell>
     Includes native completion and extras extensions.
-  asdf update --help / asdf install --help / asdf completion --help
+  asdf update --help / asdf install --help / asdf-extras prune --help
+    Show update, install and prune behavior and safety details.
+  asdf completion --help
     Show extras targets, scopes, defaults, safety behavior and completion modes.
 EOF
 }

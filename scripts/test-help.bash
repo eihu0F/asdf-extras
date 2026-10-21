@@ -52,7 +52,7 @@ fail() {
 for entry in "$repo_dir/libexec/asdf-extras" "$repo_dir/lib/commands/dispatch.bash"; do
 	bash "$entry" >"$test_root/direct"
 	grep -q 'init <bash|zsh|fish|elvish|nushell>' "$test_root/direct"
-	for topic in install update completion; do
+	for topic in install update prune completion; do
 		bash "$entry" help "$topic" >"$test_root/direct"
 		bash "$entry" --help "$topic" >"$test_root/alias"
 		cmp "$test_root/direct" "$test_root/alias"
@@ -81,6 +81,10 @@ if [[ -n "$native_asdf" ]]; then
 fi
 [[ "$(bash "$repo_dir/lib/commands/completion-candidates.bash" --standalone help u)" == update ]] ||
 	fail 'standalone help topic completion missing'
+grep -Fx prune < <(bash "$repo_dir/lib/commands/completion-candidates.bash" --standalone "") >/dev/null ||
+	fail 'standalone prune completion missing'
+[[ "$(bash "$repo_dir/lib/commands/completion-candidates.bash" --standalone help p)" == prune ]] ||
+	fail 'prune help topic completion missing'
 
 run_shell() {
 	local shell="$1" request="$2" init_file

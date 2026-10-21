@@ -17,7 +17,7 @@ main() {
 	local scope="" targets="" all=0 options="" candidates="" candidate
 	if ((standalone)); then
 		if [[ $# -le 1 ]]; then
-			for candidate in completion help init install update version --help --version; do
+			for candidate in completion help init install prune update version --help --version; do
 				[[ "$candidate" != "$current"* ]] || printf '%s\n' "$candidate"
 			done
 			return 0
@@ -25,7 +25,7 @@ main() {
 		case "$subcommand" in
 		help | --help | -h)
 			[[ $# -eq 2 ]] || return 0
-			for candidate in install update completion; do
+			for candidate in install update prune completion; do
 				[[ "$candidate" != "$current"* ]] || printf '%s\n' "$candidate"
 			done
 			return 0

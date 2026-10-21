@@ -7,14 +7,16 @@
 </div>
 
 asdf-extras extends [asdf](https://asdf-vm.com) with commands for updating tools
-and installing and activating versions in one step. Initialize your shell once,
-then use the extensions through normal `asdf` commands:
+and installing, activating and pruning versions. Initialize your shell once,
+then use the extensions through normal `asdf` commands or invoke `asdf-extras`:
 
 - `asdf update`: update asdf itself and plugin definitions, install the latest tool versions,
   and activate them in your home configuration. Previous versions are removed
   only after successful installation and verified activation.
 - `asdf install -u` / `asdf install -p` / `asdf install --local`: install a
   version and activate it in your home, a parent, or the current directory's configuration.
+- `asdf-extras prune`: remove installed versions not configured for home, including
+  every version of plugins absent from the home configuration.
 - Customize extras installs with plugin-specific environment files and hooks.
 
 Other `asdf` commands retain their native behavior.
@@ -27,6 +29,7 @@ Other `asdf` commands retain their native behavior.
   - [Discover extensions through help](#discover-extensions-through-help)
   - [Update plugins and tools](#update-plugins-and-tools)
   - [Install and activate a version](#install-and-activate-a-version)
+  - [Prune unused versions](#prune-unused-versions)
 - [Advanced usage](#advanced-usage)
   - [Updating asdf itself](#updating-asdf-itself)
   - [Direct invocation without init](#direct-invocation-without-init)
@@ -160,6 +163,7 @@ native help and appends a short extras summary. `asdf update --help` describes
 extras update targets, defaults, scopes and safe cleanup.
 `asdf install --help` displays native install help,
 then explains extras scope options and activation.
+`asdf-extras prune --help` describes how home configuration controls cleanup.
 Native asdf uses `help <plugin> [version]` for plugin documentation and
 `<subcommand> --help` for command-specific help.
 All `asdf help <plugin> [version]` requests remain delegated unchanged,
@@ -168,9 +172,9 @@ before the corresponding extras guidance is appended.
 `asdf completion --help` explains standalone and combined modes and shell setup.
 Each of these subcommands also accepts `-h`, without performing its normal action.
 
-Without init, native help is unchanged. The same extras topic documentation is
+Without init, native help is unchanged. Extras topic documentation is
 available through `asdf-extras <subcommand> --help` or
-`asdf cmd asdf-extras help <topic>` for install, update and completion.
+`asdf cmd asdf-extras help <topic>`.
 Use the explicit `help <topic>` form through `asdf cmd`: asdf 0.20.2 does not
 successfully forward the `<subcommand> --help` form to the plugin.
 Explicit `asdf-extras help <topic>` is also supported.
@@ -279,6 +283,25 @@ Plain `asdf install` keeps native asdf behavior, even after initialization.
 
 Extras installs can load plugin-specific environment files and run hook functions
 before installation. See [Install-time environment hooks](#install-time-environment-hooks).
+
+## Prune unused versions
+
+```shell
+asdf-extras prune
+```
+
+Prune compares all installed plugins and versions with the home configuration
+file (`.tool-versions` by default, or
+`ASDF_DEFAULT_TOOL_VERSIONS_FILENAME` when set) and uninstalls versions not
+listed there. Every version configured for a plugin is retained, including
+fallback versions. Plugins absent from the home configuration have all installed
+versions removed.
+This can remove versions still referenced by project configurations. Ensure the
+home file contains every version you want to keep before running prune. If the
+home configuration is missing or unreadable, prune stops without uninstalling
+anything. Uninstall failures are reported and the command continues pruning
+other versions, then returns a nonzero status. Prune uninstalls immediately;
+there is no confirmation prompt or dry-run mode.
 
 # Advanced usage
 

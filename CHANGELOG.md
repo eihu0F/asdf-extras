@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.1](https://github.com/eihu0F/asdf-extras/compare/v0.9.0...v0.9.1) (2026-10-21)
+
+
+### Bug Fixes
+
+* add per-plugin use-latest update control ([#49](https://github.com/eihu0F/asdf-extras/issues/49)) ([094f367](https://github.com/eihu0F/asdf-extras/commit/094f3677ed4d46909b5e888cf930af257c0695e5))
+
 ## [0.9.0](https://github.com/eihu0F/asdf-extras/compare/v0.8.1...v0.9.0) (2026-10-21)
 
 

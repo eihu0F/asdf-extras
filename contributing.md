@@ -50,6 +50,8 @@ and shared install hooks. Runtime lifecycle tests run from a disposable extras
 installation, delete it during final self-update cleanup, and verify other
 plugins finish first. They cover failed self-installation/activation, other plugin
 failures and cleanup failures with preserved nonzero status.
+They also cover custom extras plugin names, unchanged parent/local and
+plugin-only ordering, and exclusion when extras is outside the selected scope.
 Install tests exercise Bash/Zsh/Fish routing when those
 shells are available and native `asdf set` when asdf is installed.
 Self-update tests require jq and use isolated mock downloads, Homebrew and custom

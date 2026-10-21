@@ -57,7 +57,8 @@ update_one() {
 }
 
 main() {
-	local arg scope="" explicit_scope=0 file plugins plugin extras_selected=0
+	local arg scope="" explicit_scope=0 file plugins plugin
+	local extras_plugin="${ASDF_EXTRAS_PLUGIN_NAME:-asdf-extras}"
 	local update_asdf=0 update_plugins=0 update_versions=0 selected=0 all=0 failed=0
 	local -a positional=()
 	for arg in "$@"; do
@@ -130,6 +131,14 @@ main() {
 		elif [[ $# -eq 0 ]]; then
 			plugins="$(command asdf plugin list)"
 		fi
+		if [[ $# -eq 0 && "$scope" == --home ]] && ((update_versions)); then
+			# Self-update cleanup can remove scripts needed by later installs.
+			plugins="$(printf '%s\n' "$plugins" | awk -v extras="$extras_plugin" '
+				$0 == extras { self = $0; next }
+				{ print }
+				END { if (self != "") print self }
+			')"
+		fi
 	fi
 	if ((update_asdf)); then
 		if ! "$BASH" "${plugin_dir}/lib/commands/update-asdf.bash"; then
@@ -143,22 +152,11 @@ main() {
 	if [[ $# -eq 0 ]]; then
 		while IFS= read -r plugin; do
 			[[ -n "$plugin" ]] || continue
-			# Updating extras can delete scripts needed by subsequent installs.
-			if [[ "$plugin" == asdf-extras ]]; then
-				extras_selected=1
-				continue
-			fi
 			if ! update_one "$plugin" latest "$scope" "$file"; then
 				printf "asdf-extras: skipped %s (update failed; see error above)\n" "$plugin" >&2
 				failed=1
 			fi
 		done <<<"$plugins"
-		if ((extras_selected)); then
-			if ! update_one asdf-extras latest "$scope" "$file"; then
-				printf "asdf-extras: skipped asdf-extras (update failed; see error above)\n" >&2
-				failed=1
-			fi
-		fi
 	else
 		if ! update_one "$1" "${2:-latest}" "$scope" "$file"; then
 			failed=1

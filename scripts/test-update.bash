@@ -7,6 +7,7 @@ test_dir="$(mktemp -d)"
 trap 'rm -rf "$test_dir"' EXIT
 
 export ASDF_TEST_DIR="$test_dir"
+unset ASDF_EXTRAS_PLUGIN_NAME
 export HOME="${test_dir}/home"
 export ASDF_EXTRAS_INSTALL_ENV_DIR="${test_dir}/env"
 export ASDF_DATA_DIR="${test_dir}/data"
@@ -30,7 +31,7 @@ plugin)
 	fi
 	if [[ "$2" == list ]]; then
 		if [[ "${ASDF_TEST_RUNTIME_UPDATE:-0}" == 1 ]]; then
-			printf 'asdf-extras\ntest\nnext\n'
+			printf '%s\ntest\nnext\n' "${ASDF_EXTRAS_PLUGIN_NAME:-asdf-extras}"
 		else
 			printf 'test\nnext\n'
 		fi
@@ -51,7 +52,7 @@ list)
 	fi
 	;;
 install)
-	if [[ "$2" == asdf-extras && "$ASDF_TEST_SCENARIO" == extras-install-fails ]]; then
+	if [[ "$2" == "${ASDF_EXTRAS_PLUGIN_NAME:-asdf-extras}" && "$ASDF_TEST_SCENARIO" == extras-install-fails ]]; then
 		exit 1
 	fi
 	if [[ "${ASDF_TEST_RUNTIME_UPDATE:-0}" == 1 ]]; then
@@ -83,7 +84,7 @@ set)
 	esac
 	plugin="$1"
 	version="$2"
-	if [[ "$plugin" == asdf-extras && "$ASDF_TEST_SCENARIO" == extras-set-fails ]]; then
+	if [[ "$plugin" == "${ASDF_EXTRAS_PLUGIN_NAME:-asdf-extras}" && "$ASDF_TEST_SCENARIO" == extras-set-fails ]]; then
 		exit 1
 	fi
 	if [[ "$plugin" == test ]]; then
@@ -106,7 +107,7 @@ set)
 	printf '%s\n' "$version" >"$ASDF_TEST_DIR/$plugin-current"
 	;;
 uninstall)
-	if [[ "$2" == asdf-extras && "${ASDF_TEST_RUNTIME_UPDATE:-0}" == 1 ]]; then
+	if [[ "$2" == "${ASDF_EXTRAS_PLUGIN_NAME:-asdf-extras}" && "${ASDF_TEST_RUNTIME_UPDATE:-0}" == 1 ]]; then
 		[[ "$ASDF_TEST_SCENARIO" != cleanup-fails ]] || exit 1
 		rm -rf "$ASDF_TEST_DIR/runtime-old"
 	fi
@@ -373,8 +374,8 @@ for mode in --plugin --local --parent; do
 	: >"$test_dir/log"
 	"$BASH" "$test_dir/runtime-old/libexec/asdf-extras" update "$mode"
 	[[ -d "$test_dir/runtime-old" ]] || fail "$mode: old runtime unexpectedly removed"
-	[[ "$(grep '^plugin update ' "$test_dir/log" | tail -n 1)" == 'plugin update asdf-extras' ]] ||
-		fail "$mode: extras plugin update did not run last"
+	[[ "$(grep '^plugin update ' "$test_dir/log" | head -n 1)" == 'plugin update asdf-extras' ]] ||
+		fail "$mode: original plugin order changed"
 	if [[ "$mode" == --plugin ]]; then
 		if grep -q '^install ' "$test_dir/log"; then
 			fail "plugin-only update installed tools"
@@ -392,5 +393,47 @@ for mode in --plugin --local --parent; do
 	fi
 	rm -rf "$test_dir/runtime-old"
 done
+
+export ASDF_EXTRAS_PLUGIN_NAME=custom-extras
+for mode in default --version --home --local --parent --plugin custom-extras; do
+	mkdir -p "$test_dir/runtime-old"
+	cp -R "$repo_dir/lib" "$repo_dir/libexec" "$test_dir/runtime-old/"
+	printf 'custom-extras 1.0\ntest 1.0\nnext 1.0\n' >"$HOME/.tool-versions"
+	for plugin in custom-extras test next; do
+		printf '1.0\n' >"$test_dir/$plugin-installed"
+	done
+	case "$mode" in
+	--local) file="$PWD/.tool-versions" ;;
+	--parent) file="$test_dir/project/.tool-versions" ;;
+	*) file="$HOME/.tool-versions" ;;
+	esac
+	cp "$HOME/.tool-versions" "$test_dir/selected-versions"
+	cp "$test_dir/selected-versions" "$file"
+	: >"$test_dir/log"
+	if [[ "$mode" == default ]]; then
+		set --
+	else
+		set -- "$mode"
+	fi
+	"$BASH" "$test_dir/runtime-old/libexec/asdf-extras" update "$@" >"$test_dir/output" 2>&1 ||
+		fail "$mode: custom extras update failed: $(cat "$test_dir/output")"
+	case "$mode" in
+	--local | --parent | --plugin)
+		[[ -d "$test_dir/runtime-old" ]] || fail "$mode: retained runtime removed"
+		[[ "$(grep '^plugin update ' "$test_dir/log" | head -n 1)" == 'plugin update custom-extras' ]] ||
+			fail "$mode: custom name changed retained-runtime update order"
+		rm -rf "$test_dir/runtime-old"
+		;;
+	*)
+		[[ ! -d "$test_dir/runtime-old" ]] || fail "$mode: custom extras runtime not cleaned"
+		[[ "$(tail -n 1 "$test_dir/log")" == 'uninstall custom-extras 1.0' ]] ||
+			fail "$mode: custom extras update did not run last"
+		;;
+	esac
+	if [[ "$mode" != --plugin ]]; then
+		grep -Fx 'custom-extras 2.0' "$file" >/dev/null || fail "$mode: custom extras not activated"
+	fi
+done
+unset ASDF_EXTRAS_PLUGIN_NAME
 
 printf 'update regression tests: PASS\n'

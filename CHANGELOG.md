@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.0](https://github.com/eihu0F/asdf-extras/compare/v0.8.1...v0.9.0) (2026-10-21)
+
+
+### Features
+
+* enhance update command with --use-latest option ([#47](https://github.com/eihu0F/asdf-extras/issues/47)) ([5c05db4](https://github.com/eihu0F/asdf-extras/commit/5c05db47e69c3e68b479aad7466f0fd01464cb0a))
+
 ## [0.8.0](https://github.com/eihu0F/asdf-extras/compare/v0.7.0...v0.8.0) (2026-10-21)
 
 

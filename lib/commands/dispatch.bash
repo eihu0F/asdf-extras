@@ -5,11 +5,15 @@ set -euo pipefail
 current_script_path=${BASH_SOURCE[0]}
 commands_dir=$(dirname "$current_script_path")
 
-subcommand="${1:-help}"
+subcommand="${1:-}"
 case "$subcommand" in
-"" | "-h" | "--help" | "help")
+"")
 	subcommand="help"
 	set --
+	;;
+"-h" | "--help" | "help")
+	subcommand="help"
+	shift
 	;;
 "-v" | "--version")
 	subcommand="version"

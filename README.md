@@ -24,6 +24,7 @@ Other `asdf` commands retain their native behavior.
 - [Dependencies](#dependencies)
 - [Quick start](#quick-start)
 - [Commands](#commands)
+  - [Discover extensions through help](#discover-extensions-through-help)
   - [Update plugins and tools](#update-plugins-and-tools)
   - [Install and activate a version](#install-and-activate-a-version)
 - [Advanced usage](#advanced-usage)
@@ -144,6 +145,32 @@ without shell initialization are covered under [Advanced usage](#advanced-usage)
 # Commands
 
 The examples in this section assume shell initialization is enabled.
+
+## Discover extensions through help
+
+```shell
+asdf help
+asdf help update
+asdf help install
+```
+
+With init enabled in Bash, Zsh, Fish, Elvish or Nushell, `asdf help` preserves
+native help and appends a short extras summary. `asdf help update` describes
+extras update targets, defaults, scopes and safe cleanup.
+`asdf help install` displays native general help (including install usage),
+then explains extras scope options and activation.
+Native asdf uses `help <plugin> [version]` for plugin documentation rather than
+built-in command-specific help; init adds the exact `help install` and
+`help update` forms. Other help requests, including plugin/version arguments,
+remain delegated unchanged, with native failures preserved. Native help must
+succeed before any extras summary or install guidance is appended.
+To access plugin help for a plugin named `install` or `update`, bypass the
+wrapper using your shell's external-command syntax (for example,
+`command asdf help install` in Bash/Zsh/Fish).
+
+Without init, native help is unchanged. The same extras topic documentation is
+available through `asdf-extras help install`, `asdf-extras help update`, or
+`asdf cmd asdf-extras help <topic>`. Plain `asdf-extras help` includes both topics.
 
 ## Update plugins and tools
 

@@ -33,6 +33,7 @@ Run install command regression tests without installing asdf:
 /bin/bash ./scripts/test-update.bash
 /bin/bash ./scripts/test-update-asdf.bash
 /bin/bash ./scripts/test-init-refresh.bash
+/bin/bash ./scripts/test-help.bash
 /bin/bash ./scripts/test-completion.bash
 /bin/bash ./scripts/test-completion-elvish.bash
 /bin/bash ./scripts/test-completion-nushell.bash
@@ -53,6 +54,11 @@ Shell refresh tests exercise each available Bash/Zsh/Fish shell using isolated
 old/new runtimes, including removal of the old runtime and partial update failures.
 When Elvish or Nushell is available, they also verify reload reminders on successful
 and failed updates without suppressing update output or failures.
+Help tests exercise all available init shells, including Nushell multiword
+command routing. They verify native help preservation, extras topics, plugin
+delegation, native failure statuses, repeated initialization and standalone/plugin
+help consistency. Elvish failures are compared against the shell's native
+external-command failure behavior rather than assuming a process exit code.
 Completion tests verify native handler discovery and registration preservation,
 repeated initialization, scope/target argument positions, and explicit failures.
 They also verify that standalone completion registers `asdf-extras` without

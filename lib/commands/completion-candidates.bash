@@ -23,6 +23,13 @@ main() {
 			return 0
 		fi
 		case "$subcommand" in
+		help | --help | -h)
+			[[ $# -eq 2 ]] || return 0
+			for candidate in install update; do
+				[[ "$candidate" != "$current"* ]] || printf '%s\n' "$candidate"
+			done
+			return 0
+			;;
 		completion)
 			local completion_asdf=0 completion_shell=""
 			shift

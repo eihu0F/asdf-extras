@@ -11,6 +11,11 @@ def --env "asdf-extras-dispatch" [...args] {
 }
 
 def --env --wrapped asdf-extras-run [...args] {
+	if (($args | get --optional 0 | default "") in [help --help -h]) {
+		asdf-extras-dispatch help "--asdf" ...$args
+		return
+	}
+
 	if (($args | length) >= 1 and ($args | get 0) == "completion") {
 		let completion_args = ($args | skip 1)
 		if (($completion_args | get --optional 0 | default "") in [bash zsh fish nushell elvish]) {

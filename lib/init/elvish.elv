@@ -15,6 +15,11 @@ fn asdf {|@args|
 		return
 	}
 
+	if (has-value [help --help -h] $args[0]) {
+		asdf-extras-dispatch help --asdf $@args
+		return
+	}
+
 	if (eq $args[0] completion) {
 		if (and (> (count $args) 1) (has-value [bash zsh fish nushell elvish] $args[1])) {
 			asdf-extras-dispatch completion --asdf (all $args[1..])

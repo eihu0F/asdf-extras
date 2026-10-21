@@ -36,6 +36,13 @@ _asdf_extras_refresh() {
 asdf() {
 	local arg previous update_rc
 
+	case "${1:-}" in
+	help | --help | -h)
+		_asdf_extras_dispatch help --asdf "$@"
+		return $?
+		;;
+	esac
+
 	if [[ "${1:-}" == "completion" ]]; then
 		shift
 		case "${1:-}" in

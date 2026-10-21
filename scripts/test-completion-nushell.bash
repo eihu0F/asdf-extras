@@ -120,6 +120,23 @@ print "Nushell completion tests: PASS"
 EOF
 nu --no-config-file -c "source '$test_root/standalone.nu'; if (scope commands | where name == asdf | length) != 0 { error make {msg: 'standalone installed asdf definitions'} }"
 nu --no-config-file "$test_root/test.nu"
+cat >"$test_root/failing-helper.bash" <<'EOF'
+#!/usr/bin/env bash
+printf 'candidate-query-failed\n' >&2
+exit 7
+EOF
+for line in "asdf-extras update " "asdf update " "asdf completion "; do
+	export ASDF_NU_COMPLETION_LINE="$line"
+	nu --no-config-file -c "
+		source '$test_root/init.nu'
+		\$env.ASDF_EXTRAS_COMPLETION_HELPER = '$test_root/failing-helper.bash'
+		\$env.ASDF_NU_COMPLETION_LINE | commandline complete | to nuon
+	" >"$test_root/completion-output" 2>"$test_root/completion-error"
+	if ! grep -q 'asdf-extras: completion failed: candidate-query-failed' "$test_root/completion-error"; then
+		printf 'FAIL: completion engine hid query diagnostic: %s\n' "$line" >&2
+		exit 1
+	fi
+done
 for failure in generator empty; do
 	if ASDF_NU_FAILURE="$failure" bash "$repo_dir/lib/commands/command-completion" --asdf nushell >"$test_root/output" 2>"$test_root/error"; then
 		printf 'FAIL: native completion failure suppressed: %s\n' "$failure" >&2

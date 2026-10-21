@@ -64,6 +64,8 @@ delegation, structured native output, standalone isolation, repeated setup,
 option positions, initialized routing, and native-loading/query failures.
 Quoted literal arguments and unfinished quoted prefixes are tested without
 evaluating expressions; native delegation retains the original source tokens.
+Failure tests also invoke `commandline complete` in default-config-free sessions
+and assert visible stderr diagnostics for all three Bash query paths.
 They exercise Bash 3.2-compatible behavior and each available Zsh/Fish shell;
 no real plugins are installed or updated.
 

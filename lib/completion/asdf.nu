@@ -10,7 +10,9 @@ def asdf-extras-asdf-candidates [place: record] {
 	let values = ($args | each {|word| asdf-extras-argument-value $word })
 	let query = (^bash $env.ASDF_EXTRAS_COMPLETION_HELPER ...$mode $subcommand ...$values | complete)
 	if $query.exit_code != 0 {
-		error make {msg: $"asdf-extras: completion failed: ($query.stderr | str trim)"}
+		let diagnostic = $"asdf-extras: completion failed: ($query.stderr | str trim)"
+		print --stderr $diagnostic
+		error make {msg: $diagnostic}
 	}
 	let extras = ($query.stdout | lines)
 	if $subcommand != install {
@@ -25,7 +27,9 @@ def asdf-extras-completion-candidates [place: record] {
 	let values = ($place.command | skip 1 | each {|word| asdf-extras-argument-value $word })
 	let result = (^bash $env.ASDF_EXTRAS_COMPLETION_HELPER --standalone completion ...$values | complete)
 	if $result.exit_code != 0 {
-		error make {msg: $"asdf-extras: completion failed: ($result.stderr | str trim)"}
+		let diagnostic = $"asdf-extras: completion failed: ($result.stderr | str trim)"
+		print --stderr $diagnostic
+		error make {msg: $diagnostic}
 	}
 	$result.stdout | lines
 }

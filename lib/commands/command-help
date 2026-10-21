@@ -8,6 +8,40 @@ plugin_dir=$(dirname "$(dirname "$(dirname "$current_script_path")")")
 # shellcheck source=./common.bash
 source "${plugin_dir}/lib/commands/common.bash"
 
+# shellcheck source=./help.bash
+source "${plugin_dir}/lib/commands/help.bash"
+
+if [[ "${1:-}" == --asdf ]]; then
+	shift
+	case "${1:-}" in
+	install)
+		command asdf install --help
+		printf '\n'
+		extras_help_install
+		;;
+	update) extras_help_update ;;
+	completion) extras_help_completion ;;
+	*)
+		command asdf "$@"
+		if [[ "$#" -eq 1 && ("$1" == help || "$1" == --help || "$1" == -h) ]]; then
+			extras_help_summary
+		fi
+		;;
+	esac
+	exit 0
+fi
+
+if [[ "$#" -gt 0 ]]; then
+	[[ "$#" -eq 1 ]] || extras_fail "help accepts at most one topic"
+	case "$1" in
+	install) extras_help_install ;;
+	update) extras_help_update ;;
+	completion) extras_help_completion ;;
+	*) extras_fail "unknown help topic: $1 (expected install, update or completion)" ;;
+	esac
+	exit 0
+fi
+
 version="$(extras_self_version)"
 
 printf "asdf-extras %s\n\n" "$version"
@@ -22,7 +56,8 @@ Fallback (when asdf-extras is not installed):
 
 Subcommands:
   completion [--asdf] <bash|zsh|fish|elvish|nushell>
-  init bash
+  help [install|update|completion]
+  init <bash|zsh|fish|elvish|nushell>
   install [--home|-u|--parent|-p|--local] <plugin> <version>
   update [--all | --asdf --plugin --version] [scope] [<plugin> [version]]
   version
@@ -36,25 +71,9 @@ Completion (Bash, Zsh, Fish, Elvish and Nushell):
   Elvish completion requires Elvish >= 0.21.0 in an interactive shell.
   Load existing native Elvish completion before init; see README for eval setup.
 
-Scopes (install and update):
-  --home, -u    Home configuration (default); update removes replaced versions
-  --parent, -p  Closest existing parent configuration; keep previous versions
-  --local       Current directory configuration; keep previous versions
-  Scope options cannot be combined. Home/local files are created when needed.
-  Parent scope fails if no parent configuration exists.
-  Scopes have no effect when tool versions are not being updated.
-  Explicitly scoped bulk version updates only process plugins listed in that scope file.
-
-Update targets:
-  --all         Update asdf itself, plugin definitions and tool versions
-  --asdf        Update asdf itself to the latest stable release
-  --plugin      Update plugin definitions
-  --version     Update tool versions
-  Combine target flags except --all. Use --all, not positional "all".
-  With no targets, a plugin/scope selects plugin and version updates.
-  With no arguments, update is equivalent to update --all.
-  Updates continue after failures and return nonzero if any update fails.
-  Custom asdf updater: ${ASDF_DATA_DIR:-$HOME/.asdf}/asdf-extras/update-asdf.bash
-  Otherwise detect Homebrew, or update an owned standalone binary under HOME.
-  Standalone updates require jq and SHA-256 verification.
 EOF
+extras_help_install
+printf '\n'
+extras_help_update
+printf '\n'
+extras_help_completion

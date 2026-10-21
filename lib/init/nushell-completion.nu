@@ -13,3 +13,7 @@ def --env --wrapped "asdf update" [...args: string@asdf-extras-asdf-candidates] 
 def --env --wrapped "asdf completion" [...args: string@asdf-extras-completion-candidates] {
 	asdf-extras-run ...([completion] ++ $args)
 }
+
+def --env --wrapped "asdf help" [...args] {
+	asdf-extras-run ...([help] ++ $args)
+}

@@ -30,6 +30,8 @@ jobs:
           echo "$RUNNER_TEMP/elvish-completion" >> "$GITHUB_PATH"
       - name: Elvish completion regression tests
         run: bash ./scripts/test-completion-elvish.bash
+      - name: Help routing regression tests
+        run: bash ./scripts/test-help.bash
   nushell_completion:
     name: Nushell completion
     runs-on: ubuntu-latest
@@ -46,6 +48,8 @@ jobs:
           echo "$RUNNER_TEMP/nu-completion" >> "$GITHUB_PATH"
       - name: Nushell completion regression tests
         run: bash ./scripts/test-completion-nushell.bash
+      - name: Help routing regression tests
+        run: bash ./scripts/test-help.bash
   plugin_test:
     name: asdf plugin test
     strategy:
@@ -71,6 +75,9 @@ jobs:
       - name: Completion overlay tests
         shell: /bin/bash {0}
         run: /bin/bash ./scripts/test-completion.bash
+      - name: Help routing regression tests
+        shell: /bin/bash {0}
+        run: /bin/bash ./scripts/test-help.bash
       - name: asdf_plugin_test
         uses: asdf-vm/actions/plugin-test@v4
         with:

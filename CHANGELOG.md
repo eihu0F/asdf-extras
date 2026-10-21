@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/eihu0F/asdf-extras/compare/v0.6.2...v0.7.0) (2026-10-21)
+
+
+### Features
+
+* add prune command and related documentation ([#39](https://github.com/eihu0F/asdf-extras/issues/39)) ([39649bd](https://github.com/eihu0F/asdf-extras/commit/39649bdd76d183b59c71e892d5baf2a5fc269abe))
+
 ## [0.6.2](https://github.com/eihu0F/asdf-extras/compare/v0.6.1...v0.6.2) (2026-10-21)
 
 

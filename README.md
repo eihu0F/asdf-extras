@@ -423,10 +423,17 @@ The native handler's rich candidate values and failures are preserved; scoped
 install completion removes completed scope arguments before native delegation.
 Elvish supplies decoded argument values, including quoted plugin/version names.
 
-The asdf 0.20.2 Elvish generator currently references an undeclared `$asdf_dir`
-and legacy helpers. Its output cannot load by itself in Elvish 0.21.0.
-With that upstream version, configure a working native handler before using
-combined mode or init; standalone extras completion remains usable without it.
+Complete the native Elvish setup described in the
+[asdf getting-started guide](https://asdf-vm.com/guide/getting-started.html)
+before extras initialization. Native completion may depend on variables and
+helpers provided by that setup. A loading failure in an unconfigured session
+does not by itself establish an upstream defect.
+An existing registered handler retains its original setup context when extras
+delegates to it; automatic loading runs in the extras module's evaluation context
+and does not inherit variables declared in `rc.elv`.
+If automatic loading cannot resolve native prerequisites, load and register the
+native completer in its required context before extras setup.
+Standalone extras completion remains usable without native setup.
 Extras does not repair or copy upstream completion logic.
 
 ### Nushell setup and native coexistence

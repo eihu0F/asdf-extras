@@ -8,6 +8,10 @@ plugin_dir="$(cd "$(dirname "$current_script_path")/../.." && pwd)"
 # shellcheck source=./common.bash
 source "${plugin_dir}/lib/commands/common.bash"
 
+# shellcheck source=./help.bash
+source "${plugin_dir}/lib/commands/help.bash"
+extras_maybe_help completion "$@"
+
 main() {
 	local shell_name="" arg include_asdf=0
 	for arg in "$@"; do

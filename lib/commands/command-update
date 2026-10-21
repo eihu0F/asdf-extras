@@ -8,6 +8,10 @@ plugin_dir=$(dirname "$(dirname "$(dirname "$current_script_path")")")
 # shellcheck source=./common.bash
 source "${plugin_dir}/lib/commands/common.bash"
 
+# shellcheck source=./help.bash
+source "${plugin_dir}/lib/commands/help.bash"
+extras_maybe_help update "$@"
+
 update_one() {
 	local plugin="$1" version="$2" scope="$3" file="$4"
 	local previous="" target old_version

@@ -57,7 +57,10 @@ and failed updates without suppressing update output or failures.
 Help tests exercise all available init shells, including Nushell multiword
 command routing. They verify native help preservation, extras topics, plugin
 delegation, native failure statuses, repeated initialization and standalone/plugin
-help consistency. Elvish failures are compared against the shell's native
+help consistency. Install/update/completion use `--help` and `-h`, including
+flags after other arguments, without running the command's normal actions.
+Native install-specific help is preserved, and `help install` / `help update`
+remain plugin-help requests. Elvish failures are compared against the shell's native
 external-command failure behavior rather than assuming a process exit code.
 Completion tests verify native handler discovery and registration preservation,
 repeated initialization, scope/target argument positions, and explicit failures.

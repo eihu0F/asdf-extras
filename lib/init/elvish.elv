@@ -20,6 +20,11 @@ fn asdf {|@args|
 		return
 	}
 
+	if (and (has-value [install update completion] $args[0]) (or (has-value $args --help) (has-value $args -h))) {
+		asdf-extras-dispatch help --asdf $@args
+		return
+	}
+
 	if (eq $args[0] completion) {
 		if (and (> (count $args) 1) (has-value [bash zsh fish nushell elvish] $args[1])) {
 			asdf-extras-dispatch completion --asdf (all $args[1..])

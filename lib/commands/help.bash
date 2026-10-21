@@ -1,5 +1,20 @@
 #!/usr/bin/env bash
 
+extras_maybe_help() {
+	local topic="$1" arg
+	shift
+	for arg in "$@"; do
+		if [[ "$arg" == --help || "$arg" == -h ]]; then
+			case "$topic" in
+			install) extras_help_install ;;
+			update) extras_help_update ;;
+			completion) extras_help_completion ;;
+			esac
+			exit 0
+		fi
+	done
+}
+
 extras_help_scopes() {
 	cat <<'EOF'
 Scopes (install and update):
@@ -73,6 +88,23 @@ EOF
 	extras_help_scopes
 }
 
+extras_help_completion() {
+	cat <<'EOF'
+asdf-extras completion:
+  asdf completion [--asdf] <bash|zsh|fish|elvish|nushell>
+  asdf-extras completion [--asdf] <bash|zsh|fish|elvish|nushell>
+
+  Standalone extras defaults to completion for asdf-extras only.
+  --asdf adds the native asdf overlay without installing command wrappers.
+  Initialized asdf completion automatically enables --asdf.
+  init enables command wrappers and completion for both commands.
+  Nushell requires >= 0.116.1; save generated output and source it.
+  Elvish requires >= 0.21.0 and an interactive editor.
+  Configure native completion before extras init; see README for shell setup.
+  --help, -h    Show this help without generating completion code.
+EOF
+}
+
 extras_help_summary() {
 	cat <<'EOF'
 
@@ -83,7 +115,7 @@ asdf-extras extensions (enabled by init):
     Scoped install also activates the version; unscoped install stays native.
   asdf completion <bash|zsh|fish|elvish|nushell>
     Includes native completion and extras extensions.
-  asdf help update / asdf help install
-    Show extras targets, scopes, defaults and safety behavior.
+  asdf update --help / asdf install --help / asdf completion --help
+    Show extras targets, scopes, defaults, safety behavior and completion modes.
 EOF
 }

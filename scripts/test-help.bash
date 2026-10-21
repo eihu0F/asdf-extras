@@ -26,7 +26,14 @@ help | --help | -h)
 		exit 17
 	fi
 	;;
-"help nodejs" | "help install extra")
+"install --help")
+	printf 'NATIVE INSTALL HELP\nasdf install --keep-download\n'
+	if [[ "${ASDF_HELP_FAILURE:-}" == yes ]]; then
+		printf 'native help failed\n' >&2
+		exit 17
+	fi
+	;;
+"help nodejs" | "help install" | "help update" | "help install extra")
 	printf 'NATIVE PLUGIN HELP: %s\n' "$*"
 	;;
 "help missing")
@@ -45,12 +52,17 @@ fail() {
 for entry in "$repo_dir/libexec/asdf-extras" "$repo_dir/lib/commands/dispatch.bash"; do
 	bash "$entry" >"$test_root/direct"
 	grep -q 'init <bash|zsh|fish|elvish|nushell>' "$test_root/direct"
-	for topic in install update; do
+	for topic in install update completion; do
 		bash "$entry" help "$topic" >"$test_root/direct"
 		bash "$entry" --help "$topic" >"$test_root/alias"
 		cmp "$test_root/direct" "$test_root/alias"
 		grep -q "asdf-extras $topic" "$test_root/direct"
-		grep -q -- '--parent' "$test_root/direct"
+		for flag in --help -h; do
+			bash "$entry" "$topic" "$flag" >"$test_root/alias"
+			cmp "$test_root/direct" "$test_root/alias"
+			bash "$entry" "$topic" --local nodejs "$flag" >"$test_root/alias"
+			cmp "$test_root/direct" "$test_root/alias"
+		done
 	done
 	if bash "$entry" help unknown >"$test_root/direct" 2>"$test_root/error"; then
 		fail 'unknown standalone topic accepted'
@@ -61,9 +73,11 @@ done
 if [[ -n "$native_asdf" ]]; then
 	mkdir -p "$test_root/data/plugins"
 	ln -s "$repo_dir" "$test_root/data/plugins/asdf-extras"
-	ASDF_DATA_DIR="$test_root/data" "$native_asdf" cmd asdf-extras help install >"$test_root/plugin"
-	bash "$repo_dir/libexec/asdf-extras" help install >"$test_root/direct"
-	cmp "$test_root/plugin" "$test_root/direct"
+	for topic in install update completion; do
+		ASDF_DATA_DIR="$test_root/data" "$native_asdf" cmd asdf-extras help "$topic" >"$test_root/plugin"
+		bash "$repo_dir/libexec/asdf-extras" "$topic" --help >"$test_root/direct"
+		cmp "$test_root/plugin" "$test_root/direct"
+	done
 fi
 [[ "$(bash "$repo_dir/lib/commands/completion-candidates.bash" --standalone help u)" == update ]] ||
 	fail 'standalone help topic completion missing'
@@ -123,17 +137,27 @@ for shell in bash zsh fish elvish nushell; do
 		cmp "$test_root/native" "$test_root/prefix"
 		[[ "$(grep -c 'asdf-extras extensions' "$test_root/output")" == 1 ]] || fail 'stacked help'
 	done
-	run_shell "$shell" 'asdf help install' >"$test_root/output"
-	grep -q 'NATIVE HELP' "$test_root/output"
+	run_shell "$shell" "$native_command install --help" >"$test_root/native"
+	run_shell "$shell" 'asdf install --help' >"$test_root/output"
+	grep -q 'NATIVE INSTALL HELP' "$test_root/output"
 	head -n 2 "$test_root/output" >"$test_root/prefix"
 	cmp "$test_root/native" "$test_root/prefix"
 	grep -q 'asdf-extras install extensions' "$test_root/output"
 	grep -q 'verifies activation' "$test_root/output"
-	run_shell "$shell" 'asdf help update' >"$test_root/output"
+	run_shell "$shell" 'asdf update --help' >"$test_root/output"
 	grep -q 'update --all' "$test_root/output"
 	grep -q 'cannot be resolved' "$test_root/output"
 	grep -q 'Parent/local updates retain' "$test_root/output"
-	for request in 'asdf help nodejs' 'asdf help install extra'; do
+	for topic in install update completion; do
+		run_shell "$shell" "asdf $topic --help" >"$test_root/long"
+		run_shell "$shell" "asdf $topic -h" >"$test_root/short"
+		cmp "$test_root/long" "$test_root/short"
+		run_shell "$shell" "asdf $topic --local nodejs --help" >"$test_root/position"
+		cmp "$test_root/long" "$test_root/position"
+	done
+	grep -q -- '--asdf adds' "$test_root/long"
+	grep -q 'asdf-extras only' "$test_root/long"
+	for request in 'asdf help nodejs' 'asdf help install' 'asdf help update' 'asdf help install extra'; do
 		run_shell "$shell" "$request" >"$test_root/output"
 		[[ "$(cat "$test_root/output")" == "NATIVE PLUGIN HELP: ${request#asdf }" ]] || fail 'native help changed'
 	done
@@ -151,7 +175,7 @@ for shell in bash zsh fish elvish nushell; do
 		fi
 	fi
 	grep -q 'native plugin help failed' "$test_root/error"
-	for request in 'asdf help' 'asdf help install'; do
+	for request in 'asdf help' 'asdf install --help'; do
 		if ASDF_HELP_FAILURE=yes run_shell "$shell" "$request" >"$test_root/output" 2>"$test_root/error"; then
 			fail 'native help failure suppressed'
 		else

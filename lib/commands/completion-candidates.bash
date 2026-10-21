@@ -25,7 +25,7 @@ main() {
 		case "$subcommand" in
 		help | --help | -h)
 			[[ $# -eq 2 ]] || return 0
-			for candidate in install update; do
+			for candidate in install update completion; do
 				[[ "$candidate" != "$current"* ]] || printf '%s\n' "$candidate"
 			done
 			return 0

@@ -13,18 +13,21 @@ source "${plugin_dir}/lib/commands/help.bash"
 
 if [[ "${1:-}" == --asdf ]]; then
 	shift
-	if [[ "$#" -eq 2 && "$1" == help && "$2" == update ]]; then
-		extras_help_update
-	elif [[ "$#" -eq 2 && "$1" == help && "$2" == install ]]; then
-		command asdf help
+	case "${1:-}" in
+	install)
+		command asdf install --help
 		printf '\n'
 		extras_help_install
-	else
+		;;
+	update) extras_help_update ;;
+	completion) extras_help_completion ;;
+	*)
 		command asdf "$@"
 		if [[ "$#" -eq 1 && ("$1" == help || "$1" == --help || "$1" == -h) ]]; then
 			extras_help_summary
 		fi
-	fi
+		;;
+	esac
 	exit 0
 fi
 
@@ -33,7 +36,8 @@ if [[ "$#" -gt 0 ]]; then
 	case "$1" in
 	install) extras_help_install ;;
 	update) extras_help_update ;;
-	*) extras_fail "unknown help topic: $1 (expected install or update)" ;;
+	completion) extras_help_completion ;;
+	*) extras_fail "unknown help topic: $1 (expected install, update or completion)" ;;
 	esac
 	exit 0
 fi
@@ -52,7 +56,7 @@ Fallback (when asdf-extras is not installed):
 
 Subcommands:
   completion [--asdf] <bash|zsh|fish|elvish|nushell>
-  help [install|update]
+  help [install|update|completion]
   init <bash|zsh|fish|elvish|nushell>
   install [--home|-u|--parent|-p|--local] <plugin> <version>
   update [--all | --asdf --plugin --version] [scope] [<plugin> [version]]
@@ -71,3 +75,5 @@ EOF
 extras_help_install
 printf '\n'
 extras_help_update
+printf '\n'
+extras_help_completion

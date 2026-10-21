@@ -150,27 +150,31 @@ The examples in this section assume shell initialization is enabled.
 
 ```shell
 asdf help
-asdf help update
-asdf help install
+asdf update --help
+asdf install --help
+asdf completion --help
 ```
 
 With init enabled in Bash, Zsh, Fish, Elvish or Nushell, `asdf help` preserves
-native help and appends a short extras summary. `asdf help update` describes
+native help and appends a short extras summary. `asdf update --help` describes
 extras update targets, defaults, scopes and safe cleanup.
-`asdf help install` displays native general help (including install usage),
+`asdf install --help` displays native install help,
 then explains extras scope options and activation.
-Native asdf uses `help <plugin> [version]` for plugin documentation rather than
-built-in command-specific help; init adds the exact `help install` and
-`help update` forms. Other help requests, including plugin/version arguments,
-remain delegated unchanged, with native failures preserved. Native help must
-succeed before any extras summary or install guidance is appended.
-To access plugin help for a plugin named `install` or `update`, bypass the
-wrapper using your shell's external-command syntax (for example,
-`command asdf help install` in Bash/Zsh/Fish).
+Native asdf uses `help <plugin> [version]` for plugin documentation and
+`<subcommand> --help` for command-specific help.
+All `asdf help <plugin> [version]` requests remain delegated unchanged,
+with native failures preserved. Native general/install help must succeed
+before the corresponding extras guidance is appended.
+`asdf completion --help` explains standalone and combined modes and shell setup.
+Each of these subcommands also accepts `-h`, without performing its normal action.
 
 Without init, native help is unchanged. The same extras topic documentation is
-available through `asdf-extras help install`, `asdf-extras help update`, or
-`asdf cmd asdf-extras help <topic>`. Plain `asdf-extras help` includes both topics.
+available through `asdf-extras <subcommand> --help` or
+`asdf cmd asdf-extras help <topic>` for install, update and completion.
+Use the explicit `help <topic>` form through `asdf cmd`: asdf 0.20.2 does not
+successfully forward the `<subcommand> --help` form to the plugin.
+Explicit `asdf-extras help <topic>` is also supported.
+Plain `asdf-extras help` includes all three topics.
 
 ## Update plugins and tools
 

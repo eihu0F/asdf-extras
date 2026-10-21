@@ -11,6 +11,13 @@ def --env "asdf-extras-dispatch" [...args] {
 }
 
 def --env --wrapped asdf-extras-run [...args] {
+	if (($args | get --optional 0 | default "") in [install update completion]) {
+		if ("--help" in $args or "-h" in $args) {
+			asdf-extras-dispatch help "--asdf" ...$args
+			return
+		}
+	}
+
 	if (($args | get --optional 0 | default "") in [help --help -h]) {
 		asdf-extras-dispatch help "--asdf" ...$args
 		return

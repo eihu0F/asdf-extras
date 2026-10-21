@@ -221,6 +221,9 @@ This also applies to unresolved latest versions during bulk updates.
 When both plugin and tool targets are selected, extras updates each plugin
 definition, then delegates installation
 and activation to extras install. It does not run `asdf plugin update --all`.
+Bulk updates process `asdf-extras` last when it is in the selected plugin set,
+preserving the order of other plugins. This keeps the running extras scripts
+available for other installations before its old runtime is removed.
 Install compares the version in the selected configuration with the target;
 if they match and the version is installed, no installation or setting change
 is needed. Otherwise it installs the target and writes the selected configuration,

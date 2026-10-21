@@ -556,6 +556,8 @@ silently replaced with empty results.
 # Contributing
 
 Contributions of any kind welcome! See the [contributing guide](contributing.md).
+Please follow the [Code of Conduct](.github/CODE_OF_CONDUCT.md). To report a
+vulnerability, see the [Security Policy](.github/SECURITY.md).
 
 [Thanks goes to these contributors](https://github.com/eihu0F/asdf-extras/graphs/contributors)!
 

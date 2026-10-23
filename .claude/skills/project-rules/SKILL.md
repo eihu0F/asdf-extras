@@ -17,6 +17,7 @@ description: "Use at the start of every task in this repository, before editing 
 - Before editing files, use the `branch-precheck-before-edit` skill.
 - For commit messages, PR titles, and opening a PR, use the `commit-and-pr` skill.
 - For releases, use the `release-by-tag-and-page` skill.
+- For creating or editing GitHub issues, use the `manage-issue` skill. Never put local environment information in public issue text.
 
 ## Shell Scripts, Formatting, and Linting
 

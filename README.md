@@ -6,36 +6,33 @@
 
 </div>
 
-asdf-extras extends [asdf](https://asdf-vm.com) with commands for updating tools
-and installing, activating and pruning versions. Initialize your shell once,
-then use the extensions through normal `asdf` commands or invoke `asdf-extras`:
-
-- `asdf update`: update asdf itself and plugin definitions, install the latest tool versions,
-  and activate them in your home configuration. Previous versions are removed
-  only after successful installation and verified activation.
-- `asdf install -u` / `asdf install -p` / `asdf install --local`: install a
-  version and activate it in your home, a parent, or the current directory's configuration.
-- `asdf-extras prune`: remove installed versions not configured for home, including
-  every version of plugins absent from the home configuration.
-- Customize extras installs with plugin-specific environment files and hooks.
-
+asdf-extras adds tool updates, install-and-activate commands, and version cleanup
+to [asdf](https://asdf-vm.com). Initialize your shell once, then use
+`asdf update` to update asdf, plugin definitions, and tools, or
+`asdf install --local nodejs latest` to install and activate a project version.
 Other `asdf` commands retain their native behavior.
 
 # Contents
 
 - [Dependencies](#dependencies)
 - [Quick start](#quick-start)
-- [Commands](#commands)
-  - [Discover extensions through help](#discover-extensions-through-help)
+- [Usage](#usage)
   - [Update plugins and tools](#update-plugins-and-tools)
   - [Install and activate a version](#install-and-activate-a-version)
   - [Prune unused versions](#prune-unused-versions)
+  - [Discover extensions through help](#discover-extensions-through-help)
+- [Reference](#reference)
+  - [Command names and terminology](#command-names-and-terminology)
+  - [Update options and defaults](#update-options-and-defaults)
+  - [Update environment variables](#update-environment-variables)
+  - [Scopes and version cleanup](#scopes-and-version-cleanup)
+  - [Install-time environment hooks](#install-time-environment-hooks)
+- [Shell support](#shell-support)
 - [Advanced usage](#advanced-usage)
   - [Updating asdf itself](#updating-asdf-itself)
   - [Direct invocation without init](#direct-invocation-without-init)
-  - [Install-time environment hooks](#install-time-environment-hooks)
-  - [Completion output](#completion-output)
 - [Contributing](#contributing)
+- [Related projects](#related-projects)
 - [License](#license)
 
 # Dependencies
@@ -47,288 +44,327 @@ Other `asdf` commands retain their native behavior.
 
 # Quick start
 
-## 1. Add the plugin and install asdf-extras
-
-Add the plugin using its repository URL, then install and activate the latest
-release:
+## 1. Install asdf-extras
 
 ```shell
 asdf plugin add asdf-extras https://github.com/eihu0F/asdf-extras.git
 asdf cmd asdf-extras install asdf-extras latest
 ```
 
-The plugin is not listed in the asdf plugin index, so the URL is required.
-The second command uses the plugin checkout to bootstrap installation before
-the `asdf-extras` command is available.
+The repository URL is required because the plugin is not in the asdf plugin
+index. `asdf cmd asdf-extras` runs the plugin checkout to bootstrap installation;
+afterward, `asdf-extras` runs the installed version selected by asdf.
 
 ## 2. Initialize your shell
 
-Initialize your shell to use extras features through normal `asdf` commands.
-For Bash, add this line to your shell startup configuration and run it in your
-current shell:
+Add the appropriate lines to your shell startup configuration and run them in your
+current shell, after any framework or native asdf completion setup:
 
-```shell
+```bash
+# Bash
 eval "$(asdf-extras init bash)"
+eval "$(asdf completion bash)"
 ```
 
-For Zsh, use `eval "$(asdf-extras init zsh)"` instead.
-
-For Elvish 0.21.0 or newer, add the following to `rc.elv`, **after** any native
-asdf completion setup:
-
-```elvish
-var asdf~ = $nil
-eval (asdf-extras init elvish | slurp) &on-end={|ns| set asdf~ = $ns[asdf~]}
+```zsh
+# Zsh
+eval "$(asdf-extras init zsh)"
+eval "$(asdf completion zsh)"
 ```
 
-The `on-end` callback exposes the generated command wrapper outside `eval`.
-Completion needs the interactive editor; see
-[Elvish setup and native coexistence](#elvish-setup-and-native-coexistence)
-for native-loading requirements.
+`init` enables command extensions such as `asdf update`; it does not load
+completion. `asdf completion <shell>` enables completion for both `asdf` and
+`asdf-extras`, and must come **after** `init`: after initialization, the wrapper
+routes it to combined completion, while before initialization it prints native
+asdf completion only. The shell name is required. Type `asdf update --` and
+press Tab to see completion candidates.
+For other shells and copyable completion-only examples, see the
+[shell guide](docs/shells.md).
 
-For Nushell 0.116.1 or newer, generate a file and source it from `config.nu`:
-
-```nu
-^asdf-extras init nushell | save --force ~/.asdf-extras-init.nu
-# Add this line to config.nu, then start a new session:
-source ~/.asdf-extras-init.nu
-```
-
-Supported shells for `init`: `bash`, `elvish`, `fish`, `nushell`, `zsh`.
-The examples above use Bash/Zsh syntax; other shells must load the generated
-initialization code using their own syntax.
-
-In Bash, Zsh, and Fish, the initialized `asdf update` wrapper reloads initialization
-from the newly selected asdf-extras executable when its path changes. This keeps
-the current shell usable after an update removes the old installed runtime.
-The wrapper resolves the new executable with `asdf which asdf-extras`, rather
-than using the old shim or dispatcher.
-
-If a bulk update reports a failure but successfully changes the selected extras
-installation, initialization is still refreshed and the update's failure status
-is preserved. If extras remains unchanged, no initialization is evaluated.
-Refresh failures report an error and return nonzero. Startup configuration files
-are never rewritten.
-
-Automatic refresh currently applies only to initialized Bash/Zsh/Fish wrappers,
-not direct `asdf-extras update` calls. Elvish and Nushell wrappers display a
-reminder after every update, including failures, to start a new shell session if
-extras changed. This reloads startup initialization without referencing a removed
-runtime. They do not automatically reload definitions in the current shell.
-The Bash/Zsh/Fish refresh reloads extras initialization and its completion overlay.
-Existing native completion definitions are retained.
-
-## 3. Use the extended commands
-
-After initialization, use normal `asdf` commands:
+## 3. Try an extended command
 
 ```shell
-# Update asdf itself, plugins and tools
-asdf update
-
-# Update one plugin and activate its latest version
 asdf update nodejs
-
-# Install and activate in the home configuration
-asdf install -u nodejs 24.11.0
-
-# Install and activate in a parent directory's configuration
-asdf install -p nodejs 24.11.0
 ```
 
-`asdf update` is equivalent to `asdf update --all`: it updates asdf itself as well
-as plugins and tools. If a plugin's latest version
-cannot be resolved, it is reported and skipped so other plugins can still update.
-Successful updates remove the previous version only after installation and
-verified activation; failed installation or activation retains the previous installation.
+This updates the plugin definition, installs its latest tool version, and
+activates it in the home configuration. See [Usage](#usage) for other commands
+and [Scopes and version cleanup](#scopes-and-version-cleanup) before updating
+versions shared with projects.
 
-See [Commands](#commands) for update behavior and scope details. Direct calls
-without shell initialization are covered under [Advanced usage](#advanced-usage).
+# Usage
 
-# Commands
-
-The examples in this section assume shell initialization is enabled.
-
-## Discover extensions through help
-
-```shell
-asdf help
-asdf update --help
-asdf install --help
-asdf completion --help
-```
-
-With init enabled in Bash, Zsh, Fish, Elvish or Nushell, `asdf help` preserves
-native help and appends a short extras summary. `asdf update --help` describes
-extras update targets, defaults, scopes and safe cleanup.
-`asdf install --help` displays native install help,
-then explains extras scope options and activation.
-`asdf-extras prune --help` describes how home configuration controls cleanup.
-Native asdf uses `help <plugin> [version]` for plugin documentation and
-`<subcommand> --help` for command-specific help.
-All `asdf help <plugin> [version]` requests remain delegated unchanged,
-with native failures preserved. Native general/install help must succeed
-before the corresponding extras guidance is appended.
-`asdf completion --help` explains standalone and combined modes and shell setup.
-Each of these subcommands also accepts `-h`, without performing its normal action.
-
-Without init, native help is unchanged. Extras topic documentation is
-available through `asdf-extras <subcommand> --help` or
-`asdf cmd asdf-extras help <topic>`.
-Use the explicit `help <topic>` form through `asdf cmd`: asdf 0.20.2 does not
-successfully forward the `<subcommand> --help` form to the plugin.
-Explicit `asdf-extras help <topic>` is also supported.
-Plain `asdf-extras help` includes all three topics.
+These examples assume shell initialization is enabled. Update and scoped install
+are available through `asdf`; prune is a separate `asdf-extras` command, not an
+extension of `asdf prune`.
 
 ## Update plugins and tools
 
-```shell
-# Update asdf itself, plugins and tools to the latest versions
-asdf update
-# Equivalent explicit form
-asdf update --all
+| Example | Action |
+| --- | --- |
+| `asdf update` | Update asdf itself, plugin definitions, and tools (equivalent to `asdf update --all`) |
+| `asdf update nodejs` | Update one plugin definition and activate its latest tool version |
+| `asdf update nodejs 24.11.0` | Update one plugin definition and activate a specific tool version |
+| `asdf update --use-latest nodejs 24` | Resolve and activate the latest version matching a prefix |
+| `asdf update --local` | Update plugin definitions and tools listed in the current directory's configuration |
+| `asdf update --parent nodejs` | Update one plugin definition and tool using the closest parent configuration |
+| `asdf update --plugin --version` | Update plugin definitions and tools without updating asdf itself |
 
-# Update one plugin and use its latest version
-asdf update nodejs
-
-# Resolve latest with an explicit prefix
-asdf update --use-latest nodejs 24
-
-# Update one plugin and use a specific version
-asdf update nodejs 24.11.0
-
-# Update only the tools listed in the selected project configuration
-asdf update --local
-asdf update --parent nodejs
-
-# Select update targets (these flags can be combined)
-asdf update --asdf
-asdf update --plugin
-asdf update --version nodejs
-asdf update --plugin --version
-```
-
-`--all` updates asdf itself, plugin definitions and tool versions, in that order.
-It cannot be combined with other target flags or a plugin/version argument.
-Use `--all` instead of the former positional `all`.
-`--asdf`, `--plugin`, and `--version` select those targets individually and can be
-combined. The standalone `--version` here selects tool updates; it is not the
-top-level extras version command.
-
-With no target flags, specifying a plugin or scope updates plugin definitions and
-tool versions; with no arguments, all three targets are selected. An omitted
-plugin processes the applicable plugin set.
-A missing version is resolved from `ASDF_EXTRAS_UPDATE_DEFAULT_VERSION`
-(default: `latest`). For plugin-specific defaults, set
-`ASDF_EXTRAS_UPDATE_DEFAULT_VERSION_<PLUGIN>` where `<PLUGIN>` is the uppercase
-plugin name with non-alphanumeric characters replaced by `_`
-(for example, `ASDF_EXTRAS_UPDATE_DEFAULT_VERSION_NODEJS=24.11.0`).
-Set `ASDF_EXTRAS_UPDATE_USE_LATEST=1` or pass `--use-latest` to treat the value
-as an `asdf latest` prefix. Prefix defaults are configured separately with
-`ASDF_EXTRAS_UPDATE_DEFAULT_LATEST_PREFIX` and
-`ASDF_EXTRAS_UPDATE_DEFAULT_LATEST_PREFIX_<PLUGIN>`. If the prefix is omitted,
-`asdf latest <plugin>` is used without a prefix.
-You can also control this mode per plugin with
-`ASDF_EXTRAS_UPDATE_USE_LATEST_<PLUGIN>` (nonzero enables, `0` disables).
-A target version argument requires tool version updates. Scope options have no
-effect when tool version updates are not selected.
-
-Failures are reported and remaining updates continue, including when updating
-asdf itself fails. The command returns nonzero if any requested update fails.
-This also applies to unresolved latest versions during bulk updates.
-
-When both plugin and tool targets are selected, extras updates each plugin
-definition, then delegates installation
-and activation to extras install. It does not run `asdf plugin update --all`.
-Home-scoped bulk tool updates process the extras plugin last when it is in the
-selected plugin set, preserving the order of other plugins. This keeps the
-running extras scripts available before its old runtime is removed.
-Set `ASDF_EXTRAS_PLUGIN_NAME` if it is registered under another name
-(default: `asdf-extras`). Parent/local updates retain old runtimes, and
-plugin-only updates do not remove them, so those updates keep the original order.
-Install compares the version in the selected configuration with the target;
-if they match and the version is installed, no installation or setting change
-is needed. Otherwise it installs the target and writes the selected configuration,
-even when another configuration or environment variable shadows it.
-
-Both install and update accept these mutually exclusive scope options in any
-argument position:
-
-| Scope | Configuration | Previous versions after update |
-| --- | --- | --- |
-| `-u` / `--home` (default) | Home directory | Removed after success |
-| `-p` / `--parent` | Closest existing configuration in a parent directory | Retained |
-| `--local` | Current directory | Retained |
-
-Home and local configuration files are created when needed. Parent scope fails
-before installation if no parent configuration file exists. Files are named
-`.tool-versions`, or use `ASDF_DEFAULT_TOOL_VERSIONS_FILENAME` when set.
-`--current` is not a scope option.
-
-With an explicit scope and tool version updates selected, an omitted plugin only updates plugins
-listed in that configuration file; a missing file is an error for bulk updates.
-Without a scope option, bulk updates retain the existing behavior of processing
-all installed plugins and writing the home configuration.
-
-In home scope, the previous configured versions are uninstalled only after installation succeeds, the target
-is confirmed installed, and activation succeeds and is verified. If installation
-fails, activation is not attempted. If activation fails or cannot be verified,
-the previous installation is retained. Parent and local updates never remove
-previous versions. Home cleanup can affect projects that still reference an old
-version; use a project scope when those versions must be retained.
+See [Update options and defaults](#update-options-and-defaults) for target
+selection, failure handling, and environment settings.
 
 ## Install and activate a version
 
 ```shell
-asdf install -u nodejs 24.11.0
-asdf install -p nodejs 24.11.0
 asdf install --local nodejs latest
 ```
 
-- `-u` / `--home`: install, then activate with `asdf set --home`.
-- `-p` / `--parent`: install, then activate with `asdf set --parent`.
-- `--local`: install, then write the current directory's configuration with `asdf set`.
-- Scope options cannot be combined. See the scope rules above.
+Use a [scope option](#scopes-and-version-cleanup) to install through asdf-extras
+and activate the version in the selected configuration. `latest` and
+`latest:<prefix>` are resolved before comparison and installation.
 
-`latest` and `latest:<prefix>` are resolved before comparison and installation.
-Install never removes previous versions; home-scoped update performs cleanup.
-
-Only installs with one of these scope options are routed through extras.
+Only installs with a scope option are routed through asdf-extras.
 Plain `asdf install` keeps native asdf behavior, even after initialization.
-
-Extras installs can load plugin-specific environment files and run hook functions
-before installation. See [Install-time environment hooks](#install-time-environment-hooks).
+asdf-extras installs can also load environment files and run
+[install-time hooks](#install-time-environment-hooks).
 
 ## Prune unused versions
 
+> [!WARNING]
+> Prune uninstalls versions immediately, without a confirmation prompt or dry-run
+> mode. It uses only the home configuration, so it can remove versions still
+> referenced by projects. Ensure the home file lists every version you want to
+> keep. A plugin absent from that file has **all** its installed versions removed.
+
 ```shell
 asdf-extras prune
-# Prune only selected plugins
+# Prune only one plugin
 asdf-extras prune nodejs
 ```
 
-With no plugin argument, prune checks all installed plugins. When a plugin name
-is provided, it checks only that plugin. It compares installed versions with the
-home configuration file (`.tool-versions` by default, or
-`ASDF_DEFAULT_TOOL_VERSIONS_FILENAME` when set) and uninstalls versions not
-listed there. Every version configured for a plugin is retained, including
-fallback versions. Plugins absent from the home configuration have all installed
-versions removed.
-This can remove versions still referenced by project configurations. Ensure the
-home file contains every version you want to keep before running prune. If the
-home configuration is missing or unreadable, prune stops without uninstalling
-anything. Uninstall failures are reported and the command continues pruning
-other versions, then returns a nonzero status. Prune uninstalls immediately;
-there is no confirmation prompt or dry-run mode.
+With no plugin argument, prune checks all installed plugins. With a plugin
+argument, it checks only that plugin. It retains every version listed for the
+plugin in the home configuration, including fallback versions.
+See [Scopes and version cleanup](#scopes-and-version-cleanup) for configuration
+file naming.
+
+If the home configuration is missing or unreadable, prune stops without
+uninstalling anything. Uninstall failures are reported; pruning continues for
+other versions and returns a nonzero status.
+
+## Discover extensions through help
+
+| Command | Help shown after initialization |
+| --- | --- |
+| `asdf help` | Native help followed by a short asdf-extras summary |
+| `asdf update --help` | Update targets, defaults, scopes, and cleanup |
+| `asdf install --help` | Native install help followed by scope and activation guidance |
+| `asdf-extras prune --help` | Home-based cleanup behavior |
+| `asdf completion --help` | Completion modes and shell setup |
+
+Each subcommand also accepts `-h` without performing its normal action.
+Native general/install help must succeed before asdf-extras guidance is appended.
+Native asdf uses `help <plugin> [version]` for plugin documentation and
+`<subcommand> --help` for command-specific help. All
+`asdf help <plugin> [version]` requests are delegated unchanged, preserving failures.
+
+Without initialization, native help is unchanged. Use
+`asdf-extras <subcommand> --help`, `asdf-extras help <topic>`, or
+`asdf cmd asdf-extras help <topic>` for asdf-extras documentation.
+Through `asdf cmd`, use the explicit `help <topic>` form: asdf versions such as
+0.20.2 do not successfully forward `<subcommand> --help` to the plugin.
+Plain `asdf-extras help` includes all three command topics.
+
+# Reference
+
+## Command names and terminology
+
+| Term or command | Meaning |
+| --- | --- |
+| asdf-extras plugin / plugin checkout | The repository registered with `asdf plugin add`; contains the code used by `asdf cmd asdf-extras` |
+| Installed runtime | A released version of asdf-extras installed and selected through asdf |
+| `asdf-extras` | Runs the selected installed runtime |
+| `asdf cmd asdf-extras` | Runs the plugin checkout, including before a runtime is installed |
+| Initialized `asdf` wrapper | Shell definitions generated by `asdf-extras init <shell>`; route extended commands to the installed runtime and delegate other commands to native asdf |
+
+The two direct invocation forms provide the same subcommands but can run different
+versions of the code. Use the installed `asdf-extras` command for normal direct
+invocation and the plugin checkout for bootstrapping.
+
+## Update options and defaults
+
+### Target selection
+
+| Invocation or target option | Targets |
+| --- | --- |
+| `asdf update` with no arguments | asdf itself, plugin definitions, and tool versions |
+| `--all` | asdf itself, plugin definitions, and tool versions, in that order |
+| No target flags, with a plugin or scope | Plugin definitions and tool versions |
+| `--asdf` | asdf executable only |
+| `--plugin` | Plugin definitions only |
+| `--version` | Tool versions only |
+
+- `--asdf`, `--plugin`, and `--version` can be combined.
+- `--all` cannot be combined with other target flags or a plugin/version
+  argument. Positional `all` is not a target selector.
+- A target version argument requires tool version updates.
+- The update target `--version` is distinct from the top-level
+  `asdf-extras version` command.
+- Scope options have no effect when tool version updates are not selected.
+- An omitted plugin processes the applicable plugin set; see
+  [Scopes and version cleanup](#scopes-and-version-cleanup).
+
+### Version resolution
+
+| Mode | Explicit version argument | Omitted version argument |
+| --- | --- | --- |
+| Default | Use the requested version; resolve `latest` or `latest:<prefix>` | Use `ASDF_EXTRAS_UPDATE_DEFAULT_VERSION` (default: `latest`), with a plugin-specific override if set |
+| `--use-latest` or enabled use-latest environment setting | Treat the argument as an `asdf latest` prefix | Use the configured latest prefix; if empty, call `asdf latest <plugin>` without a prefix |
+
+See [Update environment variables](#update-environment-variables) for overrides.
+
+### Processing and failures
+
+When both plugin and tool targets are selected, asdf-extras updates each plugin
+definition, then delegates installation and activation to its install command.
+It does not run `asdf plugin update --all`.
+
+Install compares the target with the version in the selected configuration.
+If they match and the version is installed, it skips installation, configuration
+changes, and hooks. Otherwise it installs the target and writes the selected
+configuration, even when another configuration or environment variable shadows it.
+
+Failures are reported and remaining updates continue, including when updating
+asdf itself fails. Bulk updates warn and skip a plugin whose latest version
+cannot be resolved, allowing other plugins to update. The command returns
+nonzero if any requested update fails, including unresolved latest versions.
+
+Home-scoped bulk tool updates process the asdf-extras plugin last when it is in
+the selected set, preserving other plugins' order. This keeps the running runtime
+available until its replacement is installed. Parent/local and plugin-only
+updates keep the original order because they do not remove old runtimes.
+Use `ASDF_EXTRAS_PLUGIN_NAME` if the plugin is registered under another name.
+
+## Update environment variables
+
+In variable suffixes below, `<PLUGIN>` is the uppercase plugin name with
+non-alphanumeric characters replaced by `_` (for example, `NODEJS`).
+Plugin-specific settings override their global counterparts.
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `ASDF_EXTRAS_UPDATE_DEFAULT_VERSION` | `latest` | Version used when no argument is supplied and use-latest mode is disabled |
+| `ASDF_EXTRAS_UPDATE_DEFAULT_VERSION_<PLUGIN>` | Global setting | Plugin-specific default version |
+| `ASDF_EXTRAS_UPDATE_USE_LATEST` | Disabled | Enable latest-prefix resolution with a nonzero value, such as `1` |
+| `ASDF_EXTRAS_UPDATE_USE_LATEST_<PLUGIN>` | Global setting | Enable latest-prefix resolution with a nonzero value, or disable it with `0`, for one plugin |
+| `ASDF_EXTRAS_UPDATE_DEFAULT_LATEST_PREFIX` | Empty | Default prefix in use-latest mode; empty resolves latest without a prefix |
+| `ASDF_EXTRAS_UPDATE_DEFAULT_LATEST_PREFIX_<PLUGIN>` | Global setting | Plugin-specific default prefix |
+| `ASDF_EXTRAS_PLUGIN_NAME` | `asdf-extras` | Registered plugin name used to process the runtime's home-scoped bulk update last |
+
+For example, `ASDF_EXTRAS_UPDATE_DEFAULT_VERSION_NODEJS=24.11.0` selects a
+specific default version for Node.js. `--use-latest` explicitly selects
+latest-prefix resolution for an invocation.
+
+## Scopes and version cleanup
+
+Install and update accept these mutually exclusive scope options in any argument
+position. Configuration files are named `.tool-versions`, or use
+`ASDF_DEFAULT_TOOL_VERSIONS_FILENAME` when set.
+
+| Scope | Configuration and activation | Previous versions after update |
+| --- | --- | --- |
+| `-u` / `--home` (default for update and direct `asdf-extras install`) | Home directory; `asdf set --home` | Removed only after successful installation and verified activation |
+| `-p` / `--parent` | Closest existing configuration in a parent directory; `asdf set --parent` | Retained |
+| `--local` | Current directory; `asdf set` | Retained |
+
+Home and local files are created when needed. Parent scope fails before
+installation if no parent configuration exists. `--current` is not a scope option.
+Initialized `asdf install` requires an explicit scope to use asdf-extras;
+unscoped installation remains native.
+
+| Bulk tool update scope | Plugins selected |
+| --- | --- |
+| Explicit scope, no plugin argument | Only plugins listed in that configuration; a missing file is an error |
+| No scope option, no plugin argument | All installed plugins; writes the home configuration |
+
+Home-scoped update removes previous configured versions only after installation
+succeeds, the target is confirmed installed, and activation succeeds and is
+verified. Installation failure prevents activation. Failed or unverifiable
+activation retains previous installations. Install itself never removes previous
+versions; cleanup belongs to update.
+
+> [!WARNING]
+> Home-scoped update cleanup can affect projects that still reference an old
+> version. Use parent or local scope when those versions must be retained.
+
+## Install-time environment hooks
+
+Hooks apply to installs routed through asdf-extras: scoped `asdf install` after
+initialization, direct `asdf-extras install`, and the installation step of
+`update`. They do not apply to plain `asdf install`. Already-configured,
+installed versions are skipped without running hooks.
+
+| Setting | Purpose |
+| --- | --- |
+| `${ASDF_DATA_DIR:-$HOME/.asdf}/asdf-extras/install/env/<plugin>.env` | Default environment file |
+| `ASDF_EXTRAS_INSTALL_ENV_DIR` | Override the environment directory |
+| `ASDF_EXTRAS_INSTALL_ENV_FILE_<PLUGIN>` | Override the file for one plugin |
+| `ASDF_EXTRAS_INSTALL_ENV_FUNCTION_<PLUGIN>` | Hook function for one plugin |
+| `ASDF_EXTRAS_INSTALL_ENV_FUNCTION` | Global fallback hook function |
+
+`<PLUGIN>` uses the same normalization as
+[update environment variables](#update-environment-variables). An existing
+environment file is sourced before installation. If a hook function variable
+is set, the function runs as `<function> <plugin> <version>` before installation.
+The plugin-specific function takes precedence over the global fallback.
+
+```shell
+mkdir -p "${ASDF_DATA_DIR:-$HOME/.asdf}/asdf-extras/install/env"
+
+cat >"${ASDF_DATA_DIR:-$HOME/.asdf}/asdf-extras/install/env/nodejs.env" <<'EOF'
+export CC=clang
+export CXX=clang++
+
+nodejs_build_env() {
+	export PYTHON=/usr/bin/python3
+}
+EOF
+
+export ASDF_EXTRAS_INSTALL_ENV_FUNCTION_NODEJS=nodejs_build_env
+asdf-extras install nodejs 24.11.0
+```
+
+# Shell support
+
+Initialization supports Bash, Zsh, Fish, Elvish, and Nushell. It enables command
+wrappers only. Enable completion for both `asdf` and `asdf-extras` afterward with
+`asdf completion <shell>`, which the initialized wrapper routes to combined
+completion. Load framework/native completion before asdf-extras setup.
+
+| Shell | Startup initialization, then completion | Notes |
+| --- | --- | --- |
+| [Bash](docs/shells.md#bash) | `eval "$(asdf-extras init bash)"`<br>`eval "$(asdf completion bash)"` | Load after native completion |
+| [Zsh](docs/shells.md#zsh) | `eval "$(asdf-extras init zsh)"`<br>`eval "$(asdf completion zsh)"` | Load after `compinit` or framework setup |
+| [Fish](docs/shells.md#fish) | `asdf-extras init fish \| source`<br>`asdf completion fish \| source` | Preserves native completion rules |
+| [Elvish](docs/shells.md#elvish) | See linked setup for `rc.elv` | Requires >= 0.21.0 and an interactive editor for completion |
+| [Nushell](docs/shells.md#nushell) | Save `init nushell` output, then source it from `config.nu` | Requires >= 0.116.1; regenerate the file after runtime changes |
+
+Initialized Bash/Zsh/Fish wrappers refresh automatically when an update changes
+the selected runtime. Elvish/Nushell require a new session if it changes.
+Direct `asdf-extras update` does not refresh the current shell.
+
+See the [shell guide](docs/shells.md) for setup details,
+[completion-only modes](docs/shells.md#which-completion-command-should-i-use), native completion
+coexistence, and [refresh behavior](docs/shells.md#shell-refresh-after-updates).
 
 # Advanced usage
 
 ## Updating asdf itself
 
 `asdf update --asdf` (or direct `asdf-extras update --asdf`) updates the asdf
-executable, not the asdf-extras plugin or runtime. Only the latest stable release
-is supported. Without target flags, `asdf update` now includes this step; use
-`--plugin --version` to retain plugin/tool-only updates.
+executable, not the asdf-extras plugin or installed runtime. Only the latest
+stable release is supported. See [target selection](#target-selection) for
+including or excluding this step from a broader update.
 
 The updater selects the first applicable method:
 
@@ -347,7 +383,7 @@ version, then replace the old executable with a same-filesystem rename. Failures
 before replacement retain the original binary; installed versions newer than or
 equal to the latest release are not downgraded. No privileged commands are run.
 Version checks accept both plain versions (such as `v0.20.2`) and the
-`asdf version v0.20.2 (revision ...)` output used by current asdf binaries.
+`asdf version v0.20.2 (revision ...)` output format.
 GitHub API/network failures are reported, not treated as successful updates.
 
 Other package managers, symlink layouts, system-wide installations, and unsupported
@@ -365,10 +401,10 @@ brew upgrade asdf
 EOF
 ```
 
-The asdf executable updater does not edit shell startup files or refresh extras
-initialization itself; the initialized Bash/Zsh/Fish update wrapper refreshes it
-when the selected extras installation changes. Executable discovery ignores the initialized `asdf` shell
-function and uses the first executable on PATH.
+The asdf executable updater does not edit shell startup files or refresh asdf-extras
+initialization itself; [shell refresh](docs/shells.md#shell-refresh-after-updates) is handled
+by the initialized update wrapper. Executable discovery ignores the initialized
+`asdf` shell function and uses the first executable on PATH.
 
 ## Direct invocation without init
 
@@ -381,192 +417,14 @@ asdf-extras update nodejs
 asdf-extras install nodejs 24.11.0
 ```
 
-The same [command behavior](#commands) applies. Direct `asdf-extras install`
-activates in the home configuration by default; `--home`, `--parent`, and `--local` can also
-be specified explicitly.
+The same [update rules](#update-options-and-defaults) apply.
+Direct `asdf-extras install` defaults to home activation and also accepts the
+[scope options](#scopes-and-version-cleanup).
 
 Without initialization, ordinary `asdf` commands are not extended: `asdf update`
-is not provided by extras, and `asdf install` retains native behavior.
-
-`asdf-extras` and `asdf cmd asdf-extras` provide the same subcommands, but use
-different code:
-
-- `asdf-extras` runs the installed version selected by asdf.
-- `asdf cmd asdf-extras` runs the code in the plugin checkout, including for
-  bootstrapping before extras itself is installed.
-
-## Install-time environment hooks
-
-Hooks apply to installs routed through extras (`asdf install -u/-p/--local` after
-init, direct `asdf-extras install`, and the installation step of `update`).
-They do not apply to plain `asdf install`. Already-configured, installed versions
-are skipped without running hooks.
-
-- Default env file location: `${ASDF_DATA_DIR:-$HOME/.asdf}/asdf-extras/install/env/<plugin>.env`
-- Optional env dir override: `ASDF_EXTRAS_INSTALL_ENV_DIR`
-- Plugin-specific env file override: `ASDF_EXTRAS_INSTALL_ENV_FILE_<PLUGIN_NAME_UPPER>`
-- Plugin-specific hook function: `ASDF_EXTRAS_INSTALL_ENV_FUNCTION_<PLUGIN_NAME_UPPER>`
-- Global hook function fallback: `ASDF_EXTRAS_INSTALL_ENV_FUNCTION`
-
-Notes:
-
-- `<PLUGIN_NAME_UPPER>` is generated from plugin name by uppercasing and replacing non-alphanumeric characters with `_`.
-- If env file exists, it is sourced before install.
-- If hook function variable is set, that function is executed as `<function> <plugin> <version>` before install.
-- Function resolution order is: plugin-specific (`..._FUNCTION_<PLUGIN_NAME_UPPER>`) first, then global (`..._FUNCTION`).
-
-Example:
-
-```shell
-mkdir -p "${ASDF_DATA_DIR:-$HOME/.asdf}/asdf-extras/install/env"
-
-cat >"${ASDF_DATA_DIR:-$HOME/.asdf}/asdf-extras/install/env/nodejs.env" <<'EOF'
-export CC=clang
-export CXX=clang++
-
-nodejs_build_env() {
-	export PYTHON=/usr/bin/python3
-}
-EOF
-
-export ASDF_EXTRAS_INSTALL_ENV_FUNCTION_NODEJS=nodejs_build_env
-asdf-extras install nodejs 24.11.0
-```
-
-## Completion output
-
-```shell
-asdf-extras completion bash
-```
-
-For all supported shells, normal `asdf-extras init <shell>` already enables
-completion for both `asdf` and `asdf-extras`: no separate completion file or
-additional startup command is needed.
-After initialization, `asdf completion <shell>` routes to this command as well.
-The initialized wrapper automatically adds `--asdf` to include the `asdf`
-overlay.
-
-Without init, load completion for `asdf-extras` alone:
-
-```bash
-# Bash
-eval "$(asdf-extras completion bash)"
-```
-
-```zsh
-# Zsh (after framework/completion setup, if any)
-eval "$(asdf-extras completion zsh)"
-```
-
-```fish
-# Fish
-asdf-extras completion fish | source
-```
-
-```elvish
-# Elvish (interactive shell)
-eval (asdf-extras completion elvish | slurp)
-```
-
-These commands register completion for `asdf-extras` without installing command
-wrappers, loading native asdf completion, or changing its existing registration.
-They complete extras subcommands, shell names, scopes, update targets, plugins,
-and versions. Repeated loading does not duplicate registrations.
-
-Use `asdf-extras completion --asdf <shell>` to register both `asdf-extras`
-completion and the `asdf` overlay without installing command wrappers.
-The default, with no `--asdf`, registers only `asdf-extras` completion.
-Normal init uses `--asdf` mode automatically. This mode is supported for all five
-shells.
-
-### Elvish setup and native coexistence
-
-Completion requires **Elvish 0.21.0 or newer** and its interactive editor.
-Standalone completion uses `eval (asdf-extras completion elvish | slurp)` and
-does not load or alter native `asdf` completion.
-For both commands' completion without command wrappers, use:
-
-```elvish
-eval (asdf-extras completion --asdf elvish | slurp)
-```
-
-Combined mode retains the function already registered in
-`$edit:completion:arg-completer[asdf]`. Load framework/native registration
-**before** extras setup. If a framework replaces it later, run extras setup again
-to capture the replacement. Repeated setup does not stack wrappers.
-
-If nothing is registered, extras evaluates `asdf completion elvish` unchanged
-and retains its registered handler or exported `arg-completer` function.
-Generation errors, empty output, compilation failures, missing handlers, and
-non-function registrations are explicit errors, not empty-result fallbacks.
-The native handler's rich candidate values and failures are preserved; scoped
-install completion removes completed scope arguments before native delegation.
-Elvish supplies decoded argument values, including quoted plugin/version names.
-
-Complete the native Elvish setup described in the
-[asdf getting-started guide](https://asdf-vm.com/guide/getting-started.html)
-before extras initialization. Native completion may depend on variables and
-helpers provided by that setup. A loading failure in an unconfigured session
-does not by itself establish an upstream defect.
-An existing registered handler retains its original setup context when extras
-delegates to it; automatic loading runs in the extras module's evaluation context
-and does not inherit variables declared in `rc.elv`.
-If automatic loading cannot resolve native prerequisites, load and register the
-native completer in its required context before extras setup.
-Standalone extras completion remains usable without native setup.
-Extras does not repair or copy upstream completion logic.
-
-### Nushell setup and native coexistence
-
-Completion requires **Nushell 0.116.1 or newer**. Save generated code before
-sourcing it, because Nushell resolves source paths and command definitions at
-parse time:
-
-```nu
-# Standalone completion only; does not install asdf wrappers.
-^asdf-extras completion nushell | save --force ~/.asdf-extras-completion.nu
-# Add this line to config.nu:
-source ~/.asdf-extras-completion.nu
-```
-
-For the initialized workflow, use the Quick start's saved `init nushell` output
-instead. Initialization already includes both completion modes.
-Regenerate the saved file when changing the extras runtime, then start a new
-Nushell session.
-
-Combined mode embeds the output of `asdf completion nushell` unchanged and imports
-its definitions before the extras overlay. Load any existing native asdf module
-before extras initialization; do not import it again afterward, as that would
-replace the extras signatures. The generated module is the native baseline.
-Native commands such as `asdf plugin list` retain their structured return values.
-Private aliases retain native root/install signatures for completion delegation;
-extras does not copy the upstream completers. Only root, install, update and
-completion signatures are extended, and initialized wrappers route the extended
-commands to extras. Standalone completion does not load the native module.
-
-When init is used, the additional `asdf` overlay works as follows:
-
-The overlay adds `update`, install/update scope flags, update-target flags, and
-plugin/version candidates even when scope flags appear between arguments.
-It preserves upstream definitions and delegates ordinary commands to the existing
-native completion handler. Repeated initialization does not stack wrappers.
-Scoped install delegation retains arguments after the cursor as well as before
-it. Update completion still offers unselected scope flags after `--all`, while
-excluding incompatible update targets and positional arguments.
-
-- **Bash:** discovers the registered function using `complete -p asdf`, retaining
-  its registration options. If no completion is registered, it loads native
-  `asdf completion bash`. External-command (`-C`) or other non-function
-  registrations are left unchanged with an explicit error.
-- **Zsh:** retains the handler registered by `compinit`, Oh My Zsh, or another
-  framework. If none is registered, it loads native completion. Place extras init
-  **after** framework/completion setup; if a framework replaces the registration
-  later, run extras init again.
-- **Fish:** adds conditional rules without erasing existing native registrations.
-  Native completion is loaded only when no rules are registered.
-
-Native completion loading and candidate-query failures are reported rather than
-silently replaced with empty results.
+is not provided by asdf-extras, and `asdf install` retains native behavior.
+See [Command names and terminology](#command-names-and-terminology) for the
+difference between installed-runtime and plugin-checkout invocation.
 
 # Contributing
 
@@ -575,6 +433,10 @@ Please follow the [Code of Conduct](.github/CODE_OF_CONDUCT.md). To report a
 vulnerability, see the [Security Policy](.github/SECURITY.md).
 
 [Thanks goes to these contributors](https://github.com/eihu0F/asdf-extras/graphs/contributors)!
+
+# Related projects
+
+- [asdf](https://github.com/asdf-vm/asdf): the version manager that asdf-extras extends.
 
 # License
 

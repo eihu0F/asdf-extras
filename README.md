@@ -352,7 +352,8 @@ completion. Load framework/native completion before asdf-extras setup.
 | [Nushell](docs/shells.md#nushell) | Save `init nushell` output, then source it from `config.nu` | Requires >= 0.116.1; regenerate the file after runtime changes |
 
 Initialized Bash/Zsh/Fish wrappers refresh automatically when an update changes
-the selected runtime. Elvish/Nushell require a new session if it changes.
+the selected runtime, and reload completion if you enabled it. Elvish/Nushell
+require a new session if it changes.
 Direct `asdf-extras update` does not refresh the current shell.
 
 See the [shell guide](docs/shells.md) for setup details,

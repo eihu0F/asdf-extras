@@ -27,7 +27,7 @@ fn asdf {|@args|
 
 	if (eq $args[0] completion) {
 		if (and (> (count $args) 1) (has-value [bash zsh fish nushell elvish] $args[1])) {
-			asdf-extras-dispatch completion --asdf (all $args[1..])
+			asdf-extras-dispatch completion --asdf --wrappers (all $args[1..])
 		} else {
 			asdf-extras-dispatch completion (all $args[1..])
 		}

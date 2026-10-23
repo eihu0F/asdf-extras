@@ -68,7 +68,8 @@ Subcommands:
 Completion (Bash, Zsh, Fish, Elvish and Nushell):
   completion registers asdf-extras completion without enabling command wrappers.
   --asdf also registers the asdf completion overlay (without command wrappers).
-  init enables wrappers and completion for both asdf and asdf-extras.
+  init enables command wrappers only; enable completion separately with the
+  completion command (after init, asdf completion <shell>).
   Initialized asdf completion automatically selects --asdf mode.
   Nushell completion requires Nushell >= 0.116.1; save the output and source it.
   Elvish completion requires Elvish >= 0.21.0 in an interactive shell.

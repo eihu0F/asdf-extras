@@ -45,6 +45,12 @@ chmod +x "$test_root/bin/asdf"
 bash "$repo_dir/lib/commands/command-completion" nushell >"$test_root/standalone.nu"
 bash "$repo_dir/lib/commands/command-completion" --asdf nushell >"$test_root/combined.nu"
 bash "$repo_dir/lib/commands/command-init" nushell >"$test_root/init.nu"
+# What the initialized wrapper generates for `asdf completion nushell`.
+bash "$repo_dir/lib/commands/command-completion" --asdf --wrappers nushell >"$test_root/wrapped.nu"
+if grep -q 'ASDF_EXTRAS_COMPLETION_HELPER\|nushell-completion' "$test_root/init.nu"; then
+	printf 'FAIL: init emitted completion\n' >&2
+	exit 1
+fi
 cat >"$test_root/dispatch.bash" <<'EOF'
 #!/usr/bin/env bash
 printf '%s\n' "$*" >>"$ASDF_NU_TEST_ROOT/dispatch.log"
@@ -94,6 +100,8 @@ if (open --raw ($env.ASDF_NU_TEST_ROOT | path join native.log) | str trim) != "i
 }
 source init.nu
 source init.nu
+source wrapped.nu
+source wrapped.nu
 $env.ASDF_EXTRAS_DISPATCHER = ($env.ASDF_NU_TEST_ROOT | path join dispatch.bash)
 check "asdf n" native-marker
 check "asdf install nodejs --local 22" "22.0.0"
@@ -104,7 +112,7 @@ asdf update --version nodejs
 asdf completion nushell
 asdf completion elvish
 let calls = (open --raw ($env.ASDF_NU_TEST_ROOT | path join dispatch.log) | lines)
-if $calls != ["install --local nodejs 22.0.0" "update --version nodejs" "completion --asdf nushell" "completion --asdf elvish"] {
+if $calls != ["install --local nodejs 22.0.0" "update --version nodejs" "completion --asdf --wrappers nushell" "completion --asdf --wrappers elvish"] {
 	error make {msg: $"incorrect wrapper routing: ($calls | to nuon)"}
 }
 $env.ASDF_NU_FAILURE = "query"
@@ -127,6 +135,7 @@ for line in "asdf-extras update " "asdf update " "asdf completion "; do
 	export ASDF_NU_COMPLETION_LINE="$line"
 	nu --no-config-file -c "
 		source '$test_root/init.nu'
+		source '$test_root/wrapped.nu'
 		\$env.ASDF_EXTRAS_COMPLETION_HELPER = '$test_root/failing-helper.bash'
 		\$env.ASDF_NU_COMPLETION_LINE | commandline complete | to nuon
 	" >"$test_root/completion-output" 2>"$test_root/completion-error"

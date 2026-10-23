@@ -24,6 +24,16 @@ function __asdf_extras_refresh
 	if test "$executable" = "$previous"
 		return $update_rc
 	end
+	# init does not load completion, so reload it only where it was enabled,
+	# in the same mode (the asdf overlay sets __asdf_extras_completion_registered).
+	set -l completion_args
+	if set -q ASDF_EXTRAS_COMPLETION_HELPER; and test -n "$ASDF_EXTRAS_COMPLETION_HELPER"
+		set completion_args completion
+		if set -q __asdf_extras_completion_registered
+			set -a completion_args --asdf
+		end
+		set -a completion_args fish
+	end
 	set -l init_code ("$executable" init fish)
 	if test $status -ne 0; or test (count $init_code) -eq 0
 		echo 'asdf-extras: cannot generate initialization; retry asdf-extras init fish | source' >&2
@@ -33,6 +43,18 @@ function __asdf_extras_refresh
 	if not eval "$joined_code"
 		echo 'asdf-extras: initialization failed; retry asdf-extras init fish | source' >&2
 		return 1
+	end
+	if test (count $completion_args) -gt 0
+		set -l completion_code ("$executable" $completion_args)
+		if test $status -ne 0; or test (count $completion_code) -eq 0
+			echo "asdf-extras: cannot generate completion; retry asdf-extras $completion_args | source" >&2
+			return 1
+		end
+		set -l joined_completion (string join \n -- $completion_code | string collect)
+		if not eval "$joined_completion"
+			echo "asdf-extras: completion reload failed; retry asdf-extras $completion_args | source" >&2
+			return 1
+		end
 	end
 	return $update_rc
 end
@@ -52,7 +74,7 @@ function asdf
 
 	if test (count $argv) -ge 1; and test "$argv[1]" = "completion"
 		if test (count $argv) -ge 2; and contains -- "$argv[2]" bash zsh fish nushell elvish
-			__asdf_extras_dispatch completion --asdf $argv[2..-1]
+			__asdf_extras_dispatch completion --asdf --wrappers $argv[2..-1]
 		else
 			__asdf_extras_dispatch completion $argv[2..-1]
 		end

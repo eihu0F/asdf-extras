@@ -81,17 +81,24 @@ fail() {
 	}
 	code="$(bash "$ASDF_COMPLETION_REPO/lib/commands/command-init" bash)"
 	eval "$code"
+	[[ -z "${ASDF_EXTRAS_COMPLETION_HELPER:-}" ]] || fail "init set the completion helper"
+	[[ -z "${_ASDF_EXTRAS_NATIVE_COMPLETE:-}" ]] || fail "init registered the overlay"
+	! declare -F _asdf_extras_complete >/dev/null || fail "init defined overlay functions"
+	! complete -p asdf >/dev/null 2>&1 || fail "init registered asdf completion"
+	! complete -p asdf-extras >/dev/null 2>&1 || fail "init registered asdf-extras completion"
+	code="$(asdf completion bash)"
+	eval "$code"
 	[[ "$_ASDF_EXTRAS_NATIVE_COMPLETE" == native_alternate_name ]] || fail "handler discovery"
 	registration="$(complete -p asdf)"
 	[[ "$registration" == *"-o bashdefault"* && "$registration" == *"-o default"* &&
 		"$registration" == *"-o nospace"* && "$registration" == *"native words"* ]] || fail "registration options lost"
 	eval "$code"
-	[[ "$(complete -p asdf)" == "$registration" ]] || fail "repeated init changed registration"
+	[[ "$(complete -p asdf)" == "$registration" ]] || fail "repeated completion changed registration"
 	code="$(bash "$ASDF_COMPLETION_REPO/lib/commands/command-completion" bash)"
 	eval "$code"
 	[[ "$_ASDF_EXTRAS_NATIVE_COMPLETE" == native_alternate_name ]] || fail "recursive delegation"
 	[[ "$(asdf completion bash)" == "$(bash "$ASDF_COMPLETION_REPO/lib/commands/command-completion" --asdf bash)" ]] || fail "initialized completion mode"
-	[[ "$(asdf completion nushell)" == "$(bash "$ASDF_COMPLETION_REPO/lib/commands/command-completion" --asdf nushell)" ]] || fail "Nushell combined mode"
+	[[ "$(asdf completion nushell)" == "$(bash "$ASDF_COMPLETION_REPO/lib/commands/command-completion" --asdf --wrappers nushell)" ]] || fail "Nushell combined mode"
 	for shell in elvish; do
 		[[ "$(asdf completion "$shell")" == "$(bash "$ASDF_COMPLETION_REPO/lib/commands/command-completion" --asdf "$shell")" ]] || fail "Elvish combined completion forwarding"
 	done
@@ -103,7 +110,7 @@ fail() {
 	ASDF_COMPLETION_NATIVE_RC=7
 	if run_completion asdf version ""; then fail "native failure suppressed"; else [[ $? == 7 ]] || fail "native failure status"; fi
 	unset ASDF_COMPLETION_NATIVE_RC
-	code="$(bash "$ASDF_COMPLETION_REPO/lib/commands/command-init" bash)"
+	code="$(asdf completion bash)"
 	run_completion asdf install ""
 	contains native-plugin
 	contains --local
@@ -250,12 +257,18 @@ if command -v zsh >/dev/null; then
 			compadd native-command
 		}
 		compdef native_framework_handler asdf
+		helper_before="${ASDF_EXTRAS_COMPLETION_HELPER:-}"
 		code="$(bash "$ASDF_COMPLETION_REPO/lib/commands/command-init" zsh)"
+		eval "$code"
+		eval "$code"
+		[[ "${_comps[asdf]}" == native_framework_handler ]] || fail "init replaced the framework handler"
+		[[ -z "${ASDF_EXTRAS_COMPLETION_HELPER:-}" || "$ASDF_EXTRAS_COMPLETION_HELPER" == "$helper_before" ]] || fail "init changed the completion helper"
+		code="$(asdf completion zsh)"
 		eval "$code"
 		eval "$code"
 		[[ "$_ASDF_EXTRAS_NATIVE_COMPLETE" == native_framework_handler ]] || fail "framework handler lost"
 		[[ "$(asdf completion zsh)" == "$(bash "$ASDF_COMPLETION_REPO/lib/commands/command-completion" --asdf zsh)" ]] || fail "initialized completion mode"
-		[[ "$(asdf completion nushell)" == "$(bash "$ASDF_COMPLETION_REPO/lib/commands/command-completion" --asdf nushell)" ]] || fail "Nushell combined mode"
+		[[ "$(asdf completion nushell)" == "$(bash "$ASDF_COMPLETION_REPO/lib/commands/command-completion" --asdf --wrappers nushell)" ]] || fail "Nushell combined mode"
 		for shell in elvish; do
 			[[ "$(asdf completion "$shell")" == "$(bash "$ASDF_COMPLETION_REPO/lib/commands/command-completion" --asdf "$shell")" ]] || fail "Elvish combined completion forwarding"
 		done
@@ -329,7 +342,7 @@ if command -v fish >/dev/null; then
 		set -l expected (bash "$ASDF_COMPLETION_REPO/lib/commands/command-completion" --asdf fish)
 		test "$initialized" = "$expected"; or fail "initialized completion mode"
 		set -l nu_actual (asdf completion nushell)
-		set -l nu_expected (bash "$ASDF_COMPLETION_REPO/lib/commands/command-completion" --asdf nushell)
+		set -l nu_expected (bash "$ASDF_COMPLETION_REPO/lib/commands/command-completion" --asdf --wrappers nushell)
 		test "$nu_actual" = "$nu_expected"; or fail "Nushell combined mode"
 		for shell in elvish
 			set -l actual (asdf completion $shell)
@@ -350,17 +363,38 @@ if command -v fish >/dev/null; then
 		contains_candidate native-file "asdf exec native-"
 		set -e __asdf_extras_completion_registered
 		complete -e -c asdf
-		bash "$ASDF_COMPLETION_REPO/lib/commands/command-init" fish | source; or fail "native Fish loading"
+		asdf completion fish | source; or fail "native Fish loading"
 		contains_candidate native-command "asdf version "
 		set -e __asdf_extras_completion_registered
 		complete -e -c asdf
 		set -gx ASDF_COMPLETION_FAIL generator
-		if bash "$ASDF_COMPLETION_REPO/lib/commands/command-init" fish | source
+		if asdf completion fish | source
 			fail "native Fish generation failure suppressed"
 		end
 	'
 else
 	printf 'SKIP: fish is unavailable\n'
 fi
+
+# init enables command wrappers only; completion is a separate, explicit step.
+for shell in bash zsh fish elvish nushell; do
+	init_output="$(bash "$repo_dir/lib/commands/command-init" "$shell")"
+	for marker in ASDF_EXTRAS_COMPLETION_HELPER lib/completion/ nushell-completion; do
+		[[ "$init_output" != *"$marker"* ]] || fail "init $shell emitted completion: $marker"
+	done
+	[[ "$init_output" == *ASDF_EXTRAS_DISPATCHER* ]] || fail "init $shell lost the command wrapper"
+done
+nushell_wrappers="$(bash "$repo_dir/lib/commands/command-completion" --asdf --wrappers nushell)"
+[[ "$nushell_wrappers" == *"lib/init/nushell-completion.nu"* ]] || fail "--wrappers did not redefine the Nushell wrappers"
+[[ "$(bash "$repo_dir/lib/commands/command-completion" --asdf nushell)" != *nushell-completion* ]] ||
+	fail "combined Nushell completion defined wrappers without --wrappers"
+for shell in bash zsh fish elvish; do
+	[[ "$(bash "$repo_dir/lib/commands/command-completion" --asdf --wrappers "$shell")" == "$(bash "$repo_dir/lib/commands/command-completion" --asdf "$shell")" ]] ||
+		fail "--wrappers changed $shell completion"
+done
+if bash "$repo_dir/lib/commands/command-completion" --wrappers nushell >"$test_root/output" 2>"$test_root/error"; then
+	fail "accepted --wrappers without --asdf"
+fi
+[[ ! -s "$test_root/output" && -s "$test_root/error" ]] || fail "--wrappers diagnostic"
 
 printf 'completion overlay tests: PASS\n'

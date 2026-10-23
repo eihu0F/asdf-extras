@@ -9,7 +9,7 @@
 asdf-extras adds tool updates, install-and-activate commands, and version cleanup
 to [asdf](https://asdf-vm.com). Initialize your shell once, then use
 `asdf update` to update asdf, plugin definitions, and tools, or
-`asdf install --local nodejs latest` to install and activate a project version.
+`asdf install --home nodejs latest` to install and activate a home version.
 Other `asdf` commands retain their native behavior.
 
 # Contents
@@ -63,12 +63,14 @@ current shell, after any framework or native asdf completion setup:
 ```bash
 # Bash
 eval "$(asdf-extras init bash)"
+# Optional: enable completion if you use it.
 eval "$(asdf completion bash)"
 ```
 
 ```zsh
 # Zsh
 eval "$(asdf-extras init zsh)"
+# Optional: enable completion if you use it.
 eval "$(asdf completion zsh)"
 ```
 
@@ -116,7 +118,7 @@ selection, failure handling, and environment settings.
 ## Install and activate a version
 
 ```shell
-asdf install --local nodejs latest
+asdf install --home nodejs latest
 ```
 
 Use a [scope option](#scopes-and-version-cleanup) to install through asdf-extras

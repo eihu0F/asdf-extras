@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.3](https://github.com/eihu0F/asdf-extras/compare/v0.9.2...v0.9.3) (2026-10-23)
+
+
+### Bug Fixes
+
+* stop init from loading completion ([#71](https://github.com/eihu0F/asdf-extras/issues/71)) ([0c9d0dc](https://github.com/eihu0F/asdf-extras/commit/0c9d0dcd53da4c0d16187d6c9f52176c9d3ef75c))
+
 ## [0.9.2](https://github.com/eihu0F/asdf-extras/compare/v0.9.1...v0.9.2) (2026-10-23)
 
 

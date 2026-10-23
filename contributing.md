@@ -1,154 +1,103 @@
 # Contributing
 
-## Development Flow (Branch + Pull Request Required)
+## Workflow
 
-1. Sync local `main` and create a working branch.
+1. Create a branch from an up-to-date `main`.
+2. Make your changes and run the [tests](#testing).
+3. Open a pull request. Do not push development changes directly to `main`.
+4. Wait for the required checks, then merge through PR review.
 
-```shell
-git switch main
-git pull --ff-only origin main
-git switch -c issue-<number>-<short-topic>
-```
+PR titles follow Conventional Commits: `<type>: <subject>`.
 
-### Branch Naming Rules
+### Branch names
 
-- If an issue already exists, branch name must include the issue number:
-	- `issue-<number>-<short-topic>`
-	- Example: `issue-123-install-parent-option`
-- If no issue exists, branch name must explicitly indicate that state:
-	- `noissue-<short-topic>`
-	- Example: `noissue-update-contributing-guide`
-- Branch names do not need a commit/PR type prefix.
+| Situation | Name | Example |
+| --- | --- | --- |
+| An issue exists | `issue-<number>-<short-topic>` | `issue-123-install-parent-option` |
+| No issue exists | `noissue-<short-topic>` | `noissue-update-contributing-guide` |
 
-2. Make changes and run local validation.
+Branch names do not need a commit or PR type prefix.
 
-```shell
-bash ./scripts/test-local.bash
-```
+## Testing
 
-Run install command regression tests without installing asdf:
+Run the full local check before opening a PR:
 
 ```shell
-/bin/bash ./scripts/test-install.bash
-/bin/bash ./scripts/test-prune.bash
-/bin/bash ./scripts/test-update.bash
-/bin/bash ./scripts/test-update-asdf.bash
-/bin/bash ./scripts/test-init-refresh.bash
-/bin/bash ./scripts/test-help.bash
-/bin/bash ./scripts/test-completion.bash
-/bin/bash ./scripts/test-completion-elvish.bash
-/bin/bash ./scripts/test-completion-nushell.bash
-```
-
-These tests check option forwarding and argument validation, including empty-array
-handling under `set -u` with macOS system Bash 3.2. CI runs them with system Bash
-on both Linux and macOS.
-
-Update regression tests verify that installation and activation failures retain
-the previous version, and that bulk updates continue with subsequent plugins.
-They also cover scope selection, home-only cleanup, sequential plugin updates,
-and shared install hooks. Runtime lifecycle tests run from a disposable extras
-installation, delete it during final self-update cleanup, and verify other
-plugins finish first. They cover failed self-installation/activation, other plugin
-failures and cleanup failures with preserved nonzero status.
-They also cover custom extras plugin names, unchanged parent/local and
-plugin-only ordering, and exclusion when extras is outside the selected scope.
-Install tests exercise Bash/Zsh/Fish routing when those
-shells are available and native `asdf set` when asdf is installed.
-Self-update tests require jq and use isolated mock downloads, Homebrew and custom
-scripts; they never update the developer's asdf installation or access the network.
-Shell refresh tests exercise each available Bash/Zsh/Fish shell using isolated
-old/new runtimes, including removal of the old runtime and partial update failures.
-When Elvish or Nushell is available, they also verify reload reminders on successful
-and failed updates without suppressing update output or failures.
-Help tests exercise all available init shells, including Nushell multiword
-command routing. They verify native help preservation, extras topics, plugin
-delegation, native failure statuses, repeated initialization and standalone/plugin
-help consistency. Install/update/completion use `--help` and `-h`, including
-flags after other arguments, without running the command's normal actions.
-Native install-specific help is preserved, and `help install` / `help update`
-remain plugin-help requests. Elvish failures are compared against the shell's native
-external-command failure behavior rather than assuming a process exit code.
-Completion tests verify native handler discovery and registration preservation,
-repeated initialization, scope/target argument positions, and explicit failures.
-They also verify that standalone completion registers `asdf-extras` without
-installing command wrappers or changing native `asdf` completion.
-Combined-mode tests verify `--asdf` with either option position, both registrations
-without command wrappers, and automatic mode selection by initialized wrappers.
-Elvish completion tests require Elvish >= 0.21.0, util-linux `script`, and
-coreutils `timeout` (Linux). They use a real interactive editor under a pseudo-terminal to
-verify standalone isolation, native function discovery/loading, rich candidate
-preservation, scope normalization, repeated registration, initialized routing,
-and visible native-loading/query failures. They also send real TAB keystrokes
-and verify both command names' completion through the editor.
-The dedicated CI job pins Elvish 0.21.0.
-Nushell completion tests require `nu` >= 0.116.1 (otherwise they skip). They use
-the real completion engine and a mock native module to verify signature
-delegation, structured native output, standalone isolation, repeated setup,
-option positions, initialized routing, and native-loading/query failures.
-Quoted literal arguments and unfinished quoted prefixes are tested without
-evaluating expressions; native delegation retains the original source tokens.
-Failure tests also invoke `commandline complete` in default-config-free sessions
-and assert visible stderr diagnostics for all three Bash query paths.
-They exercise Bash 3.2-compatible behavior and each available Zsh/Fish shell;
-no real plugins are installed or updated.
-
-3. Commit and push the branch.
-
-```shell
-git add -A
-git commit
-git push -u origin <branch-name>
-```
-
-4. Open a pull request and merge via PR review flow.
-
-Rules:
-
-- Do not push development changes directly to `main`.
-- PR titles must follow Conventional Commits format (`<type>: <subject>`).
-- Wait for required checks before merge.
-
-Testing Locally:
-
-```shell
-# Optional: install local tooling versions declared in .tool-versions
+# Optional: install the tool versions declared in .tool-versions
 asdf install
 
 bash ./scripts/test-local.bash
 ```
 
-What this script does:
+`test-local.bash` does the following:
 
-1. Verifies local `asdf` version is `>= 0.16.0`.
-2. Verifies `asdf plugin test` command exists on your asdf version.
+1. Checks that your `asdf` is version 0.16.0 or later.
+2. Checks that your `asdf` provides `asdf plugin test`.
 3. Runs `asdf plugin test` for this plugin.
-4. If plugin-test fails only because installable versions cannot be listed, runs fallback local smoke checks.
+4. If the plugin test fails only because no installable versions can be listed, runs fallback smoke checks.
 
-Manual plugin-test command:
+A repository without release tags can make `asdf plugin test` fail with
+`Unable to list available versions`. The fallback checks cover that case, so use
+`test-local.bash` as the default entry point.
+
+To run the plugin test by itself:
 
 ```shell
 asdf plugin test asdf-extras https://github.com/eihu0F/asdf-extras.git "asdf-extras --help"
 ```
 
-Note:
-- If this repository has no release tags yet, `asdf plugin test` may fail with `Unable to list available versions`.
-- In that case, use `scripts/test-local.bash` as the default local test entrypoint.
+After editing shell scripts, also run `./scripts/lint.bash` (`shellcheck` and `shfmt`).
 
-Tests are automatically run in GitHub Actions on push and PR.
+### Regression tests
 
-## Agent Skills
+These scripts run without installing asdf. They use temporary directories and mock
+downloads, so they never touch your asdf installation, installed plugins, or the
+network. CI runs them with the system Bash on both Linux and macOS, so scripts must
+also work with macOS Bash 3.2 (for example, empty arrays under `set -u`).
+
+```shell
+/bin/bash ./scripts/test-<name>.bash
+```
+
+| Script | What it covers | Extra requirements |
+| --- | --- | --- |
+| `test-install.bash` | `install` options, argument validation, and Bash/Zsh/Fish routing | None |
+| `test-prune.bash` | Removal of unused versions by `prune` | None |
+| `test-update.bash` | `update` scopes, failure handling, and runtime self-update | None |
+| `test-update-asdf.bash` | `update --asdf` self-update | `jq` |
+| `test-init-refresh.bash` | Shell initialization refresh after an update | None |
+| `test-help.bash` | `--help` and `help` routing for every available init shell | None |
+| `test-completion.bash` | Completion registration for Bash, Zsh, and Fish | None |
+| `test-completion-elvish.bash` | Completion through a real interactive Elvish editor | Elvish 0.21.0 or later, util-linux `script`, coreutils `timeout` (Linux) |
+| `test-completion-nushell.bash` | Completion through the real Nushell completion engine | `nu` 0.116.1 or later |
+
+Shell-specific parts run only for the shells you have installed. The Nushell test
+skips itself when `nu` is missing. CI installs pinned Elvish and Nushell versions
+in dedicated jobs.
+
+Some behavior is covered in more detail than the table shows:
+
+- **Update:** a failed install or activation keeps the previous version, and a bulk
+  update continues with the remaining plugins. Plugin, self-install, and cleanup
+  failures preserve a nonzero exit status.
+- **Help:** native `asdf` help is preserved. `help install` and `help update` stay
+  plugin-help requests. `--help` and `-h` never run the command itself.
+- **Completion:** standalone completion never installs command wrappers or changes
+  native `asdf` completion. Native loading and query failures are reported on stderr.
+
+## Agent skills
 
 Instructions for coding agents are kept as skills, not as per-tool instruction files.
 
 - `.agents/skills/` is the source of truth. Edit skills only there.
 - `.claude/skills/` is a plain copy for Claude Code. Never edit it directly, and do not use symlinks.
-- After finishing your edits, refresh the copy and check that nothing differs:
+- `AGENTS.md`, `.claude/CLAUDE.md`, and `.github/copilot-instructions.md` are one-line entry points that load the `project-rules` skill. Put real instructions in skills.
+
+After finishing your edits, refresh the copy and check that nothing differs, then commit both directories together:
 
 ```shell
 rm -rf .claude/skills && mkdir -p .claude && cp -R .agents/skills .claude/skills
 diff -r .agents/skills .claude/skills && echo "skills in sync"
 ```
 
-- Commit both directories together. See `.agents/skills/add-skill/SKILL.md` for details.
-- `AGENTS.md`, `.claude/CLAUDE.md`, and `.github/copilot-instructions.md` are one-line entry points that load the `project-rules` skill. Put real instructions in skills.
+See `.agents/skills/add-skill/SKILL.md` for details.

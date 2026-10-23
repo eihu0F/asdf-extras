@@ -86,7 +86,7 @@ make_release() {
 assert_failure_preserves_binary() {
 	local output previous
 	previous="$("$HOME/bin/asdf" --version)"
-	if output="$("$BASH" "$repo_dir/lib/commands/update-asdf.bash" 2>&1)"; then
+	if output="$("$BASH" "$repo_dir/lib/extras/update-asdf.bash" 2>&1)"; then
 		fail "expected update failure"
 	fi
 	[[ -n "$output" ]] || fail "failure did not report an error"
@@ -97,26 +97,26 @@ assert_failure_preserves_binary() {
 printf 'Testing asdf self-update with Bash %s\n' "$BASH_VERSION"
 reset_binary
 make_release v0.20.2
-"$BASH" "$repo_dir/lib/commands/update-asdf.bash"
+"$BASH" "$repo_dir/lib/extras/update-asdf.bash"
 [[ "$("$HOME/bin/asdf" --version)" == v0.20.2 ]] || fail "new binary not activated"
 : >"$test_dir/log"
-"$BASH" "$repo_dir/lib/commands/update-asdf.bash"
+"$BASH" "$repo_dir/lib/extras/update-asdf.bash"
 [[ "$(wc -l <"$test_dir/log" | tr -d ' ')" == 1 ]] || fail "already-current release was downloaded"
 
 for format in 'v0.20.1' '0.20.1' 'asdf version v0.20.1 (revision old)' 'asdf version 0.20.1'; do
 	reset_binary "$format"
 	make_release 'asdf version v0.20.2 (revision cb72590)'
-	"$BASH" "$repo_dir/lib/commands/update-asdf.bash"
+	"$BASH" "$repo_dir/lib/extras/update-asdf.bash"
 	[[ "$("$HOME/bin/asdf" --version)" == 'asdf version v0.20.2 (revision cb72590)' ]] ||
 		fail "prefixed release was not activated"
 	: >"$test_dir/log"
-	"$BASH" "$repo_dir/lib/commands/update-asdf.bash"
+	"$BASH" "$repo_dir/lib/extras/update-asdf.bash"
 	[[ "$(wc -l <"$test_dir/log" | tr -d ' ')" == 1 ]] || fail "prefixed current version was downloaded again"
 done
 for format in '0.20.2' 'asdf version 0.20.2' 'v0.20.2 (revision test)'; do
 	reset_binary 'asdf version v0.20.1 (revision old)'
 	make_release "$format"
-	"$BASH" "$repo_dir/lib/commands/update-asdf.bash"
+	"$BASH" "$repo_dir/lib/extras/update-asdf.bash"
 	[[ "$("$HOME/bin/asdf" --version)" == "$format" ]] || fail "release format rejected: $format"
 done
 for invalid in 'unknown' 'asdf version v0.20' 'v0.20.20' 'v0.20.2-rc1' 'asdf version v0.99.0'; do
@@ -131,7 +131,7 @@ for invalid in 'unknown' 'asdf version v0.20' 'v0.20.1-rc1'; do
 done
 reset_binary 'asdf version v0.21.0 (revision newer)'
 make_release v0.20.2
-"$BASH" "$repo_dir/lib/commands/update-asdf.bash"
+"$BASH" "$repo_dir/lib/extras/update-asdf.bash"
 [[ "$(wc -l <"$test_dir/log" | tr -d ' ')" == 1 ]] || fail "newer installed version was downgraded"
 
 reset_binary
@@ -170,7 +170,7 @@ for arch in arm64 x86_64; do
 		export ASDF_SELF_TEST_ASSET=darwin-amd64
 	fi
 	make_release v0.20.2
-	"$BASH" "$repo_dir/lib/commands/update-asdf.bash"
+	"$BASH" "$repo_dir/lib/extras/update-asdf.bash"
 	[[ "$("$HOME/bin/asdf" --version)" == v0.20.2 ]] || fail "Darwin asset selection failed"
 done
 unset ASDF_SELF_TEST_OS ASDF_SELF_TEST_ARCH ASDF_SELF_TEST_ASSET
@@ -190,7 +190,7 @@ rm "$HOME/bin/asdf"
 mkdir -p "$test_dir/cellar/asdf/0.20.1/bin"
 mv "$HOME/bin/original" "$test_dir/cellar/asdf/0.20.1/bin/asdf"
 ln -s "$test_dir/cellar/asdf/0.20.1/bin/asdf" "$HOME/bin/asdf"
-"$BASH" "$repo_dir/lib/commands/update-asdf.bash"
+"$BASH" "$repo_dir/lib/extras/update-asdf.bash"
 grep -Fx 'brew upgrade asdf' "$test_dir/log" >/dev/null || fail "Homebrew was not detected"
 export ASDF_SELF_TEST_BREW_STATUS=1
 assert_failure_preserves_binary
@@ -201,7 +201,7 @@ cat >"$ASDF_DATA_DIR/asdf-extras/update-asdf.bash" <<'EOF'
 printf '%s\n' "$1" >"$ASDF_SELF_TEST_DIR/script-path"
 exit "${ASDF_SELF_TEST_SCRIPT_STATUS:-0}"
 EOF
-"$BASH" "$repo_dir/lib/commands/update-asdf.bash"
+"$BASH" "$repo_dir/lib/extras/update-asdf.bash"
 [[ "$(<"$test_dir/script-path")" == "$HOME/bin/asdf" ]] || fail "custom script did not receive executable path"
 export ASDF_SELF_TEST_SCRIPT_STATUS=1
 assert_failure_preserves_binary

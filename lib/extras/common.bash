@@ -7,6 +7,20 @@ extras_fail() {
 	exit 1
 }
 
+# Runs another subcommand through the public entry point this command came from.
+# Installed mode resolves the selected extras version on every call, so a call
+# follows selection changes instead of the runtime that started it.
+extras_run() {
+	local subcommand="$1"
+	shift
+	case "${ASDF_EXTRAS_ORIGIN:-}" in
+	# asdf cmd parses options itself unless they follow --, which it removes.
+	plugin) command asdf cmd "${ASDF_EXTRAS_PLUGIN_NAME:-asdf-extras}" "$subcommand" -- "$@" ;;
+	installed) command asdf exec asdf-extras "$subcommand" "$@" ;;
+	*) extras_fail "unknown entry point origin: ${ASDF_EXTRAS_ORIGIN:-unset}" ;;
+	esac
+}
+
 extras_need_args() {
 	local required="$1"
 	local got="$2"

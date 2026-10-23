@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.2](https://github.com/eihu0F/asdf-extras/compare/v0.9.1...v0.9.2) (2026-10-23)
+
+
+### Bug Fixes
+
+* isolate install-time build environment ([#52](https://github.com/eihu0F/asdf-extras/issues/52)) ([7185ca4](https://github.com/eihu0F/asdf-extras/commit/7185ca4eae6e4e7d1462ec2e9f7eb95416758e5b))
+
 ## [0.9.1](https://github.com/eihu0F/asdf-extras/compare/v0.9.0...v0.9.1) (2026-10-21)
 
 

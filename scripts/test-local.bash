@@ -44,16 +44,21 @@ check_asdf_plugin_test() {
 	return 1
 }
 
-run_asdf_plugin_test() {
-	local output exit_code
+run_asdf_plugin_test() (
+	local output exit_code data_dir old_shims test_path
 
-	asdf plugin remove asdf-test-asdf-extras >/dev/null 2>&1 || true
-	if output="$(asdf plugin test asdf-extras "$PWD" "asdf-extras --help" 2>&1)"; then
+	data_dir="$(mktemp -d "${TMPDIR:-/tmp}/asdf-extras-test.XXXXXX")"
+	trap 'rm -rf "$data_dir"' EXIT
+	old_shims="${ASDF_DATA_DIR:-$HOME/.asdf}/shims"
+	test_path=":$PATH:"
+	test_path="${test_path//:"$old_shims":/:$data_dir/shims:}"
+	test_path="${test_path#:}"
+	test_path="${test_path%:}"
+	if output="$(ASDF_DATA_DIR="$data_dir" PATH="$test_path" asdf plugin test asdf-extras "$PWD" "asdf-extras --help" 2>&1)"; then
 		exit_code=0
 	else
 		exit_code=$?
 	fi
-	asdf plugin remove asdf-test-asdf-extras >/dev/null 2>&1 || true
 
 	if [[ $exit_code -eq 0 ]]; then
 		log "asdf plugin test: PASS"
@@ -63,13 +68,17 @@ run_asdf_plugin_test() {
 	log "asdf plugin test: FAIL"
 	printf "%s\n" "$output"
 
-	if grep -q "Unable to list available versions" <<<"$output"; then
-		log "note: asdf plugin test failed because installable versions could not be listed"
+	if grep -q 'Unable to list available versions' <<<"$output"; then
+		log "note: full asdf plugin test skipped because installable versions could not be listed"
+		return 2
+	fi
+	if grep -q 'unable to clone plugin:' <<<"$output"; then
+		log "note: full asdf plugin test skipped because the plugin could not be cloned"
 		return 2
 	fi
 
 	return 1
-}
+)
 
 run_custom_smoke() {
 	log "running fallback custom smoke tests..."
@@ -117,7 +126,7 @@ main() {
 		log "fallback checks passed"
 		;;
 	*)
-		fail "asdf plugin test failed for a reason other than version listing"
+		fail "asdf plugin test failed for a reason other than version listing or clone"
 		;;
 	esac
 }

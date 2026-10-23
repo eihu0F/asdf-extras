@@ -3,7 +3,9 @@
 shellcheck --shell=bash --external-sources \
 	bin/* \
 	lib/utils.bash \
-	lib/commands/* --source-path=lib/commands/ \
+	lib/commands/* \
+	lib/extras/*.bash \
+	lib/extras/commands/* --source-path=SCRIPTDIR \
 	lib/completion/*.bash \
 	libexec/* \
 	scripts/*

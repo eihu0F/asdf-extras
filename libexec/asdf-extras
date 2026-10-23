@@ -4,6 +4,6 @@ set -euo pipefail
 
 current_script_path=${BASH_SOURCE[0]}
 extras_root=$(dirname "$(dirname "$current_script_path")")
-dispatcher="${extras_root}/lib/commands/dispatch.bash"
+dispatcher="${extras_root}/lib/extras/dispatch.bash"
 
-exec bash "$dispatcher" "$@"
+exec bash "$dispatcher" installed "$@"

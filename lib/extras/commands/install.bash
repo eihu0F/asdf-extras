@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+current_script_path=${BASH_SOURCE[0]}
+extras_lib=$(dirname "$(dirname "$current_script_path")")
+
+# shellcheck source=../common.bash
+source "${extras_lib}/common.bash"
+
+# shellcheck source=../help.bash
+source "${extras_lib}/help.bash"
+extras_maybe_help install "$@"
+
+main() {
+	local arg plugin version target file current
+	local -a install_opts=()
+	local -a positional=()
+	local scope=""
+
+	for arg in "$@"; do
+		case "$arg" in
+		-u | --home)
+			scope="$(extras_select_scope "$scope" --home)"
+			;;
+		-p | --parent)
+			scope="$(extras_select_scope "$scope" --parent)"
+			;;
+		--local)
+			scope="$(extras_select_scope "$scope" --local)"
+			;;
+		-*)
+			install_opts+=("$arg")
+			;;
+		*)
+			positional+=("$arg")
+			;;
+		esac
+	done
+
+	# Bash 3.2 treats empty arrays as unset under nounset; guard their expansion.
+	set -- ${positional[@]+"${positional[@]}"}
+	extras_need_args 2 "$#" "asdf-extras install [options] <plugin> <version>"
+
+	plugin="$1"
+	version="$2"
+	scope="${scope:---home}"
+	file="$(extras_scope_file "$scope")"
+	target="$version"
+	case "$version" in
+	latest | latest:*)
+		if [[ "$version" == latest ]]; then
+			target="$(command asdf latest "$plugin")" ||
+				extras_fail "unable to resolve latest version for plugin: $plugin"
+		else
+			target="$(command asdf latest "$plugin" "${version#latest:}")" ||
+				extras_fail "unable to resolve latest version for plugin: $plugin"
+		fi
+		[[ -n "$target" ]] || extras_fail "unable to resolve latest version for plugin: $plugin"
+		;;
+	esac
+	current="$(extras_configured_version "$file" "$plugin")"
+	if [[ "$current" == "$target" ]] && extras_version_installed "$plugin" "$target"; then
+		printf "asdf-extras: %s already configured at %s (%s)\n" "$plugin" "$target" "$file"
+		return 0
+	fi
+
+	if ! (
+		extras_prepare_install_environment "$plugin" "$target"
+		command asdf install ${install_opts[@]+"${install_opts[@]}"} "$plugin" "$target"
+	); then
+		extras_fail "install failed for plugin: $plugin ($target)"
+	fi
+	extras_version_installed "$plugin" "$target" ||
+		extras_fail "target version is not installed: $plugin ($target)"
+	if [[ "$scope" == --local ]]; then
+		command asdf set "$plugin" "$target"
+	else
+		command asdf set "$scope" "$plugin" "$target"
+	fi
+	[[ "$(extras_configured_version "$file" "$plugin")" == "$target" ]] ||
+		extras_fail "target version was not set in $file: $plugin ($target)"
+}
+
+main "$@"

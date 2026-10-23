@@ -7,7 +7,8 @@ test_dir="$(mktemp -d)"
 trap 'rm -rf "$test_dir"' EXIT
 
 export ASDF_TEST_DIR="$test_dir"
-unset ASDF_EXTRAS_PLUGIN_NAME
+export ASDF_TEST_REPO_DIR="$repo_dir"
+unset ASDF_EXTRAS_PLUGIN_NAME ASDF_EXTRAS_ORIGIN
 export HOME="${test_dir}/home"
 export ASDF_EXTRAS_INSTALL_ENV_DIR="${test_dir}/env"
 export ASDF_DATA_DIR="${test_dir}/data"
@@ -23,8 +24,57 @@ export PATH="${test_dir}:$PATH"
 cat >"${test_dir}/asdf" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
-printf '%s\n' "$*" >>"$ASDF_TEST_DIR/log"
 case "$1" in
+cmd | exec) printf '%s\n' "$*" >>"$ASDF_TEST_DIR/nested" ;;
+*) printf '%s\n' "$*" >>"$ASDF_TEST_DIR/log" ;;
+esac
+case "$1" in
+cmd)
+	# Like asdf, reject options before -- and drop the first --.
+	shift 2
+	command_name="$1"
+	command_args=()
+	shift
+	while [[ $# -gt 0 && "$1" != -- ]]; do
+		if [[ "$1" == -* ]]; then
+			printf 'Incorrect Usage: flag provided but not defined: %s\n' "$1" >&2
+			exit 1
+		fi
+		command_args+=("$1")
+		shift
+	done
+	[[ $# -eq 0 ]] || shift
+	# The plugin checkout is the repository under test.
+	exec "$BASH" "$ASDF_TEST_REPO_DIR/lib/commands/command-$command_name" ${command_args[@]+"${command_args[@]}"} "$@"
+	;;
+exec)
+	# Resolve the selected extras version on every call, as asdf shims do.
+	[[ "$2" == asdf-extras ]] || exit 1
+	tool="${ASDF_EXTRAS_PLUGIN_NAME:-asdf-extras}"
+	selected=""
+	directory="$PWD"
+	while [[ -z "$selected" ]]; do
+		if [[ -f "$directory/.tool-versions" ]]; then
+			selected="$(awk -v tool="$tool" '$1 == tool { print $2; exit }' "$directory/.tool-versions")"
+		fi
+		[[ "$directory" != / ]] || break
+		directory="$(dirname "$directory")"
+	done
+	if [[ -z "$selected" && -f "$HOME/.tool-versions" ]]; then
+		selected="$(awk -v tool="$tool" '$1 == tool { print $2; exit }' "$HOME/.tool-versions")"
+	fi
+	case "$selected" in
+	1.0) runtime="$ASDF_TEST_DIR/runtime-old" ;;
+	*) runtime="$ASDF_TEST_DIR/runtime-$selected" ;;
+	esac
+	if [[ -z "$selected" || ! -f "$runtime/libexec/asdf-extras" ]]; then
+		printf 'no installed extras runtime selected: %s\n' "$selected" >&2
+		exit 126
+	fi
+	printf 'runtime %s\n' "$(basename "$runtime")" >>"$ASDF_TEST_DIR/nested"
+	shift 2
+	exec "$BASH" "$runtime/libexec/asdf-extras" "$@"
+	;;
 plugin)
 	if [[ "$2" == update && "${3:-}" == test && "$ASDF_TEST_SCENARIO" == plugin-update-fails ]]; then
 		exit 1
@@ -56,10 +106,14 @@ install)
 		exit 1
 	fi
 	if [[ "${ASDF_TEST_RUNTIME_UPDATE:-0}" == 1 ]]; then
-		[[ -r "$ASDF_TEST_DIR/runtime-old/lib/commands/command-install" ]] || {
+		[[ -r "$ASDF_TEST_DIR/runtime-old/lib/extras/dispatch.bash" ]] || {
 			printf 'running extras runtime removed before install: %s\n' "$2" >&2
 			exit 1
 		}
+		if [[ "$2" == "${ASDF_EXTRAS_PLUGIN_NAME:-asdf-extras}" ]]; then
+			mkdir -p "$ASDF_TEST_DIR/runtime-$3"
+			cp -R "$ASDF_TEST_REPO_DIR/lib" "$ASDF_TEST_REPO_DIR/libexec" "$ASDF_TEST_DIR/runtime-$3/"
+		fi
 	fi
 	if [[ "$2" == test ]]; then
 		case "$ASDF_TEST_SCENARIO" in
@@ -130,6 +184,7 @@ run_case() {
 	export ASDF_TEST_SCENARIO="$scenario"
 
 	: >"${test_dir}/log"
+	: >"${test_dir}/nested"
 	printf 'test 1.0\nnext 1.0\n' >"$HOME/.tool-versions"
 	for plugin in test next; do
 		printf '1.0\n' >"${test_dir}/$plugin-current"
@@ -157,6 +212,12 @@ run_case() {
 			fail "incorrect install/activation/removal order"
 		if grep -q '^plugin update --all' "${test_dir}/log"; then
 			fail "bulk plugin update used"
+		fi
+		# Plugin-mode installs stay in the plugin checkout; no extras CLI exists here.
+		grep -Fx 'cmd asdf-extras install -- --home test latest' "${test_dir}/nested" >/dev/null ||
+			fail "$mode: plugin-mode install did not use asdf cmd"
+		if grep -q '^exec ' "${test_dir}/nested"; then
+			fail "$mode: plugin-mode install used the installed CLI"
 		fi
 		if [[ "$mode" != test ]]; then
 			[[ "$(grep -E '^(plugin update|install|set|uninstall) ' "${test_dir}/log")" == "$(printf 'plugin update test\ninstall test 2.0\nset --home test 2.0\nuninstall test 1.0\nplugin update next\ninstall next 2.0\nset --home next 2.0\nuninstall next 1.0')" ]] ||
@@ -381,13 +442,33 @@ printf 'test 1.0\n' >.tool-versions
 [[ "$(<"${test_dir}/hooks")" == "test 2.0" ]] || fail "update did not delegate install hooks"
 "$BASH" "${repo_dir}/lib/commands/command-update" --local test
 [[ "$(wc -l <"${test_dir}/hooks" | tr -d ' ')" == 1 ]] || fail "no-op update ran hooks"
-"${repo_dir}/libexec/asdf-extras" update --local test
+
+# Each entry point sets its own origin; an inherited origin must not leak into it.
+ln -s "$repo_dir" "$test_dir/runtime-dev"
+printf 'asdf-extras dev\ntest 1.0\n' >.tool-versions
+: >"${test_dir}/nested"
+ASDF_EXTRAS_ORIGIN=plugin "${repo_dir}/libexec/asdf-extras" update --local test
+[[ "$(<"${test_dir}/nested")" == "$(printf 'exec asdf-extras install --local test latest\nruntime runtime-dev')" ]] ||
+	fail "installed-mode install did not use the selected CLI: $(<"${test_dir}/nested")"
+printf 'asdf-extras dev\ntest 1.0\n' >.tool-versions
+: >"${test_dir}/nested"
+ASDF_EXTRAS_ORIGIN=installed "$BASH" "${repo_dir}/lib/commands/command-update" --local test
+[[ "$(<"${test_dir}/nested")" == 'cmd asdf-extras install -- --local test latest' ]] ||
+	fail "plugin-mode install inherited the installed origin: $(<"${test_dir}/nested")"
+printf 'test 1.0\n' >.tool-versions
+: >"${test_dir}/nested"
+ASDF_EXTRAS_PLUGIN_NAME=custom-extras "$BASH" "${repo_dir}/lib/commands/command-update" --local test
+[[ "$(<"${test_dir}/nested")" == 'cmd custom-extras install -- --local test latest' ]] ||
+	fail "plugin-mode install ignored the registered plugin name: $(<"${test_dir}/nested")"
+rm -f .tool-versions "$test_dir/runtime-dev"
 
 unset ASDF_EXTRAS_INSTALL_ENV_DIR
 export ASDF_TEST_RUNTIME_UPDATE=1
 for mode in default --all --version --home asdf-extras; do
 	for scenario in success install-fails cleanup-fails extras-install-fails extras-set-fails; do
 		export ASDF_TEST_SCENARIO="$scenario"
+		rm -rf "$test_dir/runtime-2.0"
+		: >"$test_dir/nested"
 		mkdir -p "$test_dir/runtime-old"
 		cp -R "$repo_dir/lib" "$repo_dir/libexec" "$test_dir/runtime-old/"
 		printf 'asdf-extras 1.0\ntest 1.0\nnext 1.0\n' >"$HOME/.tool-versions"
@@ -433,6 +514,9 @@ for mode in default --all --version --home asdf-extras; do
 			fail "$mode/$scenario: extras was not activated"
 		[[ "$(tail -n 1 "$test_dir/log")" == 'uninstall asdf-extras 1.0' ]] ||
 			fail "$mode/$scenario: extras cleanup did not run last"
+		# The extras install itself runs in the runtime selected before the switch.
+		grep -Fx 'exec asdf-extras install --home asdf-extras latest' "$test_dir/nested" >/dev/null ||
+			fail "$mode/$scenario: extras install did not use the installed CLI"
 		if [[ "$scenario" == cleanup-fails ]]; then
 			[[ -d "$test_dir/runtime-old" ]] || fail "failed cleanup removed runtime"
 			grep -q 'failed to remove previous version: asdf-extras' "$test_dir/output" ||
@@ -441,11 +525,20 @@ for mode in default --all --version --home asdf-extras; do
 		else
 			[[ ! -d "$test_dir/runtime-old" ]] || fail "$mode/$scenario: old extras runtime retained"
 		fi
+		# Later nested commands follow the new selection after the old runtime is gone.
+		: >"$test_dir/nested"
+		ASDF_TEST_SCENARIO=success ASDF_TEST_RUNTIME_UPDATE=0 \
+			"$BASH" "$test_dir/runtime-2.0/libexec/asdf-extras" update --version test >"$test_dir/output" 2>&1 ||
+			fail "$mode/$scenario: update after self-update failed: $(cat "$test_dir/output")"
+		[[ "$(tail -n 1 "$test_dir/nested")" == 'runtime runtime-2.0' ]] ||
+			fail "$mode/$scenario: nested command did not use the selected runtime"
 	done
 done
 
 export ASDF_TEST_SCENARIO=success
 for mode in --plugin --local --parent; do
+	rm -rf "$test_dir/runtime-2.0"
+	: >"$test_dir/nested"
 	mkdir -p "$test_dir/runtime-old"
 	cp -R "$repo_dir/lib" "$repo_dir/libexec" "$test_dir/runtime-old/"
 	printf 'asdf-extras 1.0\nnext 1.0\n' >"$HOME/.tool-versions"
@@ -469,6 +562,9 @@ for mode in --plugin --local --parent; do
 	else
 		grep -Fx 'asdf-extras 2.0' "$file" >/dev/null || fail "$mode: scope activation missing"
 		grep -Fx 'asdf-extras 1.0' "$HOME/.tool-versions" >/dev/null || fail "$mode: home modified"
+		# The scope now selects the new extras version, so the next install uses it.
+		[[ "$(tail -n 2 "$test_dir/nested")" == "$(printf 'exec asdf-extras install %s next latest\nruntime runtime-2.0' "$mode")" ]] ||
+			fail "$mode: nested install did not follow the selection change"
 		printf 'next 1.0\n' >"$file"
 		printf '1.0\n' >"$test_dir/next-installed"
 		: >"$test_dir/log"

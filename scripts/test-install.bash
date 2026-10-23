@@ -10,6 +10,9 @@ trap 'rm -rf "$test_dir"' EXIT
 export ASDF_TEST_LOG="${test_dir}/asdf.log"
 export ASDF_TEST_ENV_LOG="${test_dir}/asdf.env.log"
 export ASDF_EXTRAS_INSTALL_ENV_DIR="${test_dir}/env"
+unset ASDF_EXTRAS_INSTALL_ENV_FUNCTION ASDF_EXTRAS_INSTALL_ENV_FUNCTION_NODEJS \
+	ASDF_EXTRAS_INSTALL_ENV_FUNCTION_PYTHON ASDF_EXTRAS_INSTALL_ENV_FILE_NODEJS \
+	ASDF_EXTRAS_INSTALL_ENV_FILE_PYTHON
 export PATH="${test_dir}:$PATH"
 export HOME="${test_dir}/home"
 mkdir -p "$HOME" "${test_dir}/project/child"

@@ -1,6 +1,6 @@
 ---
-description: "Shell implementation rules for this repository"
-applyTo: "**/*.{sh,bash,zsh,ksh}"
+name: shell-implementation
+description: "Use when creating or editing shell scripts in this repository, including extensionless scripts under bin/, lib/, libexec/, and scripts/. Defines safety, style, and change-scope rules."
 ---
 
 # Shell Implementation Rules
@@ -25,7 +25,7 @@ applyTo: "**/*.{sh,bash,zsh,ksh}"
 
 - Follow the project-defined linter/formatter settings and commands.
 - Use `scripts/lint.bash` as the source of truth for shell lint/format checks.
-- Before running formatter or linter, follow `.github/skills/shell-lint/SKILL.md` to activate the exact tool versions pinned in `.tool-versions`.
+- Before running formatter or linter, follow the `shell-lint` skill to activate the exact tool versions pinned in `.tool-versions`.
 - Do not introduce style that conflicts with ShellCheck or shfmt rules used by this project.
 
 ## Change Scope

@@ -1,4 +1,4 @@
-<!-- Title: <type>: <short action-oriented subject>, using a type allowed by .github/copilot-instructions.md. -->
+<!-- Title: <type>: <short action-oriented subject>, using a type allowed by .agents/skills/commit-and-pr/SKILL.md. -->
 
 ## Summary
 

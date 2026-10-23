@@ -136,3 +136,19 @@ Note:
 - In that case, use `scripts/test-local.bash` as the default local test entrypoint.
 
 Tests are automatically run in GitHub Actions on push and PR.
+
+## Agent Skills
+
+Instructions for coding agents are kept as skills, not as per-tool instruction files.
+
+- `.agents/skills/` is the source of truth. Edit skills only there.
+- `.claude/skills/` is a plain copy for Claude Code. Never edit it directly, and do not use symlinks.
+- After finishing your edits, refresh the copy and check that nothing differs:
+
+```shell
+rm -rf .claude/skills && mkdir -p .claude && cp -R .agents/skills .claude/skills
+diff -r .agents/skills .claude/skills && echo "skills in sync"
+```
+
+- Commit both directories together. See `.agents/skills/add-skill/SKILL.md` for details.
+- `AGENTS.md`, `.claude/CLAUDE.md`, and `.github/copilot-instructions.md` are one-line entry points that load the `project-rules` skill. Put real instructions in skills.

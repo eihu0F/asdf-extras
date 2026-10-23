@@ -33,7 +33,7 @@ bash ./scripts/test-local.bash
 
 1. Checks that your `asdf` is version 0.16.0 or later.
 2. Checks that your `asdf` provides `asdf plugin test`.
-3. Runs `asdf plugin test` for this plugin with an isolated temporary asdf data directory.
+3. Runs `asdf plugin test` for this plugin with an isolated temporary asdf data directory and local release tags.
 4. If the plugin test cannot clone the plugin or list installable versions, reports the full test as skipped and runs fallback smoke checks. Other failures remain errors.
 
 A repository without release tags can make `asdf plugin test` fail with

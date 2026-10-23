@@ -45,22 +45,20 @@ check_asdf_plugin_test() {
 }
 
 run_asdf_plugin_test() (
-	local output exit_code data_dir old_shims test_path latest_tag
-	local -a version_args=()
+	local output exit_code data_dir old_shims test_path
+
+	# shellcheck source=./lib/utils.bash
+	source "$PWD/lib/utils.bash"
 
 	data_dir="$(mktemp -d "${TMPDIR:-/tmp}/asdf-extras-test.XXXXXX")"
 	trap 'rm -rf "$data_dir"' EXIT
-	git config --file "$data_dir/gitconfig" "url.file://$PWD.insteadOf" "https://github.com/eihu0F/asdf-extras"
-	latest_tag="$(git tag --sort=-version:refname --list 'v[0-9]*' | head -n1)"
-	if [[ -n "$latest_tag" ]]; then
-		version_args=(--asdf-tool-version "${latest_tag#v}")
-	fi
+	git config --file "$data_dir/gitconfig" "url.file://$PWD.insteadOf" "$GH_REPO"
 	old_shims="${ASDF_DATA_DIR:-$HOME/.asdf}/shims"
 	test_path=":$PATH:"
 	test_path="${test_path//:"$old_shims":/:$data_dir/shims:}"
 	test_path="${test_path#:}"
 	test_path="${test_path%:}"
-	if output="$(ASDF_DATA_DIR="$data_dir" PATH="$test_path" GIT_CONFIG_GLOBAL="$data_dir/gitconfig" asdf plugin test "${version_args[@]}" asdf-extras "$PWD" "asdf-extras --help" 2>&1)"; then
+	if output="$(ASDF_DATA_DIR="$data_dir" PATH="$test_path" GIT_CONFIG_GLOBAL="$data_dir/gitconfig" asdf plugin test "$TOOL_NAME" "$PWD" "$TOOL_TEST" 2>&1)"; then
 		exit_code=0
 	else
 		exit_code=$?

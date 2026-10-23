@@ -65,9 +65,10 @@ main() {
 		return 0
 	fi
 
-	extras_prepare_install_environment "$plugin" "$target"
-
-	if ! (command asdf install ${install_opts[@]+"${install_opts[@]}"} "$plugin" "$target"); then
+	if ! (
+		extras_prepare_install_environment "$plugin" "$target"
+		command asdf install ${install_opts[@]+"${install_opts[@]}"} "$plugin" "$target"
+	); then
 		extras_fail "install failed for plugin: $plugin ($target)"
 	fi
 	extras_version_installed "$plugin" "$target" ||

@@ -57,26 +57,27 @@ afterward, `asdf-extras` runs the installed version selected by asdf.
 
 ## 2. Initialize your shell
 
-Add the appropriate line to your shell startup configuration and run it in your
+Add the appropriate lines to your shell startup configuration and run them in your
 current shell, after any framework or native asdf completion setup:
 
 ```bash
 # Bash
 eval "$(asdf-extras init bash)"
+eval "$(asdf completion bash)"
 ```
 
 ```zsh
 # Zsh
 eval "$(asdf-extras init zsh)"
+eval "$(asdf completion zsh)"
 ```
 
-Initialization enables command extensions and completion for both `asdf` and
-`asdf-extras`. In Bash, native asdf completion alone is loaded with
-`eval "$(asdf completion bash)"`; the shell name is required. If you already use
-that line, keep it before `asdf-extras init`. Otherwise, `init` loads native
-completion automatically, so no separate completion line is needed.
-After initialization, `eval "$(asdf completion bash)"` reloads completion for
-both commands. Type `asdf update --` and press Tab to see completion candidates.
+`init` enables command extensions such as `asdf update`; it does not load
+completion. `asdf completion <shell>` enables completion for both `asdf` and
+`asdf-extras`, and must come **after** `init`: after initialization, the wrapper
+routes it to combined completion, while before initialization it prints native
+asdf completion only. The shell name is required. Type `asdf update --` and
+press Tab to see completion candidates.
 For other shells and copyable completion-only examples, see the
 [shell guide](docs/shells.md).
 
@@ -336,14 +337,15 @@ asdf-extras install nodejs 24.11.0
 # Shell support
 
 Initialization supports Bash, Zsh, Fish, Elvish, and Nushell. It enables command
-wrappers and completion for both `asdf` and `asdf-extras`; a separate completion
-command is unnecessary. Load framework/native completion before asdf-extras setup.
+wrappers only. Enable completion for both `asdf` and `asdf-extras` afterward with
+`asdf completion <shell>`, which the initialized wrapper routes to combined
+completion. Load framework/native completion before asdf-extras setup.
 
-| Shell | Startup initialization | Notes |
+| Shell | Startup initialization, then completion | Notes |
 | --- | --- | --- |
-| [Bash](docs/shells.md#bash) | `eval "$(asdf-extras init bash)"` | Load after native completion |
-| [Zsh](docs/shells.md#zsh) | `eval "$(asdf-extras init zsh)"` | Load after `compinit` or framework setup |
-| [Fish](docs/shells.md#fish) | `asdf-extras init fish \| source` | Preserves native completion rules |
+| [Bash](docs/shells.md#bash) | `eval "$(asdf-extras init bash)"`<br>`eval "$(asdf completion bash)"` | Load after native completion |
+| [Zsh](docs/shells.md#zsh) | `eval "$(asdf-extras init zsh)"`<br>`eval "$(asdf completion zsh)"` | Load after `compinit` or framework setup |
+| [Fish](docs/shells.md#fish) | `asdf-extras init fish \| source`<br>`asdf completion fish \| source` | Preserves native completion rules |
 | [Elvish](docs/shells.md#elvish) | See linked setup for `rc.elv` | Requires >= 0.21.0 and an interactive editor for completion |
 | [Nushell](docs/shells.md#nushell) | Save `init nushell` output, then source it from `config.nu` | Requires >= 0.116.1; regenerate the file after runtime changes |
 

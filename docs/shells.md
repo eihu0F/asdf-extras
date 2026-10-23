@@ -3,10 +3,16 @@
 [Back to README](../README.md#shell-support)
 
 Choose the section for your shell and copy its **Recommended setup** into the
-startup file indicated. This enables `asdf update`, scoped `asdf install`, and
-Tab completion for both `asdf` and `asdf-extras`. Start a new shell afterward.
+startup file indicated. Initialization (`asdf-extras init <shell>`) enables
+`asdf update` and scoped `asdf install`. The `asdf completion <shell>` line that
+follows it enables Tab completion for both `asdf` and `asdf-extras`. Keep them in
+this order, and start a new shell afterward.
 If asdf is not on PATH yet, complete the
 [asdf installation steps](https://asdf-vm.com/guide/getting-started.html) first.
+
+Initialization does not load completion. Before initialization, `asdf completion
+<shell>` prints native asdf completion; after initialization, the wrapper routes
+the same command to combined completion for both commands.
 
 Each section also provides a **Completion without command wrappers** alternative.
 Choose that instead of initialization if you only want completion, not command
@@ -31,24 +37,19 @@ Add to `~/.bashrc`:
 
 ```bash
 eval "$(asdf-extras init bash)"
+eval "$(asdf completion bash)"
 ```
 
 Open a new Bash session. Type `asdf update --` and press Tab to list update flags.
 Type `asdf-extras ` and press Tab to list its subcommands.
 Ensure your login-shell configuration loads `~/.bashrc` if needed.
 
-Native asdf completion alone uses:
-
-```bash
-eval "$(asdf completion bash)"
-```
-
-If this line is already in your configuration, keep it **before** the `init`
-line. Otherwise, no separate native completion line is needed: `init` loads it.
-After initialization, the same `asdf completion bash` command generates combined
-completion for both commands, so you can run it again to reload completion.
-Do not omit `bash`: `asdf completion` and `asdf-extras completion` require a
-shell name.
+The second line must come **after** `init`: before initialization, `asdf
+completion bash` prints native asdf completion only. If your configuration already
+has that line, keep it before `init` and add the line again after it. Otherwise,
+no separate native completion line is needed: combined completion loads native
+completion when none is registered. Run `asdf completion bash` again to reload
+completion. Do not omit `bash`: `asdf completion` requires a shell name.
 
 ### Completion without command wrappers
 
@@ -76,11 +77,12 @@ Add to `~/.zshrc`:
 autoload -Uz compinit
 compinit
 eval "$(asdf-extras init zsh)"
+eval "$(asdf completion zsh)"
 ```
 
 If Oh My Zsh or another framework already runs `compinit`, keep that existing
-setup and add only the final line **after** it. Native asdf completion is loaded
-automatically if no handler is registered.
+setup and add only the final two lines **after** it. Combined completion loads
+native asdf completion if no handler is registered.
 Open a new Zsh session, type `asdf update --`, and press Tab.
 
 ### Completion without command wrappers
@@ -108,11 +110,12 @@ Add to `~/.config/fish/config.fish`, after any native asdf setup:
 
 ```fish
 asdf-extras init fish | source
+asdf completion fish | source
 ```
 
 Open a new Fish session, type `asdf update --`, and press Tab.
-Existing native completion rules are retained; if no rules exist, initialization
-loads them automatically.
+Existing native completion rules are retained; if no rules exist, combined
+completion loads them automatically.
 
 ### Completion without command wrappers
 
@@ -142,9 +145,11 @@ Add to `rc.elv`, **after** native asdf setup and completion registration:
 ```elvish
 var asdf~ = $nil
 eval (asdf-extras init elvish | slurp) &on-end={|ns| set asdf~ = $ns[asdf~]}
+eval (asdf completion elvish | slurp)
 ```
 
-The callback makes the generated `asdf` wrapper available outside `eval`.
+The callback makes the generated `asdf` wrapper available outside `eval`, so the
+second line reaches combined completion instead of native completion.
 Open a new interactive Elvish session, type `asdf update --`, and press Tab.
 
 ### Completion without command wrappers
@@ -181,9 +186,22 @@ source ~/.asdf-extras-init.nu
 ```
 
 Load any existing native asdf module **before** this line, not afterward.
-The generated file already includes native and asdf-extras completion.
-Open a new session, type `asdf update --`, and press Tab.
-After changing the installed runtime, rerun the generation command and start a
+The initialization file does not include completion. Start a new session so the
+`asdf` wrapper is loaded, then generate the completion file once:
+
+```nu
+asdf completion nushell | save --force ~/.asdf-extras-completion.nu
+```
+
+Add this line to `config.nu` **after** the initialization source line, then start
+another new session:
+
+```nu
+source ~/.asdf-extras-completion.nu
+```
+
+Type `asdf update --` and press Tab.
+After changing the installed runtime, rerun both generation commands and start a
 new session.
 
 ### Completion without command wrappers
@@ -213,17 +231,19 @@ Regenerate saved completion files after changing the runtime.
 
 | Goal | Command that generates the shell code |
 | --- | --- |
-| Command extensions and completion for both commands (recommended) | `asdf-extras init <shell>` |
-| Completion for both commands, without command wrappers | `asdf-extras completion --asdf <shell>` |
+| Command extensions (`asdf update`, scoped `asdf install`) | `asdf-extras init <shell>` |
+| Completion for both commands, after initialization (recommended); also reloads it | `asdf completion <shell>` |
+| Completion for both commands, without initialization | `asdf-extras completion --asdf <shell>` |
 | Completion for `asdf-extras` only; leave native asdf registration untouched | `asdf-extras completion <shell>` |
-| Reload both commands' completion after initialization | `asdf completion <shell>` |
 | Native asdf completion only, without initialization | `asdf completion <shell>` |
 
 Replace `<shell>` with `bash`, `zsh`, `fish`, `elvish`, or `nushell`.
 These commands **print shell code**; running them alone does not enable
 completion. Load the output using your shell's sample above.
-Initialization already loads completion, so do not add an extra completion
-command to an initialized setup.
+`asdf completion <shell>` means different things before and after initialization:
+the initialized wrapper routes it to `asdf-extras completion --asdf <shell>`,
+while without initialization it is native asdf's command. Use
+`asdf-extras completion` directly only when you do not initialize.
 
 ## Completion behavior details
 
@@ -249,14 +269,14 @@ command to an initialized setup.
 - Zsh retains the handler registered by `compinit` or a framework. If a framework
   replaces it later, run asdf-extras setup again.
 - Fish adds conditional rules without erasing native registrations.
-- If no native registration exists, combined setup loads native completion.
+- If no native registration exists, combined completion loads native completion.
 
 ### Elvish
 
 - Combined mode retains the function registered in
   `$edit:completion:arg-completer[asdf]`. If a framework replaces it later, run
   asdf-extras setup again.
-- If no function is registered, asdf-extras evaluates `asdf completion elvish`
+- If no function is registered, asdf-extras evaluates native `asdf completion elvish`
   unchanged and retains its registered handler or exported `arg-completer`.
 - Generation errors, empty output, compilation failures, missing handlers, and
   non-function registrations are explicit errors, not empty-result fallbacks.
@@ -273,7 +293,7 @@ command to an initialized setup.
 
 ### Nushell
 
-- Combined mode embeds `asdf completion nushell` output unchanged and imports its
+- Combined mode embeds native `asdf completion nushell` output unchanged and imports its
   definitions before the asdf-extras overlay. Importing a native module afterward
   replaces the asdf-extras signatures.
 - The generated module is the native baseline. Native commands such as

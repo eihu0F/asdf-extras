@@ -13,10 +13,11 @@ source "${plugin_dir}/lib/extras/help.bash"
 extras_maybe_help completion "$@"
 
 main() {
-	local shell_name="" arg include_asdf=0
+	local shell_name="" arg include_asdf=0 with_wrappers=0
 	for arg in "$@"; do
 		case "$arg" in
 		--asdf) include_asdf=1 ;;
+		--wrappers) with_wrappers=1 ;;
 		-*) extras_fail "unknown completion option: $arg" ;;
 		*)
 			[[ -z "$shell_name" ]] || extras_fail "completion accepts only one shell"
@@ -25,6 +26,12 @@ main() {
 		esac
 	done
 	[[ -n "$shell_name" ]] || extras_fail "usage: asdf-extras completion [--asdf] <bash|zsh|fish|elvish|nushell>"
+	if ((with_wrappers)); then
+		# Passed by every initialized `asdf completion <shell>`: the init wrappers are
+		# loaded. Only Nushell needs it, because it binds completers when a command
+		# is defined, so the wrappers that init defined must be defined again.
+		((include_asdf)) || extras_fail "--wrappers requires --asdf"
+	fi
 
 	case "$shell_name" in
 	bash | zsh)
@@ -54,6 +61,9 @@ main() {
 			printf 'alias asdf-extras-native-root = asdf\n'
 			printf 'alias asdf-extras-native-install = asdf install\n'
 			printf "source '%s'\n" "${plugin_dir}/lib/completion/asdf.nu"
+		fi
+		if ((with_wrappers)); then
+			printf "source '%s'\n" "${plugin_dir}/lib/init/nushell-completion.nu"
 		fi
 		;;
 	elvish)

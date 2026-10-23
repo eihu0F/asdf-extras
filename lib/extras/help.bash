@@ -84,7 +84,7 @@ Update targets:
   Custom asdf updater: ${ASDF_DATA_DIR:-$HOME/.asdf}/asdf-extras/update-asdf.bash
   Otherwise detect Homebrew, or update an owned standalone binary under HOME.
   Standalone updates require jq and SHA-256 verification.
-  Initialized Bash/Zsh/Fish refresh extras after its runtime changes.
+  Initialized Bash/Zsh/Fish refresh extras (and enabled completion) after its runtime changes.
   Elvish/Nushell require a new session if extras changed; a reminder is printed.
 
 Examples:
@@ -127,7 +127,8 @@ asdf-extras completion:
   Standalone extras defaults to completion for asdf-extras only.
   --asdf adds the native asdf overlay without installing command wrappers.
   Initialized asdf completion automatically enables --asdf.
-  init enables command wrappers and completion for both commands.
+  init enables command wrappers only; it does not load completion.
+  Initialized Bash/Zsh/Fish reload enabled completion after an extras update.
   Nushell requires >= 0.116.1; save generated output and source it.
   Elvish requires >= 0.21.0 and an interactive editor.
   Configure native completion before extras init; see README for shell setup.

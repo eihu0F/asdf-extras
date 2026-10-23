@@ -17,23 +17,18 @@ emit_source_line() {
 	bash | zsh)
 		printf "ASDF_EXTRAS_DISPATCHER=%q\n" "$dispatcher"
 		printf "source %q\n" "$file_path"
-		bash "${extras_root}/lib/extras/commands/completion.bash" --asdf "$shell"
 		;;
 	fish)
 		printf "set -gx ASDF_EXTRAS_DISPATCHER '%s'\n" "$dispatcher"
 		printf "source '%s'\n" "$file_path"
-		bash "${extras_root}/lib/extras/commands/completion.bash" --asdf "$shell"
 		;;
 	elvish)
 		printf "set-env ASDF_EXTRAS_DISPATCHER '%s'\n" "${dispatcher//\'/\'\'}"
 		cat "$file_path"
-		bash "${extras_root}/lib/extras/commands/completion.bash" --asdf "$shell"
 		;;
 	nushell)
 		printf "\$env.ASDF_EXTRAS_DISPATCHER = '%s'\n" "$dispatcher"
-		bash "${extras_root}/lib/extras/commands/completion.bash" --asdf "$shell"
 		printf "source '%s'\n" "$file_path"
-		printf "source '%s'\n" "${extras_root}/lib/init/nushell-completion.nu"
 		;;
 	*)
 		printf "asdf-extras: unsupported shell: %s\n" "$shell" >&2

@@ -14,12 +14,20 @@ _asdf_extras_dispatch() {
 }
 
 _asdf_extras_refresh() {
-	local previous="$1" update_rc="$2" executable init_code
+	local previous="$1" update_rc="$2" executable init_code completion_code
+	local -a completion_args=()
 	if ! executable="$(command asdf which asdf-extras)"; then
 		printf 'asdf-extras: cannot resolve updated executable; retry eval "$(asdf-extras init bash)" after fixing version selection\n' >&2
 		return 1
 	fi
 	[[ "$executable" != "$previous" ]] || return "$update_rc"
+	# init does not load completion, so reload it only where it was enabled,
+	# in the same mode (the asdf overlay registers _ASDF_EXTRAS_NATIVE_COMPLETE).
+	if [[ -n "${ASDF_EXTRAS_COMPLETION_HELPER:-}" ]]; then
+		completion_args=(completion)
+		[[ -z "${_ASDF_EXTRAS_NATIVE_COMPLETE:-}" ]] || completion_args+=(--asdf)
+		completion_args+=(bash)
+	fi
 	if ! init_code="$("$executable" init bash)" || [[ -z "$init_code" ]]; then
 		printf 'asdf-extras: cannot generate initialization; retry eval "$(asdf-extras init bash)"\n' >&2
 		return 1
@@ -27,6 +35,16 @@ _asdf_extras_refresh() {
 	if ! eval "$init_code"; then
 		printf 'asdf-extras: initialization failed; retry eval "$(asdf-extras init bash)"\n' >&2
 		return 1
+	fi
+	if ((${#completion_args[@]})); then
+		if ! completion_code="$("$executable" "${completion_args[@]}")" || [[ -z "$completion_code" ]]; then
+			printf 'asdf-extras: cannot generate completion; retry eval "$(asdf-extras %s)"\n' "${completion_args[*]}" >&2
+			return 1
+		fi
+		if ! eval "$completion_code"; then
+			printf 'asdf-extras: completion reload failed; retry eval "$(asdf-extras %s)"\n' "${completion_args[*]}" >&2
+			return 1
+		fi
 	fi
 	return "$update_rc"
 }
@@ -55,7 +73,7 @@ asdf() {
 	if [[ "${1:-}" == "completion" ]]; then
 		shift
 		case "${1:-}" in
-		bash | zsh | fish | nushell | elvish) _asdf_extras_dispatch completion --asdf "$@" ;;
+		bash | zsh | fish | nushell | elvish) _asdf_extras_dispatch completion --asdf --wrappers "$@" ;;
 		*) _asdf_extras_dispatch completion "$@" ;;
 		esac
 		return $?

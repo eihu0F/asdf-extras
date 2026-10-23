@@ -146,6 +146,9 @@ try {
 EOF
 	cat "$test_root/init.elv"
 	cat "$test_root/init.elv"
+	# init does not load completion; enable it afterward, as the shell guide does.
+	cat "$test_root/combined.elv"
+	cat "$test_root/combined.elv"
 	cat <<'EOF'
 set-env ASDF_EXTRAS_DISPATCHER $E:ASDF_ELVISH_TEST_ROOT'/dispatch.bash'
 asdf install --local nodejs 22.0.0
@@ -180,10 +183,14 @@ echo 'Elvish completion tests: PASS'
 exit
 EOF
 } >"$test_root/test.elv"
+if grep -q 'ASDF_EXTRAS_COMPLETION_HELPER\|asdf-extras-load-completion' "$test_root/init.elv"; then
+	printf 'FAIL: init emitted completion\n' >&2
+	exit 1
+fi
 run_elvish "$test_root/test.elv" "$test_root/transcript" </dev/null
 grep -q 'Elvish completion tests: PASS' "$test_root/transcript"
 grep -q 'Elvish completion query failed' "$test_root/transcript"
-[[ "$(cat "$test_root/dispatch.log")" == "$(printf '%s\n' 'install --local nodejs 22.0.0' 'update --version nodejs' 'completion --asdf elvish')" ]]
+[[ "$(cat "$test_root/dispatch.log")" == "$(printf '%s\n' 'install --local nodejs 22.0.0' 'update --version nodejs' 'completion --asdf --wrappers elvish')" ]]
 [[ "$(cat "$test_root/native.log")" == "$(printf '%s\n' 'completion elvish' 'current plugin with spaces')" ]]
 
 cat >"$test_root/eval.elv" <<'EOF'
@@ -195,6 +202,7 @@ try {
 	eval (e:cat $E:ASDF_ELVISH_TEST_ROOT'/init.elv' | slurp) &on-end={|ns| set asdf~ = $ns[asdf~]}
 	set-env ASDF_EXTRAS_DISPATCHER $E:ASDF_ELVISH_TEST_ROOT'/dispatch.bash'
 	asdf completion elvish
+	eval (e:cat $E:ASDF_ELVISH_TEST_ROOT'/combined.elv' | slurp)
 	if (not-eq [($edit:completion:arg-completer[asdf] asdf current '')] [native-generated]) {
 		fail 'eval setup lost native completion'
 	}
@@ -207,7 +215,7 @@ exit
 EOF
 ASDF_ELVISH_FAILURE=registered run_elvish "$test_root/eval.elv" "$test_root/eval.log" </dev/null
 grep -q 'Elvish eval setup: PASS' "$test_root/eval.log"
-[[ "$(tail -n 2 "$test_root/dispatch.log")" == "$(printf '%s\n' 'install --local nodejs 22.0.0' 'completion --asdf elvish')" ]]
+[[ "$(tail -n 2 "$test_root/dispatch.log")" == "$(printf '%s\n' 'install --local nodejs 22.0.0' 'completion --asdf --wrappers elvish')" ]]
 
 cat >"$test_root/bin/asdf-extras" <<'EOF'
 #!/usr/bin/env bash
@@ -219,6 +227,7 @@ var asdf~ = $nil
 try {
 	eval (e:cat $E:ASDF_ELVISH_TEST_ROOT'/init.elv' | slurp) &on-end={|ns| set asdf~ = $ns[asdf~]}
 	set-env ASDF_EXTRAS_DISPATCHER $E:ASDF_ELVISH_TEST_ROOT'/dispatch.bash'
+	eval (e:cat $E:ASDF_ELVISH_TEST_ROOT'/combined.elv' | slurp)
 } catch err {
 	echo $err >&2
 	exit 1

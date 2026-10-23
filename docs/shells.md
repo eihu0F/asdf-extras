@@ -187,7 +187,9 @@ source ~/.asdf-extras-init.nu
 
 Load any existing native asdf module **before** this line, not afterward.
 The initialization file does not include completion. Start a new session so the
-`asdf` wrapper is loaded, then generate the completion file once:
+`asdf` wrapper is loaded, then generate the completion file once. Because it is
+generated through the initialized wrapper, it also redefines the wrapper commands
+so that they keep their completions:
 
 ```nu
 asdf completion nushell | save --force ~/.asdf-extras-completion.nu
@@ -308,7 +310,7 @@ while without initialization it is native asdf's command. Use
 
 | Invocation | When the selected asdf-extras runtime changes |
 | --- | --- |
-| Initialized Bash/Zsh/Fish `asdf update` | Automatically reloads asdf-extras initialization and its completion overlay; retains native completion definitions |
+| Initialized Bash/Zsh/Fish `asdf update` | Automatically reloads asdf-extras initialization, and reloads completion in the mode you enabled; retains native completion definitions |
 | Initialized Elvish/Nushell `asdf update` | Prints a reminder after every update, including failures, to start a new session if asdf-extras changed; does not reload current definitions |
 | Direct `asdf-extras update` | No automatic shell refresh |
 
@@ -317,8 +319,13 @@ The Bash/Zsh/Fish wrapper resolves the new executable with
 selected executable path changes, keeping the current shell usable after cleanup
 removes the old runtime.
 
-If a bulk update fails but changes the selected runtime, initialization is still
-refreshed and the update's failure status is preserved. If the runtime is
+Completion is reloaded only if it is already enabled in the current shell, so
+setups that never enabled completion do not get it registered by an update. A
+standalone `asdf-extras completion` setup is reloaded as standalone, and an
+initialized `asdf completion` setup as the combined overlay.
+
+If a bulk update fails but changes the selected runtime, initialization (and
+enabled completion) is still refreshed and the update's failure status is preserved. If the runtime is
 unchanged, no initialization is evaluated. Refresh failures report an error and
 return nonzero. Startup configuration files are never rewritten.
 For Elvish/Nushell, a new session reloads startup initialization without

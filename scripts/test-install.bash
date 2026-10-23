@@ -8,7 +8,11 @@ test_dir="$(mktemp -d)"
 trap 'rm -rf "$test_dir"' EXIT
 
 export ASDF_TEST_LOG="${test_dir}/asdf.log"
+export ASDF_TEST_ENV_LOG="${test_dir}/asdf.env.log"
 export ASDF_EXTRAS_INSTALL_ENV_DIR="${test_dir}/env"
+unset ASDF_EXTRAS_INSTALL_ENV_FUNCTION ASDF_EXTRAS_INSTALL_ENV_FUNCTION_NODEJS \
+	ASDF_EXTRAS_INSTALL_ENV_FUNCTION_PYTHON ASDF_EXTRAS_INSTALL_ENV_FILE_NODEJS \
+	ASDF_EXTRAS_INSTALL_ENV_FILE_PYTHON
 export PATH="${test_dir}:$PATH"
 export HOME="${test_dir}/home"
 mkdir -p "$HOME" "${test_dir}/project/child"
@@ -24,12 +28,18 @@ list) cat "${ASDF_TEST_LOG}.installed" ;;
 install)
 	printf '<%s>' "$@" >>"$ASDF_TEST_LOG"
 	printf '\n' >>"$ASDF_TEST_LOG"
+	printf '<install><%s><%s><%s>\n' "$2" "$3" "${ASDF_TEST_MARKER-}" >>"$ASDF_TEST_ENV_LOG"
 	for version in "$@"; do :; done
 	printf '%s\n' "$version" >"${ASDF_TEST_LOG}.installed"
 	;;
 set)
 	printf '<%s>' "$@" >>"$ASDF_TEST_LOG"
 	printf '\n' >>"$ASDF_TEST_LOG"
+	set_plugin="$2"
+	if [[ "$set_plugin" == --* ]]; then
+		set_plugin="$3"
+	fi
+	printf '<set><%s><%s>\n' "$set_plugin" "${ASDF_TEST_MARKER-}" >>"$ASDF_TEST_ENV_LOG"
 	if [[ -n "${ASDF_TEST_NATIVE_ASDF:-}" ]]; then
 		exec "$ASDF_TEST_NATIVE_ASDF" "$@"
 	fi
@@ -107,6 +117,25 @@ assert_invalid "--home, --parent and --local cannot be used together" --local --
 
 rm ../.tool-versions
 assert_invalid "no .tool-versions found in a parent directory" --parent nodejs 24.11.0
+
+mkdir -p "$ASDF_EXTRAS_INSTALL_ENV_DIR"
+cat >"${ASDF_EXTRAS_INSTALL_ENV_DIR}/nodejs.env" <<'EOF'
+export ASDF_TEST_MARKER=nodejs-env
+EOF
+cat >"${ASDF_EXTRAS_INSTALL_ENV_DIR}/python.env" <<'EOF'
+export ASDF_TEST_MARKER=python-env
+EOF
+: >"$ASDF_TEST_ENV_LOG"
+"$BASH" "${repo_dir}/lib/commands/command-install" nodejs 1.2.3
+"$BASH" "${repo_dir}/lib/commands/command-install" python 3.4.5
+grep -Fx '<install><nodejs><1.2.3><nodejs-env>' "$ASDF_TEST_ENV_LOG" >/dev/null ||
+	fail "nodejs install env was not applied to install"
+grep -Fx '<set><nodejs><>' "$ASDF_TEST_ENV_LOG" >/dev/null ||
+	fail "nodejs install env leaked into set"
+grep -Fx '<install><python><3.4.5><python-env>' "$ASDF_TEST_ENV_LOG" >/dev/null ||
+	fail "python install env was not applied to install"
+grep -Fx '<set><python><>' "$ASDF_TEST_ENV_LOG" >/dev/null ||
+	fail "python install env leaked into set"
 
 # Check shell wrappers route local installs while leaving plain installs native.
 for shell_name in bash zsh fish; do

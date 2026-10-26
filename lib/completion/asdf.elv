@@ -17,7 +17,7 @@ fn complete {|@words|
 	if (eq $words[1] install) {
 		var normalized = [$words[0] install]
 		for word $words[2..-1] {
-			if (not (has-value [-u --home -p --parent --local] $word)) {
+			if (not (has-value [-u --home -p --parent --local --replace] $word)) {
 				set normalized = [$@normalized $word]
 			}
 		}

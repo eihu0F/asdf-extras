@@ -14,7 +14,7 @@ extras_completion_candidates() {
 		shift
 	fi
 	local subcommand="${1:-}" current="${!#}" arg plugin="" position=0
-	local scope="" targets="" all=0 options="" candidates="" candidate
+	local scope="" targets="" all=0 replace=0 options="" candidates="" candidate
 	if ((standalone)); then
 		if [[ $# -le 1 ]]; then
 			for candidate in completion get help init install prune update version --help --version; do
@@ -75,6 +75,7 @@ extras_completion_candidates() {
 		-u | --home | -p | --parent | --local) scope="$arg" ;;
 		--all) all=1 ;;
 		--use-latest) ;;
+		--replace) replace=1 ;;
 		--asdf | --plugin | --version) targets="$targets $arg" ;;
 		-*) ;;
 		*)
@@ -85,6 +86,9 @@ extras_completion_candidates() {
 	done
 	if [[ -z "$scope" ]]; then
 		options="-u --home -p --parent --local"
+	fi
+	if [[ "$replace" == 0 && ("$subcommand" == install || "$subcommand" == update) ]] && ((all == 0)); then
+		options="$options --replace"
 	fi
 	if [[ "$subcommand" == prune ]]; then
 		((position == 0)) || return 0
@@ -117,8 +121,10 @@ extras_completion_candidates() {
 		return 0
 	fi
 	if ((delegated)); then
-		if ((position == 1)) && [[ latest == "$current"* ]]; then
-			printf 'latest\n'
+		if ((position >= 1)); then
+			for candidate in latest system; do
+				[[ "$candidate" != "$current"* ]] || printf '%s\n' "$candidate"
+			done
 		fi
 		return 0
 	fi
@@ -129,7 +135,7 @@ extras_completion_candidates() {
 			return 1
 		}
 		;;
-	1)
+	*)
 		if [[ "$subcommand" == get ]] ||
 			[[ "$subcommand" == update && -n "$targets" && "$targets" != *--version* ]]; then
 			return 0
@@ -138,9 +144,8 @@ extras_completion_candidates() {
 			printf 'asdf-extras: could not list versions for completion: %s\n' "$plugin" >&2
 			return 1
 		}
-		candidates="$(printf 'latest\n%s\n' "$candidates")"
+		candidates="$(printf 'latest\nsystem\n%s\n' "$candidates")"
 		;;
-	*) return 0 ;;
 	esac
 	while IFS= read -r candidate; do
 		[[ -z "$candidate" || "$candidate" != "$current"* ]] || printf '%s\n' "$candidate"

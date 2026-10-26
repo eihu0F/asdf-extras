@@ -31,11 +31,29 @@ Scopes (install and update):
 EOF
 }
 
+extras_help_versions() {
+	cat <<'EOF'
+Version lists (install and update):
+  One version replaces the primary (first) entry and keeps the existing fallbacks:
+    python 3.12.0 3.11.0 system  --(3.12.8)->  python 3.12.8 3.11.0 system
+  Several versions replace the whole list, in the given order.
+  --replace replaces the whole list even for one version, clearing the fallbacks.
+  The previous primary is kept only if you list it. A version appears once: a
+  fallback promoted to primary is not copied. A missing entry is created.
+  latest and latest:<prefix> are resolved per element (with --use-latest every
+  element is a prefix). system is a literal entry and is never resolved or installed.
+  The selected configuration file is read directly, not the effective version.
+  All requested versions are installed before the list is written; on failure the
+  configuration is unchanged and nothing is uninstalled. Replacing a list does not
+  uninstall dropped fallbacks (see asdf-extras prune).
+EOF
+}
+
 extras_help_install() {
 	cat <<'EOF'
 asdf-extras install extensions:
-  asdf install [--home|-u|--parent|-p|--local] <plugin> <version>
-  asdf-extras install [--home|-u|--parent|-p|--local] <plugin> <version>
+  asdf install [--home|-u|--parent|-p|--local] [--replace] <plugin> <version>...
+  asdf-extras install [--home|-u|--parent|-p|--local] [--replace] <plugin> <version>...
 
   With init, a scope flag routes install through extras; unscoped install is native.
   Direct extras install defaults to --home.
@@ -48,16 +66,19 @@ Examples:
   asdf install --home nodejs latest
   asdf install --parent nodejs 24.11.0
   asdf install --local nodejs latest:24
+  asdf install --home python latest 3.13 system
 
 EOF
+	extras_help_versions
+	printf '\n'
 	extras_help_scopes
 }
 
 extras_help_update() {
 	cat <<'EOF'
 asdf-extras update:
-  asdf update [--all | --asdf --plugin --version] [--use-latest] [scope] [<plugin> [version]]
-  asdf-extras update [--all | --asdf --plugin --version] [--use-latest] [scope] [<plugin> [version]]
+  asdf update [--all | --asdf --plugin --version] [--use-latest] [--replace] [scope] [<plugin> [<version>...]]
+  asdf-extras update [--all | --asdf --plugin --version] [--use-latest] [--replace] [scope] [<plugin> [<version>...]]
 
 Update targets:
   --all         Update asdf itself, plugin definitions and tool versions
@@ -72,6 +93,7 @@ Update targets:
   Without --use-latest, an omitted version uses ASDF_EXTRAS_UPDATE_DEFAULT_VERSION
   (default: latest). ASDF_EXTRAS_UPDATE_DEFAULT_VERSION_<PLUGIN> overrides it.
   <PLUGIN> uses uppercase plugin name with non-alnum converted to _.
+  The default version and the default latest prefix may be space-separated lists.
   With --use-latest (or ASDF_EXTRAS_UPDATE_USE_LATEST), value is a latest prefix.
   ASDF_EXTRAS_UPDATE_USE_LATEST_<PLUGIN> can enable/disable this per plugin.
   Omitted prefix uses ASDF_EXTRAS_UPDATE_DEFAULT_LATEST_PREFIX (default: empty).
@@ -79,8 +101,9 @@ Update targets:
   Bulk updates skip plugins whose latest version cannot be resolved, with a warning.
   Other failures do not stop subsequent plugins; any failure returns nonzero.
   Plugins are processed sequentially, with activation verified before cleanup.
-  Previously configured versions are removed only after successful installation
-  and verified activation in home scope. Parent/local updates retain previous versions.
+  The replaced primary version is removed only after successful installation and
+  verified activation in home scope, and only if the new list no longer keeps it.
+  Parent/local updates retain previous versions.
   Home-scoped bulk tool updates process extras last to keep its runtime available.
   ASDF_EXTRAS_PLUGIN_NAME selects its plugin name (default: asdf-extras).
   Custom asdf updater: ${ASDF_DATA_DIR:-$HOME/.asdf}/asdf-extras/update-asdf.bash
@@ -94,8 +117,12 @@ Examples:
   asdf update nodejs
   asdf update --version --local nodejs latest:24
   asdf update --plugin
+  asdf update --use-latest python 3.14 3.13 system
+  asdf update --replace python latest
 
 EOF
+	extras_help_versions
+	printf '\n'
 	extras_help_scopes
 }
 
@@ -190,7 +217,7 @@ extras_help_summary() {
 asdf-extras extensions (enabled by init):
   asdf update [targets] [scope] [<plugin> [version]]
     No arguments updates asdf, plugins and tools (--all).
-  asdf install [--home|-u|--parent|-p|--local] <plugin> <version>
+  asdf install [--home|-u|--parent|-p|--local] [--replace] <plugin> <version>...
     Scoped install also activates the version; unscoped install stays native.
   asdf get [--home|-u|--parent|-p|--local] [<plugin>]
     Prints the versions configured in one scope file without changing it.

@@ -13,7 +13,7 @@ _asdf_extras_complete() {
 		normalized=("${COMP_WORDS[0]}" install)
 		for ((i = 2; i < ${#COMP_WORDS[@]}; i++)); do
 			case "${COMP_WORDS[i]}" in
-			-u | --home | -p | --parent | --local)
+			-u | --home | -p | --parent | --local | --replace)
 				if ((i != original_cword)); then
 					scoped=1
 					((i >= original_cword)) || normalized_cword=$((normalized_cword - 1))

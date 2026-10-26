@@ -42,7 +42,7 @@ install)
 	printf '\n' >>"$ASDF_TEST_LOG"
 	printf '<install><%s><%s><%s>\n' "$2" "$3" "${ASDF_TEST_MARKER-}" >>"$ASDF_TEST_ENV_LOG"
 	for version in "$@"; do :; done
-	printf '%s\n' "$version" >"${ASDF_TEST_LOG}.installed"
+	printf '%s\n' "$version" >>"${ASDF_TEST_LOG}.installed"
 	;;
 set)
 	printf '<%s>' "$@" >>"$ASDF_TEST_LOG"
@@ -61,7 +61,12 @@ set)
 	--home) file="$HOME/.tool-versions"; shift ;;
 	--parent) file="$PWD/../.tool-versions"; shift ;;
 	esac
-	printf '%s %s\n' "$1" "$2" >"$file"
+	{
+		printf '%s' "$1"
+		shift
+		printf ' %s' "$@"
+		printf '\n'
+	} >"$file"
 	;;
 esac
 EOF
@@ -130,6 +135,30 @@ assert_invalid "unknown setup option: --local" --local
 assert_invalid "unknown setup option: -p" -p
 command_name=install
 
+# One version replaces the primary and keeps the fallbacks; several versions or
+# --replace replace the whole list; system is literal and never installed.
+check_list() {
+	local initial="$1" expected="$2"
+	shift 2
+	printf '%s\n' "$initial" >"$HOME/.tool-versions"
+	: >"$ASDF_TEST_LOG"
+	"$BASH" "${repo_dir}/lib/commands/command-install" "$@" >/dev/null || fail "install $*"
+	[[ "$(<"$HOME/.tool-versions")" == "nodejs $expected" ]] ||
+		fail "install $*: expected <$expected>, got <$(<"$HOME/.tool-versions")>"
+	if grep -F '<install>' "$ASDF_TEST_LOG" | grep -F system >/dev/null; then
+		fail "install $*: system was installed"
+	fi
+}
+check_list 'nodejs 24.0.0 23.0.0 system' '24.11.0 23.0.0 system' nodejs 24.11.0
+check_list 'nodejs 24.0.0 23.0.0 system' '9.0 23.0.0 system' --home nodejs latest:24
+check_list 'nodejs 24.11.0 23.0.0 system' '24.11.0 23.0.0 system' nodejs 24.11.0
+check_list 'nodejs 24.0.0 23.0.0 system' '24.11.0 system 22.0.0' nodejs 24.11.0 system 22.0.0
+check_list 'nodejs 24.0.0 23.0.0 system' '24.11.0' --replace nodejs 24.11.0
+check_list 'nodejs 24.0.0 23.0.0 system' '23.0.0 system' nodejs 23.0.0
+check_list 'nodejs 24.0.0' '1.0 2.0' nodejs 1.0 2.0 1.0
+check_list 'python 3.0' '9.0 8.0' nodejs latest 8.0
+check_list 'nodejs system 22.0.0' '9.0 22.0.0' nodejs latest
+
 # Progress shows the resolved version, not the request, and what it replaces.
 rm -f "$HOME/.tool-versions"
 output="$("$BASH" "${repo_dir}/lib/commands/command-install" nodejs latest 2>&1)"
@@ -141,7 +170,7 @@ output="$("$BASH" "${repo_dir}/lib/commands/command-install" nodejs latest 2>&1)
 output="$("$BASH" "${repo_dir}/lib/commands/command-install" nodejs latest 2>&1)"
 [[ "$output" == *"already configured at 9.0"* && "$output" != *updating* ]] || fail "unchanged version reported as an update: $output"
 
-usage="usage: asdf-extras install [options] <plugin> <version>"
+usage="usage: asdf-extras install [options] <plugin> <version>..."
 assert_invalid "$usage"
 assert_invalid "$usage" --home
 assert_invalid "$usage" --verbose

@@ -18,7 +18,7 @@ def asdf-extras-asdf-candidates [place: record] {
 	if $subcommand != install {
 		return $extras
 	}
-	let normalized = ($args | where {|arg| (asdf-extras-argument-value $arg) not-in [-u --home -p --parent --local] })
+	let normalized = ($args | where {|arg| (asdf-extras-argument-value $arg) not-in [-u --home -p --parent --local --replace] })
 	let native = ("asdf-extras-native-install " + ($normalized | str join " ") | commandline complete --detailed | each {|item| $item | reject span })
 	$native | append ($extras | each {|value| {value: $value} }) | uniq-by value
 }

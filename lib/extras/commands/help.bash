@@ -65,7 +65,7 @@ Subcommands:
   get [--home|-u|--parent|-p|--local] [<plugin>]
   help [install|update|get|prune|setup|completion]
   init <bash|zsh|fish|elvish|nushell>
-  install [--home|-u|--parent|-p|--local] <plugin> <version>
+  install [--home|-u|--parent|-p|--local] [--replace] <plugin> <version>...
   prune [<plugin>]
   setup [<version>]
 	update [--all | --asdf --plugin --version] [--use-latest] [scope] [<plugin> [version]]

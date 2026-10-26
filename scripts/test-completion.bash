@@ -204,6 +204,16 @@ output="$(bash "$repo_dir/libexec/asdf-extras" completion --candidates --standal
 [[ "$output" == *get* ]] || fail "get missing from subcommand candidates"
 output="$(bash "$repo_dir/libexec/asdf-extras" completion --candidates --standalone help g)"
 [[ "$output" == get ]] || fail "get help topic missing"
+# Every position after the plugin completes a version, and --replace is offered once.
+candidates() { bash "$repo_dir/libexec/asdf-extras" completion --candidates --standalone "$@"; }
+for subcommand in install update; do
+	output="$(candidates "$subcommand" nodejs 22.0.0 "")"
+	[[ "$output" == *latest* && "$output" == *system* && "$output" == *20.0.0* ]] || fail "$subcommand second version: $output"
+	[[ "$output" == *--replace* ]] || fail "$subcommand --replace not offered: $output"
+	output="$(candidates "$subcommand" --replace nodejs "")"
+	[[ "$output" != *--replace* ]] || fail "$subcommand offered --replace twice"
+done
+[[ "$(candidates install --delegated nodejs 22.0.0 s)" == system ]] || fail "delegated install lacks later versions"
 # Words typed on the command line belong to the query, even --help.
 output="$(bash "$repo_dir/libexec/asdf-extras" completion --candidates --standalone update --help)"
 [[ -z "$output" ]] || fail "--candidates treated a typed --help as a request for help"

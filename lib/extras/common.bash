@@ -95,6 +95,27 @@ extras_configured_entries() {
 	' "$file"
 }
 
+# Prints the version list an install or update leaves in the configuration.
+# One requested version replaces only the primary (first) entry and keeps the
+# existing fallbacks; several versions, or replace=1, replace the whole list.
+# A version appears once, at its first position.
+extras_merged_versions() {
+	local replace="$1" current="$2" version merged=""
+	shift 2
+	local -a kept=("$@") existing=()
+	if (($# == 1)) && [[ "$replace" == 0 ]]; then
+		read -r -a existing <<<"$current"
+		((${#existing[@]} < 2)) || kept+=("${existing[@]:1}")
+	fi
+	for version in "${kept[@]}"; do
+		case " $merged " in
+		*" $version "*) continue ;;
+		esac
+		merged="${merged:+$merged }$version"
+	done
+	printf '%s\n' "$merged"
+}
+
 extras_plugins() {
 	command asdf plugin list 2>/dev/null || true
 }

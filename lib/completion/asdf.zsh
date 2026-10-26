@@ -15,7 +15,7 @@ _asdf_extras_complete() {
 			normalized=("${words[1]}" install)
 			for ((i = 3; i <= ${#words}; i++)); do
 				case "${words[i]}" in
-				-u | --home | -p | --parent | --local)
+				-u | --home | -p | --parent | --local | --replace)
 					if ((i != CURRENT)); then
 						scoped=1
 						((i >= CURRENT)) || normalized_current=$((normalized_current - 1))

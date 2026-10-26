@@ -13,9 +13,10 @@ source "${extras_lib}/help.bash"
 extras_maybe_help update "$@"
 
 update_one() {
-	local plugin="$1" version="$2" scope="$3" file="$4"
-	local previous="" target old_version
-	local -a previous_versions=()
+	local plugin="$1" scope="$2" file="$3" old_primary target
+	local previous=""
+	local -a previous_versions=() install_args=("$scope")
+	shift 3
 	if ((update_versions)); then
 		if ! previous="$(extras_configured_version "$file" "$plugin")"; then
 			printf "asdf-extras: could not read configuration: %s\n" "$file" >&2
@@ -31,7 +32,8 @@ update_one() {
 		fi
 	fi
 	((update_versions)) || return 0
-	if ! (extras_run install "$scope" "$plugin" "$version"); then
+	((update_replace == 0)) || install_args+=(--replace)
+	if ! (extras_run install "${install_args[@]}" "$plugin" "$@"); then
 		printf "asdf-extras: update failed; previous installation retained: %s\n" "$plugin" >&2
 		return 1
 	fi
@@ -41,18 +43,21 @@ update_one() {
 			printf "asdf-extras: could not verify configuration; previous versions retained: %s\n" "$plugin" >&2
 			return 1
 		fi
-		# A home entry may contain multiple fallback versions.
+		# Only the replaced primary is cleaned up, and only when the resulting
+		# list no longer keeps it. Fallbacks dropped by a replacement stay installed.
 		read -r -a previous_versions <<<"$previous"
-		for old_version in ${previous_versions[@]+"${previous_versions[@]}"}; do
-			[[ "$old_version" != "$target" && "$old_version" != system ]] || continue
-			case "$old_version" in
-			path:* | ref:*) continue ;;
-			esac
-			if ! (command asdf uninstall "$plugin" "$old_version"); then
-				printf "asdf-extras: failed to remove previous version: %s (%s)\n" "$plugin" "$old_version" >&2
-				return 1
-			fi
-		done
+		old_primary="${previous_versions[0]-}"
+		[[ -n "$old_primary" && "$old_primary" != system ]] || return 0
+		case "$old_primary" in
+		path:* | ref:*) return 0 ;;
+		esac
+		case " $target " in
+		*" $old_primary "*) return 0 ;;
+		esac
+		if ! (command asdf uninstall "$plugin" "$old_primary"); then
+			printf "asdf-extras: failed to remove previous version: %s (%s)\n" "$plugin" "$old_primary" >&2
+			return 1
+		fi
 	fi
 }
 
@@ -60,11 +65,12 @@ main() {
 	local arg scope="" explicit_scope=0 file plugins plugin
 	local extras_plugin="${ASDF_EXTRAS_PLUGIN_NAME:-asdf-extras}"
 	local update_asdf=0 update_plugins=0 update_versions=0 selected=0 all=0 failed=0
-	local force_use_latest=0 global_use_latest=0
+	local force_use_latest=0 global_use_latest=0 update_replace=0
 	local -a positional=()
 	local plugin_env_suffix plugin_version_var plugin_prefix_var plugin_use_latest_var
-	local implicit_version implicit_prefix candidate_version requested_version
-	local use_latest_for_plugin
+	local implicit_version implicit_prefix candidate_version
+	local use_latest_for_plugin element
+	local -a targets=() elements=()
 
 	if [[ "${ASDF_EXTRAS_UPDATE_USE_LATEST:-0}" != 0 ]]; then
 		global_use_latest=1
@@ -73,6 +79,7 @@ main() {
 		case "$arg" in
 		--all) all=1 ;;
 		--use-latest) force_use_latest=1 ;;
+		--replace) update_replace=1 ;;
 		--asdf)
 			update_asdf=1
 			selected=1
@@ -106,7 +113,6 @@ main() {
 		extras_fail "--all cannot be combined with --asdf, --plugin or --version"
 	fi
 	[[ "${1:-}" != all ]] || extras_fail "use --all instead of the all positional argument"
-	[[ $# -le 2 ]] || extras_fail "usage: asdf-extras update [--all|--asdf|--plugin|--version] [--use-latest] [--home|--parent|--local] [<plugin> [<version>]]"
 	if ((all)); then
 		[[ $# -eq 0 ]] || extras_fail "--all does not accept a plugin or version"
 	fi
@@ -178,29 +184,38 @@ main() {
 		fi
 	}
 
-	resolve_install_target_version() {
-		local plugin_name="$1" version_value="$2"
+	# Prints the install arguments for one plugin, one per line. Explicit versions
+	# or the configured default may be lists, which are read as data (no
+	# expansion). system is a literal entry and is never turned into a request.
+	resolve_install_targets() {
+		local plugin_name="$1"
+		shift
 		use_latest_for_plugin="$(resolve_use_latest_mode "$plugin_name")"
-		if [[ "$use_latest_for_plugin" == 1 ]]; then
-			candidate_version="$version_value"
-			if [[ -z "$candidate_version" ]]; then
-				candidate_version="$(resolve_default_latest_prefix "$plugin_name")"
-			fi
-			if [[ -z "$candidate_version" ]]; then
-				printf '%s\n' latest
+		elements=()
+		if [[ $# -gt 0 ]]; then
+			elements=("$@")
+		elif [[ "$use_latest_for_plugin" == 1 ]]; then
+			read -r -a elements <<<"$(resolve_default_latest_prefix "$plugin_name")"
+		else
+			read -r -a elements <<<"$(resolve_default_version "$plugin_name")"
+		fi
+		[[ ${#elements[@]} -gt 0 ]] || elements=(latest)
+		for element in "${elements[@]}"; do
+			if [[ "$element" == system || "$element" == latest || "$element" == latest:* ]]; then
+				printf '%s\n' "$element"
+			elif [[ "$use_latest_for_plugin" == 1 ]]; then
+				printf 'latest:%s\n' "$element"
 			else
-				printf 'latest:%s\n' "$candidate_version"
+				printf '%s\n' "$element"
 			fi
-			return 0
-		fi
-		candidate_version="$version_value"
-		if [[ -z "$candidate_version" ]]; then
-			candidate_version="$(resolve_default_version "$plugin_name")"
-		fi
-		if [[ -z "$candidate_version" ]]; then
-			candidate_version=latest
-		fi
-		printf '%s\n' "$candidate_version"
+		done
+	}
+
+	read_targets() {
+		targets=()
+		while IFS= read -r candidate_version; do
+			targets+=("$candidate_version")
+		done < <(resolve_install_targets "$@")
 	}
 
 	scope="${scope:---home}"
@@ -238,14 +253,15 @@ main() {
 	if [[ $# -eq 0 ]]; then
 		while IFS= read -r plugin; do
 			[[ -n "$plugin" ]] || continue
-			if ! update_one "$plugin" "$(resolve_install_target_version "$plugin" "")" "$scope" "$file"; then
+			read_targets "$plugin"
+			if ! update_one "$plugin" "$scope" "$file" "${targets[@]}"; then
 				printf "asdf-extras: skipped %s (update failed; see error above)\n" "$plugin" >&2
 				failed=1
 			fi
 		done <<<"$plugins"
 	else
-		requested_version="${2-}"
-		if ! update_one "$1" "$(resolve_install_target_version "$1" "$requested_version")" "$scope" "$file"; then
+		read_targets "$1" "${@:2}"
+		if ! update_one "$1" "$scope" "$file" "${targets[@]}"; then
 			failed=1
 		fi
 	fi

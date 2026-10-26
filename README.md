@@ -113,6 +113,7 @@ extension of `asdf prune`.
 | `asdf update --local` | Update plugin definitions and tools listed in the current directory's configuration |
 | `asdf update --parent nodejs` | Update one plugin definition and tool using the closest parent configuration |
 | `asdf update --plugin --version` | Update plugin definitions and tools without updating asdf itself |
+| `asdf update python 3.14 3.13 system` | Replace the whole configured list for one plugin |
 
 See [Update options and defaults](#update-options-and-defaults) for target
 selection, failure handling, and environment settings.
@@ -121,6 +122,7 @@ selection, failure handling, and environment settings.
 
 ```shell
 asdf install --home nodejs latest
+asdf install --home python latest 3.13 system   # a list of versions
 ```
 
 Use a [scope option](#scopes-and-version-cleanup) to install through asdf-extras
@@ -255,15 +257,50 @@ Before installing, asdf-extras prints the resolved version, for example
 the scope has no entry yet). A tool that is already configured at the target version
 reports `already configured` instead.
 
+### Version lists and `--replace`
+
+A plugin can have several configured versions: a primary followed by fallbacks, such
+as `python 3.12.0 3.11.0 system`. Install and update take an ordered list of versions:
+
+| Arguments | Result in the selected configuration |
+| --- | --- |
+| One version (default) | Replaces the primary and keeps the existing fallbacks in order: `python 3.12.8 3.11.0 system` |
+| Several versions | Replaces the whole list with the supplied list, in that order |
+| `--replace` with one version | Replaces the whole list with that version, clearing the fallbacks |
+
+```shell
+asdf install -u python latest                       # replace only the primary
+asdf install -u python latest 3.14.0 system         # replace the full list
+asdf install -u --replace python latest             # clear the fallbacks
+asdf update python 3.12.8 3.12.0 3.11.0 system      # keep the previous primary by listing it
+```
+
+- The previous primary is not retained automatically; list it to keep it. There is no
+  separate option for that.
+- A version appears once, at its first position: promoting a fallback to primary does
+  not leave a copy, so repeating an update never accumulates fallbacks.
+- A missing entry is created with the supplied list.
+- `latest` and `latest:<prefix>` are resolved per element. With `--use-latest` every
+  element is a prefix, and `latest` means no prefix. `system` is a literal entry: it is
+  never resolved or installed.
+- The selected file itself is read (as `asdf get` does), not the effective version
+  from `asdf current`, so a shadowing override cannot change what is replaced.
+- All requested versions are installed before the list is written. If resolution or
+  installation fails, the configuration is unchanged and nothing is uninstalled.
+- `--replace` only changes the configured list. It does not uninstall versions; dropped
+  fallbacks stay installed until you run `asdf-extras prune`.
+
+Only `install` and `update` take lists. Plain `asdf install` is still native.
+
 ### Processing and failures
 
 When both plugin and tool targets are selected, asdf-extras updates each plugin
 definition, then delegates installation and activation to its install command.
 It does not run `asdf plugin update --all`.
 
-Install compares the target with the version in the selected configuration.
-If they match and the version is installed, it skips installation, configuration
-changes, and hooks. Otherwise it installs the target and writes the selected
+Install compares the resulting list with the selected configuration.
+If they match and the requested versions are installed, it skips installation,
+configuration changes, and hooks. Otherwise it installs the target and writes the selected
 configuration, even when another configuration or environment variable shadows it.
 
 Failures are reported and remaining updates continue, including when updating
@@ -297,6 +334,17 @@ For example, `ASDF_EXTRAS_UPDATE_DEFAULT_VERSION_NODEJS=24.11.0` selects a
 specific default version for Node.js. `--use-latest` explicitly selects
 latest-prefix resolution for an invocation.
 
+The default version and the default latest prefix may be space-separated lists, read
+as data (no shell evaluation or pathname expansion) with the
+[list rules](#version-lists-and---replace) above:
+
+```shell
+export ASDF_EXTRAS_UPDATE_USE_LATEST_PYTHON=1
+export ASDF_EXTRAS_UPDATE_DEFAULT_LATEST_PREFIX_PYTHON="3.14 3.13 system"
+```
+
+One resolved element keeps the existing fallbacks; several replace the whole list.
+
 ## Scopes and version cleanup
 
 Install and update accept these mutually exclusive scope options in any argument
@@ -305,7 +353,7 @@ position. Configuration files are named `.tool-versions`, or use
 
 | Scope | Configuration and activation | Previous versions after update |
 | --- | --- | --- |
-| `-u` / `--home` (default for update and direct `asdf-extras install`) | Home directory; `asdf set --home` | Removed only after successful installation and verified activation |
+| `-u` / `--home` (default for update and direct `asdf-extras install`) | Home directory; `asdf set --home` | The replaced primary is removed after successful installation and verified activation, unless the new list keeps it |
 | `-p` / `--parent` | Closest existing configuration in a parent directory; `asdf set --parent` | Retained |
 | `--local` | Current directory; `asdf set` | Retained |
 
@@ -319,9 +367,10 @@ unscoped installation remains native.
 | Explicit scope, no plugin argument | Only plugins listed in that configuration; a missing file is an error |
 | No scope option, no plugin argument | All installed plugins; writes the home configuration |
 
-Home-scoped update removes previous configured versions only after installation
+Home-scoped update removes the replaced primary version only after installation
 succeeds, the target is confirmed installed, and activation succeeds and is
-verified. Installation failure prevents activation. Failed or unverifiable
+verified, and only if the resulting list no longer keeps it. Fallbacks that a list
+replacement drops are not uninstalled. Installation failure prevents activation. Failed or unverifiable
 activation retains previous installations. Install itself never removes previous
 versions; cleanup belongs to update.
 

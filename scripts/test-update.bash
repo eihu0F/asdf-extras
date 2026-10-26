@@ -89,7 +89,12 @@ plugin)
 	;;
 latest)
 	[[ "$ASDF_TEST_SCENARIO" != unresolved || "$2" != test ]] || exit 1
-	printf '2.0\n'
+	# A prefix resolves to <prefix>.5 so lists of series are told apart.
+	if [[ -n "${3:-}" && "$3" =~ ^[0-9]$ ]]; then
+		printf '%s.5\n' "$3"
+	else
+		printf '2.0\n'
+	fi
 	;;
 current)
 	printf 'Name Version Source\n%s %s home\n' "$2" "$(cat "$ASDF_TEST_DIR/$2-current")"
@@ -137,7 +142,8 @@ set)
 		;;
 	esac
 	plugin="$1"
-	version="$2"
+	shift
+	version="$*"
 	if [[ "$plugin" == "${ASDF_EXTRAS_PLUGIN_NAME:-asdf-extras}" && "$ASDF_TEST_SCENARIO" == extras-set-fails ]]; then
 		exit 1
 	fi
@@ -158,7 +164,7 @@ set)
 	fi
 	printf '%s %s\n' "$plugin" "$version" >>"$file.tmp"
 	mv "$file.tmp" "$file"
-	printf '%s\n' "$version" >"$ASDF_TEST_DIR/$plugin-current"
+	printf '%s\n' "${version%% *}" >"$ASDF_TEST_DIR/$plugin-current"
 	;;
 uninstall)
 	if [[ "$2" == "${ASDF_EXTRAS_PLUGIN_NAME:-asdf-extras}" && "${ASDF_TEST_RUNTIME_UPDATE:-0}" == 1 ]]; then
@@ -328,7 +334,7 @@ for scope in --home --parent --local; do
 done
 
 export ASDF_TEST_SCENARIO=success
-for args in '--home --local test' '--parent --local test' '--current test' 'all 2.0' 'test 2.0 extra' '--all --plugin' '--all test' '--asdf test' '--plugin test 2.0'; do
+for args in '--home --local test' '--parent --local test' '--current test' 'all 2.0' '--all --plugin' '--all test' '--asdf test' '--plugin test 2.0'; do
 	: >"${test_dir}/log"
 	# Intentional splitting of fixed test arguments.
 	read -r -a invalid_args <<<"$args"
@@ -622,5 +628,102 @@ for mode in default --version --home --local --parent --plugin custom-extras; do
 	fi
 done
 unset ASDF_EXTRAS_PLUGIN_NAME
+
+# Version lists: one version replaces the primary and keeps fallbacks; several
+# versions, or --replace, replace the whole list.
+export ASDF_TEST_SCENARIO=success ASDF_TEST_RUNTIME_UPDATE=0
+list_case() {
+	local initial="$1" expected="$2" removed="$3" scope_file="$HOME/.tool-versions"
+	shift 3
+	: >"${test_dir}/log"
+	: >"${test_dir}/test-removed"
+	printf '%s\n' "$initial" >"$scope_file"
+	printf 'other 5.0\n' >>"$scope_file"
+	printf '1.0\n0.9\n' >"${test_dir}/test-installed"
+	if ! "$BASH" "${repo_dir}/lib/commands/command-update" "$@" >"${test_dir}/output" 2>&1; then
+		fail "update $*: $(cat "${test_dir}/output")"
+	fi
+	[[ "$(awk '$1 == "test" { $1 = ""; sub(/^ /, ""); print }' "$scope_file")" == "$expected" ]] ||
+		fail "update $*: expected <$expected>, got <$(grep '^test ' "$scope_file")>"
+	grep -Fx 'other 5.0' "$scope_file" >/dev/null || fail "update $*: another plugin entry changed"
+	[[ "$(<"${test_dir}/test-removed")" == "$removed" ]] || fail "update $*: removed <$(<"${test_dir}/test-removed")>, expected <$removed>"
+	if grep -Eq '^(latest|install) test system' "${test_dir}/log"; then
+		fail "update $*: system was resolved or installed"
+	fi
+}
+
+# Default: replace only the primary and keep the fallbacks, in order.
+list_case 'test 1.0 0.9 system' '2.0 0.9 system' 1.0 test
+list_case 'test 1.0 0.9 system' '2.0 0.9 system' 1.0 --home test 2.0
+# Repeating the update does not accumulate fallbacks.
+list_case 'test 2.0 0.9 system' '2.0 0.9 system' '' test
+# Several versions replace the whole list, in the given order.
+list_case 'test 1.0 0.9 system' '2.0 1.0 system' '' test 2.0 1.0 system
+list_case 'test 1.0 0.9 system' '2.0 0.9' 1.0 test 2.0 0.9
+# --replace clears the fallbacks with a single version; they stay installed.
+list_case 'test 1.0 0.9 system' '2.0' 1.0 --replace test 2.0
+# A fallback promoted to primary is not copied; the replaced primary is cleaned up.
+list_case 'test 1.0 0.9 system' '0.9 system' 1.0 test 0.9
+list_case 'test 1.0 0.9 system' '0.9 1.0' '' test 0.9 1.0 0.9
+# A missing entry is initialized with the supplied list.
+list_case 'other 5.0' '2.0 1.0' '' test 2.0 1.0
+# A primary of system is replaced without being uninstalled.
+list_case 'test system 0.9' '2.0 0.9' '' test
+# Latest resolution applies to each element; system stays literal.
+list_case 'test 1.0 0.9' '3.5 2.5 system' 1.0 --use-latest test 3 2 system
+list_case 'test 1.0 0.9' '2.0 system' 1.0 test latest system
+list_case 'test 1.0 0.9' '2.5 0.9' 1.0 test latest:2
+# Environment defaults are lists, read as data.
+ASDF_EXTRAS_UPDATE_USE_LATEST_TEST=1 ASDF_EXTRAS_UPDATE_DEFAULT_LATEST_PREFIX_TEST='3 2 system' \
+	list_case 'test 1.0 0.9' '3.5 2.5 system' 1.0 test
+ASDF_EXTRAS_UPDATE_DEFAULT_VERSION_TEST='2.0 1.0' list_case 'test 1.0 0.9' '2.0 1.0' '' test
+ASDF_EXTRAS_UPDATE_DEFAULT_VERSION='2.0 1.0' list_case 'test 1.0 0.9' '2.0 1.0' '' test
+touch "$PWD/2.x"
+ASDF_EXTRAS_UPDATE_DEFAULT_VERSION_TEST='2.?' list_case 'test 1.0 0.9' '2.? 0.9' 1.0 test
+rm "$PWD/2.x"
+ASDF_EXTRAS_UPDATE_DEFAULT_VERSION_TEST='2.0' ASDF_EXTRAS_UPDATE_DEFAULT_VERSION='3.0 4.0' \
+	list_case 'test 1.0 0.9' '2.0 0.9' 1.0 test
+
+# Bulk updates keep every plugin's fallbacks.
+: >"${test_dir}/log"
+printf 'test 1.0 0.9 system\nnext 1.0 0.8\n' >"$HOME/.tool-versions"
+printf '1.0\n0.9\n' >"${test_dir}/test-installed"
+printf '1.0\n0.8\n' >"${test_dir}/next-installed"
+"$BASH" "${repo_dir}/lib/commands/command-update" --version >/dev/null 2>&1
+[[ "$(cat "$HOME/.tool-versions")" == "$(printf 'test 2.0 0.9 system\nnext 2.0 0.8')" ]] ||
+	fail "bulk update lost fallbacks: $(cat "$HOME/.tool-versions")"
+# --replace applies to every plugin in a bulk update.
+printf 'test 1.0 0.9 system\nnext 1.0 0.8\n' >"$HOME/.tool-versions"
+"$BASH" "${repo_dir}/lib/commands/command-update" --version --replace >/dev/null 2>&1
+[[ "$(cat "$HOME/.tool-versions")" == "$(printf 'test 2.0\nnext 2.0')" ]] ||
+	fail "bulk --replace kept fallbacks: $(cat "$HOME/.tool-versions")"
+
+# Parent and local scopes keep fallbacks and never uninstall; filenames are honored.
+for scope in --parent --local; do
+	case "$scope" in
+	--parent) scope_file="${test_dir}/project/.tool-versions" ;;
+	--local) scope_file="$PWD/.tool-versions" ;;
+	esac
+	printf 'test 1.0 0.9 system\n' >"$scope_file"
+	: >"${test_dir}/test-removed"
+	"$BASH" "${repo_dir}/lib/commands/command-update" "$scope" test >/dev/null 2>&1
+	grep -Fx 'test 2.0 0.9 system' "$scope_file" >/dev/null || fail "$scope: fallbacks changed: $(cat "$scope_file")"
+	[[ ! -s "${test_dir}/test-removed" ]] || fail "$scope: previous version removed"
+	rm "$scope_file"
+done
+
+# Failures leave the configured list and the installed versions untouched.
+for scenario in install-fails partial-install-fails set-fails set-ineffective unresolved; do
+	export ASDF_TEST_SCENARIO="$scenario"
+	printf 'test 1.0 0.9 system\n' >"$HOME/.tool-versions"
+	: >"${test_dir}/test-removed"
+	printf '1.0\n0.9\n' >"${test_dir}/test-installed"
+	if "$BASH" "${repo_dir}/lib/commands/command-update" test latest 1.0 >"${test_dir}/output" 2>&1; then
+		fail "$scenario: list update failure was accepted"
+	fi
+	grep -Fx 'test 1.0 0.9 system' "$HOME/.tool-versions" >/dev/null || fail "$scenario: list changed"
+	[[ ! -s "${test_dir}/test-removed" ]] || fail "$scenario: version removed"
+done
+export ASDF_TEST_SCENARIO=success
 
 printf 'update regression tests: PASS\n'

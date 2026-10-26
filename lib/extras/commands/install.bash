@@ -65,6 +65,12 @@ main() {
 		return 0
 	fi
 
+	if [[ -z "$current" ]]; then
+		printf "asdf-extras: installing %s %s\n" "$plugin" "$target"
+	else
+		printf "asdf-extras: updating %s %s -> %s\n" "$plugin" "$current" "$target"
+	fi
+
 	if ! (
 		extras_prepare_install_environment "$plugin" "$target"
 		command asdf install ${install_opts[@]+"${install_opts[@]}"} "$plugin" "$target"

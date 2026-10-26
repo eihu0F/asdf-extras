@@ -204,6 +204,13 @@ output="$(bash "$repo_dir/libexec/asdf-extras" completion --candidates --standal
 [[ "$output" == *get* ]] || fail "get missing from subcommand candidates"
 output="$(bash "$repo_dir/libexec/asdf-extras" completion --candidates --standalone help g)"
 [[ "$output" == get ]] || fail "get help topic missing"
+output="$(bash "$repo_dir/libexec/asdf-extras" completion --candidates --standalone "")"
+[[ "$output" == *setup* ]] || fail "setup missing from subcommand candidates"
+# The first argument of setup is a version of the implied plugin.
+output="$(ASDF_EXTRAS_PLUGIN_NAME=nodejs bash "$repo_dir/libexec/asdf-extras" completion --candidates --standalone setup 22)"
+[[ "$output" == 22.0.0 ]] || fail "setup version candidates: $output"
+output="$(ASDF_EXTRAS_PLUGIN_NAME=nodejs bash "$repo_dir/libexec/asdf-extras" completion --candidates --standalone setup 22.0.0 "")"
+[[ -z "$output" ]] || fail "setup offered candidates after the version: $output"
 # Words typed on the command line belong to the query, even --help.
 output="$(bash "$repo_dir/libexec/asdf-extras" completion --candidates --standalone update --help)"
 [[ -z "$output" ]] || fail "--candidates treated a typed --help as a request for help"

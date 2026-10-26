@@ -62,7 +62,7 @@ fail() {
 entry="$repo_dir/libexec/asdf-extras"
 bash "$entry" >"$test_root/direct"
 grep -q 'init <bash|zsh|fish|elvish|nushell>' "$test_root/direct"
-for topic in install update prune completion; do
+for topic in install update get prune setup completion; do
 	bash "$entry" help "$topic" >"$test_root/direct"
 	bash "$entry" --help "$topic" >"$test_root/alias"
 	cmp "$test_root/direct" "$test_root/alias"

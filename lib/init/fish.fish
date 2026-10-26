@@ -66,7 +66,7 @@ function __asdf_extras_refresh
 end
 
 function asdf
-	if test (count $argv) -ge 1; and contains -- "$argv[1]" install update completion
+	if test (count $argv) -ge 1; and contains -- "$argv[1]" install update get completion
 		if contains -- --help $argv; or contains -- -h $argv
 			__asdf_extras_dispatch help --asdf $argv
 			return $status
@@ -84,6 +84,11 @@ function asdf
 		else
 			__asdf_extras_dispatch completion $argv[2..-1]
 		end
+		return $status
+	end
+
+	if test (count $argv) -ge 1; and test "$argv[1]" = "get"
+		__asdf_extras_dispatch get $argv[2..-1]
 		return $status
 	end
 

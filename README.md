@@ -96,8 +96,8 @@ versions shared with projects.
 
 # Usage
 
-These examples assume shell initialization is enabled. Update and scoped install
-are available through `asdf`; prune is a separate `asdf-extras` command, not an
+These examples assume shell initialization is enabled. Update, `get` and scoped
+install are available through `asdf`; prune is a separate `asdf-extras` command, not an
 extension of `asdf prune`.
 
 ## Update plugins and tools
@@ -130,6 +130,28 @@ Plain `asdf install` keeps native asdf behavior, even after initialization.
 asdf-extras installs can also load environment files and run
 [install-time hooks](#install-time-environment-hooks).
 
+## Read configured versions
+
+```shell
+asdf get python
+asdf get --parent python
+asdf get
+```
+
+`asdf get` prints the versions configured in one scope file, in their original
+order and including fallbacks such as `system`, on a single line (for example
+`3.12.0 3.11.0 system`). It is read-only. Without a plugin it prints every entry as
+`<plugin> <versions>`, one per line.
+
+- The default scope is `--home`; `--parent` and `--local` select the closest parent or
+  the current directory's file, like `install` and `update` ([scopes](#scopes-and-version-cleanup)).
+- Only the selected file is read. Environment overrides such as `ASDF_PYTHON_VERSION`
+  are ignored, nothing falls back to another file, and installation is not checked.
+  Use native `asdf current` for the effective version.
+- Exit status: `0` on success, `1` for invalid arguments or when `--parent` finds no
+  configuration, and `2` when the plugin has no version in the selected file. A missing
+  home or local file lists nothing.
+
 ## Prune unused versions
 
 > [!WARNING]
@@ -161,6 +183,7 @@ other versions and returns a nonzero status.
 | `asdf help` | Native help followed by a short asdf-extras summary |
 | `asdf update --help` | Update targets, defaults, scopes, and cleanup |
 | `asdf install --help` | Native install help followed by scope and activation guidance |
+| `asdf get --help` | Scoped reads, output format and exit statuses |
 | `asdf-extras prune --help` | Home-based cleanup behavior |
 | `asdf completion --help` | Completion modes and shell setup |
 

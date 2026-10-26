@@ -4,7 +4,7 @@ _asdf_extras_complete() {
 	local -a normalized=() mode=()
 	local original_cword="$COMP_CWORD"
 	COMPREPLY=()
-	if [[ "$cmd" == install || "$cmd" == update ]] && ((COMP_CWORD > 1)); then
+	if [[ "$cmd" == install || "$cmd" == update || "$cmd" == get ]] && ((COMP_CWORD > 1)); then
 		[[ "$cmd" != install ]] || mode=(--delegated)
 		if ! output="$(_asdf_extras_query ${mode[@]+"${mode[@]}"} "${COMP_WORDS[@]:1:COMP_CWORD}")"; then
 			return 1
@@ -44,8 +44,10 @@ _asdf_extras_complete() {
 			"$_ASDF_EXTRAS_NATIVE_COMPLETE" "$@" || rc=$?
 		fi
 		output=""
-		if ((original_cword == 1)) && [[ update == "$cur"* ]]; then
-			output=update
+		if ((original_cword == 1)); then
+			for candidate in update get; do
+				[[ "$candidate" != "$cur"* ]] || output+="$candidate"$'\n'
+			done
 		fi
 	fi
 	while IFS= read -r candidate; do

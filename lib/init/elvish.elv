@@ -28,7 +28,7 @@ fn asdf {|@args|
 		return
 	}
 
-	if (and (has-value [install update completion] $args[0]) (or (has-value $args --help) (has-value $args -h))) {
+	if (and (has-value [install update get completion] $args[0]) (or (has-value $args --help) (has-value $args -h))) {
 		asdf-extras-dispatch help --asdf $@args
 		return
 	}
@@ -39,6 +39,11 @@ fn asdf {|@args|
 		} else {
 			asdf-extras-dispatch completion (all $args[1..])
 		}
+		return
+	}
+
+	if (eq $args[0] get) {
+		asdf-extras-dispatch get (all $args[1..])
 		return
 	}
 

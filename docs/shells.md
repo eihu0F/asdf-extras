@@ -4,7 +4,7 @@
 
 Choose the section for your shell and copy its **Recommended setup** into the
 startup file indicated. Initialization (`asdf-extras init <shell>`) enables
-`asdf update` and scoped `asdf install`. The `asdf completion <shell>` line that
+`asdf update`, `asdf get` and scoped `asdf install`. The `asdf completion <shell>` line that
 follows it enables Tab completion for both `asdf` and `asdf-extras`. Keep them in
 this order, and start a new shell afterward.
 If asdf is not on PATH yet, complete the
@@ -233,7 +233,7 @@ Regenerate saved completion files after changing the runtime.
 
 | Goal | Command that generates the shell code |
 | --- | --- |
-| Command extensions (`asdf update`, scoped `asdf install`) | `asdf-extras init <shell>` |
+| Command extensions (`asdf update`, `asdf get`, scoped `asdf install`) | `asdf-extras init <shell>` |
 | Completion for both commands, after initialization (recommended); also reloads it | `asdf completion <shell>` |
 | Completion for both commands, without initialization | `asdf-extras completion --asdf <shell>` |
 | Completion for `asdf-extras` only; leave native asdf registration untouched | `asdf-extras completion <shell>` |
@@ -253,7 +253,7 @@ while without initialization it is native asdf's command. Use
 
 - Completion includes subcommands, shell names, scopes, update targets, plugins,
   and versions.
-- The `asdf` overlay adds update and install extensions while preserving upstream
+- The `asdf` overlay adds update, get and install extensions while preserving upstream
   definitions and delegating ordinary commands to native completion.
 - Scope flags may appear between arguments. Scoped install delegation retains
   arguments after the cursor as well as before it.
@@ -302,7 +302,7 @@ while without initialization it is native asdf's command. Use
   `asdf plugin list` retain structured return values.
 - Private aliases retain native root/install signatures for completion
   delegation; asdf-extras does not copy upstream completers.
-- Only root, install, update, and completion signatures are extended.
+- Only root, install, update, get, and completion signatures are extended.
   Initialized wrappers route extended commands to asdf-extras.
 - Standalone completion does not load the native module.
 

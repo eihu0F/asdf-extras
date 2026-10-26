@@ -57,7 +57,7 @@ asdf() {
 	local arg previous update_rc
 
 	case "${1:-}" in
-	install | update | completion)
+	install | update | get | completion)
 		for arg in "$@"; do
 			if [[ "$arg" == --help || "$arg" == -h ]]; then
 				_asdf_extras_dispatch help --asdf "$@"
@@ -80,6 +80,12 @@ asdf() {
 		bash | zsh | fish | nushell | elvish) _asdf_extras_dispatch completion --asdf --wrappers "$@" ;;
 		*) _asdf_extras_dispatch completion "$@" ;;
 		esac
+		return $?
+	fi
+
+	if [[ "${1:-}" == "get" ]]; then
+		shift
+		_asdf_extras_dispatch get "$@"
 		return $?
 	fi
 

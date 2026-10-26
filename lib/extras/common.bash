@@ -81,6 +81,20 @@ extras_configured_version() {
 	' "$file"
 }
 
+# Prints each configured entry as "<plugin> <versions...>", without comments.
+extras_configured_entries() {
+	local file="$1"
+	[[ -f "$file" ]] || return 0
+	awk '
+		NF && $1 !~ /^#/ {
+			line = $1
+			for (i = 2; i <= NF && $i !~ /^#/; i++)
+				line = line " " $i
+			print line
+		}
+	' "$file"
+}
+
 extras_plugins() {
 	command asdf plugin list 2>/dev/null || true
 }

@@ -206,6 +206,11 @@ run_case() {
 	if [[ "$scenario" == success ]]; then
 		[[ $rc -eq 0 ]] || fail "$mode/$scenario: $output"
 		[[ "$(<"${test_dir}/test-current")" == 2.0 ]] || fail "target was not activated"
+		[[ "$output" == *"asdf-extras: updating test 1.0 -> 2.0"* ]] || fail "$mode: update target not reported: $output"
+		[[ "$output" != *"-> latest"* ]] || fail "$mode: progress shows the request instead of the version"
+		if [[ "$mode" != test ]]; then
+			[[ "$output" == *"asdf-extras: updating next 1.0 -> 2.0"* ]] || fail "$mode: bulk update target not reported: $output"
+		fi
 		[[ "$(<"${test_dir}/test-removed")" == 1.0 ]] || fail "previous version was not removed"
 		expected="$(printf 'install test 2.0\nset --home test 2.0\nuninstall test 1.0')"
 		[[ "$(grep -E '^(install|set|uninstall) .*test ' "${test_dir}/log")" == "$expected" ]] ||

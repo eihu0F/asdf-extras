@@ -112,6 +112,17 @@ assert_install '<--parent><nodejs><24.11.0>' \
 	'<--custom=value with spaces><nodejs><24.11.0>' \
 	'--custom=value with spaces' --parent nodejs 24.11.0
 
+# Progress shows the resolved version, not the request, and what it replaces.
+rm -f "$HOME/.tool-versions"
+output="$("$BASH" "${repo_dir}/lib/commands/command-install" nodejs latest 2>&1)"
+[[ "$output" == *"asdf-extras: installing nodejs 9.0"* ]] || fail "new install not reported: $output"
+printf 'nodejs 8.0\n' >"$HOME/.tool-versions"
+output="$("$BASH" "${repo_dir}/lib/commands/command-install" nodejs latest 2>&1)"
+[[ "$output" == *"asdf-extras: updating nodejs 8.0 -> 9.0"* ]] || fail "update not reported: $output"
+[[ "$output" != *latest* ]] || fail "progress shows the request instead of the version: $output"
+output="$("$BASH" "${repo_dir}/lib/commands/command-install" nodejs latest 2>&1)"
+[[ "$output" == *"already configured at 9.0"* && "$output" != *updating* ]] || fail "unchanged version reported as an update: $output"
+
 usage="usage: asdf-extras install [options] <plugin> <version>"
 assert_invalid "$usage"
 assert_invalid "$usage" --home

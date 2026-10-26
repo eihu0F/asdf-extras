@@ -225,6 +225,11 @@ invocation and the plugin checkout for bootstrapping.
 
 See [Update environment variables](#update-environment-variables) for overrides.
 
+Before installing, asdf-extras prints the resolved version, for example
+`asdf-extras: updating nodejs 22.1.0 -> 22.2.0` (or `installing nodejs 22.2.0` when
+the scope has no entry yet). A tool that is already configured at the target version
+reports `already configured` instead.
+
 ### Processing and failures
 
 When both plugin and tool targets are selected, asdf-extras updates each plugin

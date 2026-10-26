@@ -115,7 +115,17 @@ fail() {
 	done
 	run_completion asdf ""
 	contains update
+	contains get
 	contains native-command
+	run_completion asdf get ""
+	contains nodejs
+	contains --local
+	absent native-command
+	run_completion asdf get --parent ""
+	contains python
+	absent --local
+	run_completion asdf get nodejs ""
+	absent 22.0.0
 	run_completion asdf version ""
 	contains native-command
 	ASDF_COMPLETION_NATIVE_RC=7
@@ -190,6 +200,10 @@ output="$(bash "$repo_dir/libexec/asdf-extras" completion --candidates --standal
 [[ "$output" == --asdf ]] || fail "Elvish combined mode missing"
 output="$(bash "$repo_dir/libexec/asdf-extras" completion --candidates --standalone update --all --)"
 [[ "$output" == "$(printf '%s\n' --home --parent --local)" ]] || fail "standalone --all scopes"
+output="$(bash "$repo_dir/libexec/asdf-extras" completion --candidates --standalone "")"
+[[ "$output" == *get* ]] || fail "get missing from subcommand candidates"
+output="$(bash "$repo_dir/libexec/asdf-extras" completion --candidates --standalone help g)"
+[[ "$output" == get ]] || fail "get help topic missing"
 # Words typed on the command line belong to the query, even --help.
 output="$(bash "$repo_dir/libexec/asdf-extras" completion --candidates --standalone update --help)"
 [[ -z "$output" ]] || fail "--candidates treated a typed --help as a request for help"
@@ -289,7 +303,12 @@ if command -v zsh >/dev/null; then
 		words=(asdf ""); CURRENT=2
 		_asdf_extras_complete
 		grep -qx update "$ASDF_COMPLETION_TEST/zsh-candidates"
+		grep -qx get "$ASDF_COMPLETION_TEST/zsh-candidates"
 		grep -qx native-command "$ASDF_COMPLETION_TEST/zsh-candidates"
+		: >"$ASDF_COMPLETION_TEST/zsh-candidates"
+		words=(asdf get --parent n); CURRENT=5
+		_asdf_extras_complete
+		grep -qx nodejs "$ASDF_COMPLETION_TEST/zsh-candidates"
 		words=(asdf update --local nodejs 2); CURRENT=5
 		_asdf_extras_complete
 		grep -qx 22.0.0 "$ASDF_COMPLETION_TEST/zsh-candidates"
@@ -367,6 +386,8 @@ if command -v fish >/dev/null; then
 		bash "$ASDF_COMPLETION_REPO/lib/commands/command-completion" fish | source
 		test (count (complete -c asdf)) -eq (count $registrations); or fail "duplicate registration"
 		contains_candidate update "asdf up"
+		contains_candidate get "asdf g"
+		contains_candidate nodejs "asdf get --parent n"
 		contains_candidate --version "asdf update --"
 		contains_candidate --local "asdf install --"
 		contains_candidate nodejs "asdf update --local n"

@@ -144,6 +144,8 @@ if (not (is $existing $edit:completion:arg-completer[asdf])) {
 }
 if (not-eq $native-input [asdf current '']) { fail 'ordinary context changed' }
 check update asdf ''
+check get asdf ''
+check nodejs asdf get --parent n
 check --local asdf update --all --
 check nodejs asdf update --local n
 check 24.0.0 asdf update --version nodejs --local 24

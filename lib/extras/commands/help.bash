@@ -21,6 +21,7 @@ if [[ "${1:-}" == --asdf ]]; then
 		;;
 	update) extras_help_update ;;
 	prune) extras_help_prune ;;
+	get) extras_help_get ;;
 	completion) extras_help_completion ;;
 	*)
 		command asdf "$@"
@@ -38,8 +39,9 @@ if [[ "$#" -gt 0 ]]; then
 	install) extras_help_install ;;
 	update) extras_help_update ;;
 	prune) extras_help_prune ;;
+	get) extras_help_get ;;
 	completion) extras_help_completion ;;
-	*) extras_fail "unknown help topic: $1 (expected install, update, prune or completion)" ;;
+	*) extras_fail "unknown help topic: $1 (expected install, update, get, prune or completion)" ;;
 	esac
 	exit 0
 fi
@@ -58,7 +60,8 @@ Fallback (when asdf-extras is not installed):
 
 Subcommands:
   completion [--asdf] <bash|zsh|fish|elvish|nushell>
-  help [install|update|prune|completion]
+  get [--home|-u|--parent|-p|--local] [<plugin>]
+  help [install|update|get|prune|completion]
   init <bash|zsh|fish|elvish|nushell>
   install [--home|-u|--parent|-p|--local] <plugin> <version>
   prune [<plugin>]
@@ -79,6 +82,8 @@ EOF
 extras_help_install
 printf '\n'
 extras_help_update
+printf '\n'
+extras_help_get
 printf '\n'
 extras_help_prune
 printf '\n'

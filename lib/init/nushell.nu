@@ -16,7 +16,7 @@ def --env "asdf-extras-dispatch" [subcommand: string, ...args] {
 }
 
 def --env --wrapped asdf-extras-run [...args] {
-	if (($args | get --optional 0 | default "") in [install update completion]) {
+	if (($args | get --optional 0 | default "") in [install update get completion]) {
 		if ("--help" in $args or "-h" in $args) {
 			asdf-extras-dispatch help "--asdf" ...$args
 			return
@@ -35,6 +35,11 @@ def --env --wrapped asdf-extras-run [...args] {
 		} else {
 			asdf-extras-dispatch completion ...$completion_args
 		}
+		return
+	}
+
+	if (($args | length) >= 1 and ($args | get 0) == "get") {
+		asdf-extras-dispatch get ...($args | skip 1)
 		return
 	}
 
@@ -78,6 +83,10 @@ def --env --wrapped "asdf install" [...args] {
 
 def --env --wrapped "asdf update" [...args] {
 	asdf ...([update] ++ $args)
+}
+
+def --env --wrapped "asdf get" [...args] {
+	asdf ...([get] ++ $args)
 }
 
 def --env --wrapped "asdf completion" [...args] {

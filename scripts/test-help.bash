@@ -176,6 +176,16 @@ for origin in installed plugin; do
 		done
 		grep -q -- '--asdf adds' "$test_root/long"
 		grep -q 'asdf-extras only' "$test_root/long"
+		run_shell "$shell" "asdf get --help" >"$test_root/long"
+		grep -q 'asdf-extras get' "$test_root/long" || fail "$shell: asdf get --help"
+		run_shell "$shell" "asdf get -h" >"$test_root/short"
+		cmp "$test_root/long" "$test_root/short"
+		mkdir -p "$test_root/home"
+		printf 'python 3.12.0 3.11.0 system\n' >"$test_root/home/.tool-versions"
+		[[ "$(HOME="$test_root/home" run_shell "$shell" 'asdf get python')" == '3.12.0 3.11.0 system' ]] ||
+			fail "$shell: asdf get did not reach extras"
+		[[ "$(HOME="$test_root/home" run_shell "$shell" 'asdf get')" == 'python 3.12.0 3.11.0 system' ]] ||
+			fail "$shell: asdf get listing"
 		for request in 'asdf help nodejs' 'asdf help install' 'asdf help update' 'asdf help install extra'; do
 			run_shell "$shell" "$request" >"$test_root/output"
 			[[ "$(cat "$test_root/output")" == "NATIVE PLUGIN HELP: ${request#asdf }" ]] || fail 'native help changed'

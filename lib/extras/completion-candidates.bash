@@ -17,7 +17,7 @@ extras_completion_candidates() {
 	local scope="" targets="" all=0 options="" candidates="" candidate
 	if ((standalone)); then
 		if [[ $# -le 1 ]]; then
-			for candidate in completion help init install prune update version --help --version; do
+			for candidate in completion get help init install prune update version --help --version; do
 				[[ "$candidate" != "$current"* ]] || printf '%s\n' "$candidate"
 			done
 			return 0
@@ -25,7 +25,7 @@ extras_completion_candidates() {
 		case "$subcommand" in
 		help | --help | -h)
 			[[ $# -eq 2 ]] || return 0
-			for candidate in install update prune completion; do
+			for candidate in install update get prune completion; do
 				[[ "$candidate" != "$current"* ]] || printf '%s\n' "$candidate"
 			done
 			return 0
@@ -61,11 +61,13 @@ extras_completion_candidates() {
 		esac
 	fi
 	[[ $# -gt 1 ]] || {
-		printf 'update\n'
+		for candidate in update get; do
+			[[ "$candidate" != "$current"* ]] || printf '%s\n' "$candidate"
+		done
 		return 0
 	}
 	shift
-	[[ "$subcommand" == install || "$subcommand" == update || "$subcommand" == prune ]] || return 0
+	[[ "$subcommand" == install || "$subcommand" == update || "$subcommand" == get || "$subcommand" == prune ]] || return 0
 	while [[ $# -gt 1 ]]; do
 		arg="$1"
 		shift
@@ -128,7 +130,8 @@ extras_completion_candidates() {
 		}
 		;;
 	1)
-		if [[ "$subcommand" == update && -n "$targets" && "$targets" != *--version* ]]; then
+		if [[ "$subcommand" == get ]] ||
+			[[ "$subcommand" == update && -n "$targets" && "$targets" != *--version* ]]; then
 			return 0
 		fi
 		candidates="$(command asdf list all "$plugin")" || {

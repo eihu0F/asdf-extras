@@ -106,6 +106,8 @@ source combined.nu
 check "asdf n" native-marker
 check "asdf current n" nodejs
 check "asdf install --local n" nodejs
+check "asdf g" get
+check "asdf get --local n" nodejs
 check "asdf install nodejs --parent 22" "22.0.0"
 check "asdf update --version nodejs --local 24" "24.0.0"
 check "asdf update --all --" "--local"

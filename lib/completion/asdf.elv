@@ -7,9 +7,10 @@ fn complete {|@words|
 	if (<= (count $words) 2) {
 		$native $@words
 		put update
+		put get
 		return
 	}
-	if (eq $words[1] update) {
+	if (has-value [update get] $words[1]) {
 		common:candidates extras (all $words[1..])
 		return
 	}

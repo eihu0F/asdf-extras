@@ -9,6 +9,7 @@ extras_maybe_help() {
 			install) extras_help_install ;;
 			update) extras_help_update ;;
 			prune) extras_help_prune ;;
+			get) extras_help_get ;;
 			completion) extras_help_completion ;;
 			esac
 			exit 0
@@ -118,6 +119,33 @@ Examples:
 EOF
 }
 
+extras_help_get() {
+	cat <<'EOF'
+asdf-extras get:
+  asdf get [--home|-u|--parent|-p|--local] [<plugin>]
+  asdf-extras get [--home|-u|--parent|-p|--local] [<plugin>]
+
+  Read-only. Prints the versions configured in one .tool-versions file, in their
+  original order and including fallbacks such as system, as one space-separated line.
+  Reads only the selected file: it ignores ASDF_<TOOL>_VERSION overrides and never
+  falls back to another file. Installation status is not checked.
+  Direct extras get defaults to --home. Scope options cannot be combined.
+  Honors ASDF_DEFAULT_TOOL_VERSIONS_FILENAME.
+  Without a plugin, prints every configured entry as "<plugin> <versions>", one per line.
+  The existing native asdf current is unchanged.
+
+Exit status:
+  0  Success (a missing home/local file lists nothing)
+  1  Error: invalid arguments, or no parent configuration exists for --parent
+  2  The plugin has no version configured in the selected file
+
+Examples:
+  asdf get nodejs
+  asdf get --parent python
+  asdf get --local
+EOF
+}
+
 extras_help_completion() {
 	cat <<'EOF'
 asdf-extras completion:
@@ -144,12 +172,14 @@ asdf-extras extensions (enabled by init):
     No arguments updates asdf, plugins and tools (--all).
   asdf install [--home|-u|--parent|-p|--local] <plugin> <version>
     Scoped install also activates the version; unscoped install stays native.
+  asdf get [--home|-u|--parent|-p|--local] [<plugin>]
+    Prints the versions configured in one scope file without changing it.
   asdf-extras prune
     Removes installed versions not used by the home configuration.
   asdf completion <bash|zsh|fish|elvish|nushell>
     Includes native completion and extras extensions.
-  asdf update --help / asdf install --help / asdf-extras prune --help
-    Show update, install and prune behavior and safety details.
+  asdf update --help / asdf install --help / asdf get --help / asdf-extras prune --help
+    Show update, install, get and prune behavior and safety details.
   asdf completion --help
     Show extras targets, scopes, defaults, safety behavior and completion modes.
 EOF

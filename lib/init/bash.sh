@@ -14,11 +14,14 @@ _asdf_extras_dispatch() {
 	esac
 }
 
+# Shared by Bash and Zsh; lib/init/zsh.zsh loads it.
 _asdf_extras_refresh() {
 	local previous="$1" update_rc="$2" executable init_code completion_code
+	local shell_name=bash
+	[[ -z "${ZSH_VERSION:-}" ]] || shell_name=zsh
 	local -a completion_args=()
 	if ! executable="$(command asdf which asdf-extras)"; then
-		printf 'asdf-extras: cannot resolve updated executable; retry eval "$(asdf-extras init bash)" after fixing version selection\n' >&2
+		printf 'asdf-extras: cannot resolve updated executable; retry eval "$(asdf-extras init %s)" after fixing version selection\n' "$shell_name" >&2
 		return 1
 	fi
 	[[ "$executable" != "$previous" ]] || return "$update_rc"
@@ -27,14 +30,14 @@ _asdf_extras_refresh() {
 	if [[ -n "${ASDF_EXTRAS_COMPLETION_ORIGIN:-}" ]]; then
 		completion_args=(completion)
 		[[ -z "${_ASDF_EXTRAS_NATIVE_COMPLETE:-}" ]] || completion_args+=(--asdf)
-		completion_args+=(bash)
+		completion_args+=("$shell_name")
 	fi
-	if ! init_code="$("$executable" init bash)" || [[ -z "$init_code" ]]; then
-		printf 'asdf-extras: cannot generate initialization; retry eval "$(asdf-extras init bash)"\n' >&2
+	if ! init_code="$("$executable" init "$shell_name")" || [[ -z "$init_code" ]]; then
+		printf 'asdf-extras: cannot generate initialization; retry eval "$(asdf-extras init %s)"\n' "$shell_name" >&2
 		return 1
 	fi
 	if ! eval "$init_code"; then
-		printf 'asdf-extras: initialization failed; retry eval "$(asdf-extras init bash)"\n' >&2
+		printf 'asdf-extras: initialization failed; retry eval "$(asdf-extras init %s)"\n' "$shell_name" >&2
 		return 1
 	fi
 	if ((${#completion_args[@]})); then
@@ -54,7 +57,7 @@ asdf() {
 	local arg previous update_rc
 
 	case "${1:-}" in
-	install | update | completion)
+	install | update | get | completion)
 		for arg in "$@"; do
 			if [[ "$arg" == --help || "$arg" == -h ]]; then
 				_asdf_extras_dispatch help --asdf "$@"
@@ -77,6 +80,12 @@ asdf() {
 		bash | zsh | fish | nushell | elvish) _asdf_extras_dispatch completion --asdf --wrappers "$@" ;;
 		*) _asdf_extras_dispatch completion "$@" ;;
 		esac
+		return $?
+	fi
+
+	if [[ "${1:-}" == "get" ]]; then
+		shift
+		_asdf_extras_dispatch get "$@"
 		return $?
 	fi
 

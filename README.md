@@ -53,48 +53,35 @@ asdf plugin add asdf-extras https://github.com/eihu0F/asdf-extras.git
 asdf cmd asdf-extras setup
 ```
 
-The repository URL is required because the plugin is not in the asdf plugin
-index. `asdf cmd asdf-extras` runs the plugin checkout to bootstrap installation;
-afterward, `asdf-extras` runs the installed version selected by asdf.
+`asdf cmd asdf-extras` runs the plugin checkout, so `setup` works before anything is
+installed; afterwards `asdf-extras` runs the installed version.
 
 ## 2. Initialize your shell
 
-Add the appropriate lines to your shell startup configuration and run them in your
-current shell, after any framework or native asdf completion setup:
+Add these lines to your shell startup file and run them in your current shell:
 
 ```bash
 # Bash
 eval "$(asdf-extras init bash)"
-# Optional: enable completion if you use it.
-eval "$(asdf completion bash)"
+eval "$(asdf completion bash)"   # optional: Tab completion; keep it after init
 ```
 
 ```zsh
 # Zsh
 eval "$(asdf-extras init zsh)"
-# Optional: enable completion if you use it.
-eval "$(asdf completion zsh)"
+eval "$(asdf completion zsh)"    # optional: Tab completion; keep it after init
 ```
 
-`init` enables command extensions such as `asdf update`; it does not load
-completion. `asdf completion <shell>` enables completion for both `asdf` and
-`asdf-extras`, and must come **after** `init`: after initialization, the wrapper
-routes it to combined completion, while before initialization it prints native
-asdf completion only. The shell name is required. Type `asdf update --` and
-press Tab to see completion candidates.
-For other shells and copyable completion-only examples, see the
-[shell guide](docs/shells.md).
+Other shells and how completion works: [shell guide](docs/shells.md).
 
 ## 3. Try an extended command
 
 ```shell
-asdf update nodejs
+asdf update
 ```
 
-This updates the plugin definition, installs its latest tool version, and
-activates it in the home configuration. See [Usage](#usage) for other commands
-and [Scopes and version cleanup](#scopes-and-version-cleanup) before updating
-versions shared with projects.
+This updates asdf, your plugins and their tool versions. It changes your home
+configuration; see [what it does](#update-plugins-and-tools) first.
 
 # Usage
 
@@ -114,6 +101,19 @@ extension of `asdf prune`.
 | `asdf update --parent nodejs` | Update one plugin definition and tool using the closest parent configuration |
 | `asdf update --plugin --version` | Update plugin definitions and tools without updating asdf itself |
 | `asdf update python 3.14 3.13 system` | Replace the whole configured list for one plugin |
+
+With no arguments, `asdf update` runs these steps in order:
+
+1. Update asdf itself to the latest stable release.
+2. Update the definition of each installed plugin.
+3. For each plugin, install the latest tool version, activate it in the home
+   configuration, and remove the version it replaced.
+
+Each change is reported, for example `asdf-extras: updating nodejs 22.1.0 -> 22.2.0`.
+Because step 3 rewrites the home configuration and removes the replaced version,
+projects that depend on an old version can be affected. Try a single tool first with
+`asdf update nodejs`, and read [Scopes and version cleanup](#scopes-and-version-cleanup)
+before updating versions shared with projects.
 
 See [Update options and defaults](#update-options-and-defaults) for target
 selection, failure handling, and environment settings.
@@ -210,7 +210,7 @@ Plain `asdf-extras help` includes every command topic.
 
 | Term or command | Meaning |
 | --- | --- |
-| asdf-extras plugin / plugin checkout | The repository registered with `asdf plugin add`; contains the code used by `asdf cmd asdf-extras` |
+| asdf-extras plugin / plugin checkout | The repository registered with `asdf plugin add` (its URL is required because the plugin is not in the asdf plugin index); contains the code used by `asdf cmd asdf-extras` |
 | Installed runtime | A released version of asdf-extras installed and selected through asdf |
 | `asdf-extras` | Runs the selected installed runtime |
 | `asdf cmd asdf-extras` | Runs the plugin checkout, including before a runtime is installed |

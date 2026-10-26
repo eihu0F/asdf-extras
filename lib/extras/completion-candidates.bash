@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-set -euo pipefail
-
-main() {
+# Prints completion candidates for the words typed so far; the shell completion
+# scripts query it through `completion --candidates`.
+extras_completion_candidates() {
 	local standalone=0
 	if [[ "${1:-}" == --standalone ]]; then
 		standalone=1
@@ -143,5 +143,3 @@ main() {
 		[[ -z "$candidate" || "$candidate" != "$current"* ]] || printf '%s\n' "$candidate"
 	done <<<"$candidates"
 }
-
-main "$@"

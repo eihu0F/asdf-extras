@@ -17,9 +17,9 @@ def asdf-extras-query [...args: string] {
 	let origin = ($env.ASDF_EXTRAS_COMPLETION_ORIGIN? | default "")
 	let plugin_name = ($env.ASDF_EXTRAS_PLUGIN_NAME? | default "asdf-extras")
 	if $origin == "plugin" {
-		^asdf cmd $plugin_name __complete -- ...$args | complete
+		^asdf cmd $plugin_name completion -- --candidates ...$args | complete
 	} else if $origin == "installed" {
-		^asdf exec asdf-extras __complete ...$args | complete
+		^asdf exec asdf-extras completion --candidates ...$args | complete
 	} else {
 		{exit_code: 1, stdout: "", stderr: "completion origin is not set: ASDF_EXTRAS_COMPLETION_ORIGIN"}
 	}

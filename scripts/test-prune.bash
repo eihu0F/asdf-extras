@@ -123,9 +123,9 @@ fi
 grep -q 'failed to remove version: alpha 3.0' "$test_dir/error" || fail 'uninstall failure not reported'
 grep -Fx 'orphan 4.0' "$test_dir/uninstall.log" >/dev/null || fail 'pruning did not continue after uninstall failure'
 
-[[ "$(bash "$repo_dir/lib/extras/commands/__complete.bash" --standalone prune a)" == alpha ]] ||
+[[ "$(bash "$repo_dir/libexec/asdf-extras" completion --candidates --standalone prune a)" == alpha ]] ||
 	fail 'prune plugin completion missing'
-[[ -z "$(bash "$repo_dir/lib/extras/commands/__complete.bash" --standalone prune alpha b)" ]] ||
+[[ -z "$(bash "$repo_dir/libexec/asdf-extras" completion --candidates --standalone prune alpha b)" ]] ||
 	fail 'prune offered a second plugin argument'
 
 printf 'prune regression tests: PASS\n'

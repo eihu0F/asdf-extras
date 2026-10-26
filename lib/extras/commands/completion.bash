@@ -8,6 +8,16 @@ plugin_dir="$(cd "$(dirname "$current_script_path")/../../.." && pwd)"
 # shellcheck source=../common.bash
 source "${plugin_dir}/lib/extras/common.bash"
 
+# Internal query used by the shell completion scripts. Everything after the
+# flag belongs to the query, so it must be handled before help or option parsing.
+if [[ "${1:-}" == --candidates ]]; then
+	shift
+	# shellcheck source=../completion-candidates.bash
+	source "${plugin_dir}/lib/extras/completion-candidates.bash"
+	extras_completion_candidates "$@"
+	exit 0
+fi
+
 # shellcheck source=../help.bash
 source "${plugin_dir}/lib/extras/help.bash"
 extras_maybe_help completion "$@"

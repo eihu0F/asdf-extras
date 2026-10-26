@@ -1,8 +1,8 @@
 # Asks extras for candidates through the entry point recorded at load time.
 _asdf_extras_query() {
 	case "${ASDF_EXTRAS_COMPLETION_ORIGIN:-}" in
-	plugin) command asdf cmd "${ASDF_EXTRAS_PLUGIN_NAME:-asdf-extras}" __complete -- "$@" ;;
-	installed) command asdf exec asdf-extras __complete "$@" ;;
+	plugin) command asdf cmd "${ASDF_EXTRAS_PLUGIN_NAME:-asdf-extras}" completion -- --candidates "$@" ;;
+	installed) command asdf exec asdf-extras completion --candidates "$@" ;;
 	*) return 1 ;;
 	esac
 }

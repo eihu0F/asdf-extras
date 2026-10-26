@@ -5,9 +5,9 @@ fn query {|@args|
 		set plugin = $E:ASDF_EXTRAS_PLUGIN_NAME
 	}
 	if (eq $E:ASDF_EXTRAS_COMPLETION_ORIGIN plugin) {
-		e:asdf cmd $plugin __complete -- $@args
+		e:asdf cmd $plugin completion -- --candidates $@args
 	} elif (eq $E:ASDF_EXTRAS_COMPLETION_ORIGIN installed) {
-		e:asdf exec asdf-extras __complete $@args
+		e:asdf exec asdf-extras completion --candidates $@args
 	} else {
 		fail 'completion origin is not set: ASDF_EXTRAS_COMPLETION_ORIGIN'
 	}

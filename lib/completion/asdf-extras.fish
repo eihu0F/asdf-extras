@@ -6,9 +6,9 @@ function __asdf_extras_query
 			if set -q ASDF_EXTRAS_PLUGIN_NAME; and test -n "$ASDF_EXTRAS_PLUGIN_NAME"
 				set plugin_name "$ASDF_EXTRAS_PLUGIN_NAME"
 			end
-			command asdf cmd "$plugin_name" __complete -- $argv
+			command asdf cmd "$plugin_name" completion -- --candidates $argv
 		case installed
-			command asdf exec asdf-extras __complete $argv
+			command asdf exec asdf-extras completion --candidates $argv
 		case '*'
 			return 1
 	end

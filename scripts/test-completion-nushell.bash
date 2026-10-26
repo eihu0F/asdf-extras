@@ -30,7 +30,7 @@ elif [[ "${1:-}" == cmd && "${2:-}" == asdf-extras ]]; then
 fi
 if [[ -n "$extras_entry" ]]; then
 	# Queries run for real; command wrappers only record what they dispatched.
-	if [[ "$1" == __complete ]]; then
+	if [[ "$1" == completion && "${2:-}" == --candidates ]]; then
 		if [[ "${ASDF_NU_QUERY_FAILURE:-}" == yes ]]; then
 			printf 'candidate-query-failed\n' >&2
 			exit 7

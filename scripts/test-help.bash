@@ -88,11 +88,11 @@ if [[ -n "$native_asdf" ]]; then
 		cmp "$test_root/plugin" "$test_root/direct"
 	done
 fi
-[[ "$(bash "$repo_dir/lib/extras/commands/__complete.bash" --standalone help u)" == update ]] ||
+[[ "$(bash "$repo_dir/libexec/asdf-extras" completion --candidates --standalone help u)" == update ]] ||
 	fail 'standalone help topic completion missing'
-grep -Fx prune < <(bash "$repo_dir/lib/extras/commands/__complete.bash" --standalone "") >/dev/null ||
+grep -Fx prune < <(bash "$repo_dir/libexec/asdf-extras" completion --candidates --standalone "") >/dev/null ||
 	fail 'standalone prune completion missing'
-[[ "$(bash "$repo_dir/lib/extras/commands/__complete.bash" --standalone help p)" == prune ]] ||
+[[ "$(bash "$repo_dir/libexec/asdf-extras" completion --candidates --standalone help p)" == prune ]] ||
 	fail 'prune help topic completion missing'
 
 run_shell() {

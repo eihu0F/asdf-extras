@@ -48,7 +48,7 @@ elif [[ "${1:-}" == cmd && "${2:-}" == asdf-extras ]]; then
 fi
 if [[ -n "$extras_entry" ]]; then
 	# Queries run for real; command wrappers only record what they dispatched.
-	if [[ "$1" == __complete ]]; then
+	if [[ "$1" == completion && "${2:-}" == --candidates ]]; then
 		exec bash "$ASDF_ELVISH_REPO/libexec/asdf-extras" "$@"
 	fi
 	printf '%s\n' "$*" >>"$ASDF_ELVISH_TEST_ROOT/dispatch.log"

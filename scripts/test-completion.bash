@@ -186,10 +186,13 @@ fail() {
 	[[ "$(complete -p asdf)" == "$external_registration" ]] || fail "external registration overwritten"
 '
 
-output="$(bash "$repo_dir/lib/extras/commands/__complete.bash" --standalone completion elvish --)"
+output="$(bash "$repo_dir/libexec/asdf-extras" completion --candidates --standalone completion elvish --)"
 [[ "$output" == --asdf ]] || fail "Elvish combined mode missing"
-output="$(bash "$repo_dir/lib/extras/commands/__complete.bash" --standalone update --all --)"
+output="$(bash "$repo_dir/libexec/asdf-extras" completion --candidates --standalone update --all --)"
 [[ "$output" == "$(printf '%s\n' --home --parent --local)" ]] || fail "standalone --all scopes"
+# Words typed on the command line belong to the query, even --help.
+output="$(bash "$repo_dir/libexec/asdf-extras" completion --candidates --standalone update --help)"
+[[ -z "$output" ]] || fail "--candidates treated a typed --help as a request for help"
 
 # shellcheck disable=SC2016
 "$BASH" -eu -c '

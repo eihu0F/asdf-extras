@@ -1,16 +1,22 @@
-set -g __asdf_extras_init_file (status filename)
-
 function __asdf_extras_dispatch
-	set -l init_dir (dirname "$__asdf_extras_init_file")
-	set -l lib_dir (dirname "$init_dir")
-	set -l dispatcher "$lib_dir/commands/dispatch.bash"
+	set -l subcommand "$argv[1]"
+	set -e argv[1]
 
-	if not test -r "$dispatcher"
-		echo "asdf-extras: dispatcher not found: $dispatcher" >&2
-		return 1
+	# Reach extras through the entry point this init came from, so a removed
+	# runtime does not leave a stale path behind.
+	switch "$ASDF_EXTRAS_INIT_ORIGIN"
+		case plugin
+			set -l plugin_name asdf-extras
+			if set -q ASDF_EXTRAS_PLUGIN_NAME; and test -n "$ASDF_EXTRAS_PLUGIN_NAME"
+				set plugin_name "$ASDF_EXTRAS_PLUGIN_NAME"
+			end
+			command asdf cmd "$plugin_name" "$subcommand" -- $argv
+		case installed
+			command asdf exec asdf-extras "$subcommand" $argv
+		case '*'
+			echo "asdf-extras: entry point not set: ASDF_EXTRAS_INIT_ORIGIN" >&2
+			return 1
 	end
-
-	command bash "$dispatcher" $argv
 end
 
 function __asdf_extras_refresh
@@ -27,7 +33,7 @@ function __asdf_extras_refresh
 	# init does not load completion, so reload it only where it was enabled,
 	# in the same mode (the asdf overlay sets __asdf_extras_completion_registered).
 	set -l completion_args
-	if set -q ASDF_EXTRAS_COMPLETION_HELPER; and test -n "$ASDF_EXTRAS_COMPLETION_HELPER"
+	if set -q ASDF_EXTRAS_COMPLETION_ORIGIN; and test -n "$ASDF_EXTRAS_COMPLETION_ORIGIN"
 		set completion_args completion
 		if set -q __asdf_extras_completion_registered
 			set -a completion_args --asdf

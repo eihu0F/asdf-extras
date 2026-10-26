@@ -1,13 +1,18 @@
 # asdf-extras init overlay for nushell
 
-def --env "asdf-extras-dispatch" [...args] {
-	let dispatcher = ($env.ASDF_EXTRAS_DISPATCHER? | default "")
+def --env "asdf-extras-dispatch" [subcommand: string, ...args] {
+	# Reach extras through the entry point this init came from, so a removed
+	# runtime does not leave a stale path behind.
+	let origin = ($env.ASDF_EXTRAS_INIT_ORIGIN? | default "")
+	let plugin_name = ($env.ASDF_EXTRAS_PLUGIN_NAME? | default "asdf-extras")
 
-	if $dispatcher == "" {
-		error make {msg: "asdf-extras: dispatcher not set: ASDF_EXTRAS_DISPATCHER"}
+	if $origin == "plugin" {
+		^asdf cmd $plugin_name $subcommand -- ...$args
+	} else if $origin == "installed" {
+		^asdf exec asdf-extras $subcommand ...$args
+	} else {
+		error make {msg: "asdf-extras: entry point not set: ASDF_EXTRAS_INIT_ORIGIN"}
 	}
-
-	^bash $dispatcher ...$args
 }
 
 def --env --wrapped asdf-extras-run [...args] {

@@ -1,12 +1,20 @@
 # asdf-extras init overlay for elvish
 
-fn asdf-extras-dispatch {|@args|
-	if (or (not (has-env ASDF_EXTRAS_DISPATCHER)) (eq $E:ASDF_EXTRAS_DISPATCHER '')) {
-		echo 'asdf-extras: dispatcher not set: ASDF_EXTRAS_DISPATCHER' >&2
-		fail 'ASDF_EXTRAS_DISPATCHER is not set'
+fn asdf-extras-dispatch {|subcommand @args|
+	# Reach extras through the entry point this init came from, so a removed
+	# runtime does not leave a stale path behind.
+	if (eq $E:ASDF_EXTRAS_INIT_ORIGIN plugin) {
+		var plugin = asdf-extras
+		if (and (has-env ASDF_EXTRAS_PLUGIN_NAME) (not-eq $E:ASDF_EXTRAS_PLUGIN_NAME '')) {
+			set plugin = $E:ASDF_EXTRAS_PLUGIN_NAME
+		}
+		e:asdf cmd $plugin $subcommand -- $@args
+	} elif (eq $E:ASDF_EXTRAS_INIT_ORIGIN installed) {
+		e:asdf exec asdf-extras $subcommand $@args
+	} else {
+		echo 'asdf-extras: entry point not set: ASDF_EXTRAS_INIT_ORIGIN' >&2
+		fail 'ASDF_EXTRAS_INIT_ORIGIN is not set'
 	}
-
-	bash $E:ASDF_EXTRAS_DISPATCHER $@args
 }
 
 fn asdf {|@args|

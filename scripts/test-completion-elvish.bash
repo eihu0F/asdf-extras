@@ -26,12 +26,34 @@ export HOME="$test_root/home"
 export XDG_CONFIG_HOME="$test_root/config"
 export XDG_DATA_HOME="$test_root/data"
 mkdir -p "$test_root/bin" "$HOME"
+export ASDF_ELVISH_REPO="$repo_dir"
 ln -s "$repo_dir" "$test_root/extra's runtime"
 repo_dir="$test_root/extra's runtime"
 cd "$test_root"
 cat >"$test_root/bin/asdf" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
+# Stand in for the stable entry points that wrappers and completion query.
+extras_entry=""
+if [[ "${1:-}" == exec && "${2:-}" == asdf-extras ]]; then
+	shift 2
+	extras_entry=installed
+elif [[ "${1:-}" == cmd && "${2:-}" == asdf-extras ]]; then
+	shift 2
+	extras_entry=plugin
+	subcommand="$1"
+	shift
+	[[ "${1:-}" != -- ]] || shift
+	set -- "$subcommand" "$@"
+fi
+if [[ -n "$extras_entry" ]]; then
+	# Queries run for real; command wrappers only record what they dispatched.
+	if [[ "$1" == __complete ]]; then
+		exec bash "$ASDF_ELVISH_REPO/libexec/asdf-extras" "$@"
+	fi
+	printf '%s\n' "$*" >>"$ASDF_ELVISH_TEST_ROOT/dispatch.log"
+	exit 0
+fi
 case "$*" in
 "completion elvish")
 	printf 'completion elvish\n' >>"$ASDF_ELVISH_TEST_ROOT/native.log"
@@ -63,13 +85,9 @@ case "$*" in
 esac
 EOF
 chmod +x "$test_root/bin/asdf"
-bash "$repo_dir/lib/commands/command-completion" elvish >"$test_root/standalone.elv"
-bash "$repo_dir/lib/commands/command-completion" --asdf elvish >"$test_root/combined.elv"
-bash "$repo_dir/lib/commands/command-init" elvish >"$test_root/init.elv"
-cat >"$test_root/dispatch.bash" <<'EOF'
-#!/usr/bin/env bash
-printf '%s\n' "$*" >>"$ASDF_ELVISH_TEST_ROOT/dispatch.log"
-EOF
+bash "$repo_dir/libexec/asdf-extras" completion elvish >"$test_root/standalone.elv"
+bash "$repo_dir/libexec/asdf-extras" completion --asdf elvish >"$test_root/combined.elv"
+bash "$repo_dir/libexec/asdf-extras" init elvish >"$test_root/init.elv"
 
 {
 	printf 'try {\n'
@@ -150,7 +168,6 @@ EOF
 	cat "$test_root/combined.elv"
 	cat "$test_root/combined.elv"
 	cat <<'EOF'
-set-env ASDF_EXTRAS_DISPATCHER $E:ASDF_ELVISH_TEST_ROOT'/dispatch.bash'
 asdf install --local nodejs 22.0.0
 asdf update --version nodejs
 asdf completion elvish
@@ -167,14 +184,14 @@ for words [[asdf-extras install ''] [asdf-extras install nodejs ''] [asdf update
 	}
 	if (not $query-failed) { fail 'query failure was suppressed' }
 }
-set-env ASDF_EXTRAS_COMPLETION_HELPER $E:ASDF_ELVISH_TEST_ROOT'/missing-helper'
-var helper-failed = $false
+set-env ASDF_EXTRAS_COMPLETION_ORIGIN unknown
+var query-unset = $false
 try {
 	$edit:completion:arg-completer[asdf] asdf install '' | each {|candidate| }
 } catch err {
-	set helper-failed = $true
+	set query-unset = $true
 }
-if (not $helper-failed) { fail 'delegated helper failure was suppressed' }
+if (not $query-unset) { fail 'delegated query failure was suppressed' }
 echo 'Elvish completion tests: PASS'
 } catch err {
 	echo $err >&2
@@ -183,7 +200,7 @@ echo 'Elvish completion tests: PASS'
 exit
 EOF
 } >"$test_root/test.elv"
-if grep -q 'ASDF_EXTRAS_COMPLETION_HELPER\|asdf-extras-load-completion' "$test_root/init.elv"; then
+if grep -q 'ASDF_EXTRAS_COMPLETION_ORIGIN\|asdf-extras-load-completion' "$test_root/init.elv"; then
 	printf 'FAIL: init emitted completion\n' >&2
 	exit 1
 fi
@@ -197,11 +214,9 @@ cat >"$test_root/eval.elv" <<'EOF'
 try {
 	var asdf~ = $nil
 	eval (e:cat $E:ASDF_ELVISH_TEST_ROOT'/init.elv' | slurp) &on-end={|ns| set asdf~ = $ns[asdf~]}
-	set-env ASDF_EXTRAS_DISPATCHER $E:ASDF_ELVISH_TEST_ROOT'/dispatch.bash'
-	asdf install --local nodejs 22.0.0
+		asdf install --local nodejs 22.0.0
 	eval (e:cat $E:ASDF_ELVISH_TEST_ROOT'/init.elv' | slurp) &on-end={|ns| set asdf~ = $ns[asdf~]}
-	set-env ASDF_EXTRAS_DISPATCHER $E:ASDF_ELVISH_TEST_ROOT'/dispatch.bash'
-	asdf completion elvish
+		asdf completion elvish
 	eval (e:cat $E:ASDF_ELVISH_TEST_ROOT'/combined.elv' | slurp)
 	if (not-eq [($edit:completion:arg-completer[asdf] asdf current '')] [native-generated]) {
 		fail 'eval setup lost native completion'
@@ -226,8 +241,7 @@ cat >"$test_root/tab.elv" <<'EOF'
 var asdf~ = $nil
 try {
 	eval (e:cat $E:ASDF_ELVISH_TEST_ROOT'/init.elv' | slurp) &on-end={|ns| set asdf~ = $ns[asdf~]}
-	set-env ASDF_EXTRAS_DISPATCHER $E:ASDF_ELVISH_TEST_ROOT'/dispatch.bash'
-	eval (e:cat $E:ASDF_ELVISH_TEST_ROOT'/combined.elv' | slurp)
+		eval (e:cat $E:ASDF_ELVISH_TEST_ROOT'/combined.elv' | slurp)
 } catch err {
 	echo $err >&2
 	exit 1
@@ -259,3 +273,38 @@ done
 } >"$test_root/invalid.elv"
 run_elvish "$test_root/invalid.elv" "$test_root/invalid.log" </dev/null
 grep -q 'Invalid registration preserved: PASS' "$test_root/invalid.log"
+
+# Completion and wrappers keep working after the runtime that generated them is
+# removed, and completion from the plugin entry point queries through `asdf cmd`.
+export ASDF_ELVISH_REMOVED="$test_root/removed runtime"
+mkdir -p "$ASDF_ELVISH_REMOVED"
+cp -R "$ASDF_ELVISH_REPO/lib" "$ASDF_ELVISH_REPO/libexec" "$ASDF_ELVISH_REMOVED/"
+bash "$ASDF_ELVISH_REMOVED/libexec/asdf-extras" init elvish >"$test_root/removed-init.elv"
+bash "$ASDF_ELVISH_REMOVED/libexec/asdf-extras" completion --asdf elvish >"$test_root/removed-completion.elv"
+bash "$ASDF_ELVISH_REPO/lib/commands/command-completion" elvish >"$test_root/plugin.elv"
+: >"$test_root/dispatch.log"
+cat >"$test_root/removed.elv" <<'EOF'
+try {
+	var asdf~ = $nil
+	eval (e:cat $E:ASDF_ELVISH_TEST_ROOT'/removed-init.elv' | slurp) &on-end={|ns| set asdf~ = $ns[asdf~]}
+	eval (e:cat $E:ASDF_ELVISH_TEST_ROOT'/removed-completion.elv' | slurp)
+	e:rm -rf $E:ASDF_ELVISH_REMOVED
+	if (not (has-value [($edit:completion:arg-completer[asdf-extras] asdf-extras up)] update)) {
+		fail 'completion used a removed runtime'
+	}
+	asdf update --version nodejs
+	eval (e:cat $E:ASDF_ELVISH_TEST_ROOT'/plugin.elv' | slurp)
+	if (not (has-value [($edit:completion:arg-completer[asdf-extras] asdf-extras up)] update)) {
+		fail 'plugin entry query failed'
+	}
+	echo 'Elvish removed runtime: PASS'
+} catch err {
+	echo $err >&2
+	exit 1
+}
+exit
+EOF
+run_elvish "$test_root/removed.elv" "$test_root/removed.log" </dev/null
+grep -q 'Elvish removed runtime: PASS' "$test_root/removed.log"
+[[ "$(<"$test_root/dispatch.log")" == 'update --version nodejs' ]]
+[[ ! -e "$ASDF_ELVISH_REMOVED" ]]

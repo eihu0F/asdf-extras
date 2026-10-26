@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# Internal: queried by shell completion; not a user-facing command.
+# asdf consumes the subcommand name when it selects this extension command.
+exec "$BASH" "$(dirname "${BASH_SOURCE[0]}")/../extras/dispatch.bash" plugin __complete "$@"

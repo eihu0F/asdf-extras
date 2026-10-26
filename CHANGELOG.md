@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.10.0](https://github.com/eihu0F/asdf-extras/compare/v0.9.2...v0.10.0) (2026-10-26)
+
+
+### Features
+
+* add a read-only get command for scoped version reads ([#77](https://github.com/eihu0F/asdf-extras/issues/77)) ([b6ffb5a](https://github.com/eihu0F/asdf-extras/commit/b6ffb5a1dd29b27816730e93dfe72d20dbc262d8))
+* add a setup subcommand to install asdf-extras itself ([#78](https://github.com/eihu0F/asdf-extras/issues/78)) ([eeec7e8](https://github.com/eihu0F/asdf-extras/commit/eeec7e801f9c427b5d39176c506e61b8cf6cdf67))
+* support version lists and --replace in install and update ([#79](https://github.com/eihu0F/asdf-extras/issues/79)) ([d3e98fd](https://github.com/eihu0F/asdf-extras/commit/d3e98fd2f76717f4a4be4029a88ed94251a36b82))
+
+
+### Bug Fixes
+
+* route init and completion through stable entry points ([#74](https://github.com/eihu0F/asdf-extras/issues/74)) ([73cf25e](https://github.com/eihu0F/asdf-extras/commit/73cf25e2dac897831c7e0270b7a87ab99173b328))
+* show the resolved version when installing or updating a tool ([#76](https://github.com/eihu0F/asdf-extras/issues/76)) ([23d0c8e](https://github.com/eihu0F/asdf-extras/commit/23d0c8e89d4ac751965781bceda1ca895e9684e7))
+* stop init from loading completion ([#71](https://github.com/eihu0F/asdf-extras/issues/71)) ([0c9d0dc](https://github.com/eihu0F/asdf-extras/commit/0c9d0dcd53da4c0d16187d6c9f52176c9d3ef75c))
+
 ## [0.9.2](https://github.com/eihu0F/asdf-extras/compare/v0.9.1...v0.9.2) (2026-10-23)
 
 

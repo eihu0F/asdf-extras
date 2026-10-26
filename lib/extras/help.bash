@@ -10,6 +10,7 @@ extras_maybe_help() {
 			update) extras_help_update ;;
 			prune) extras_help_prune ;;
 			get) extras_help_get ;;
+			setup) extras_help_setup ;;
 			completion) extras_help_completion ;;
 			esac
 			exit 0
@@ -143,6 +144,25 @@ Examples:
   asdf get nodejs
   asdf get --parent python
   asdf get --local
+EOF
+}
+
+extras_help_setup() {
+	cat <<'EOF'
+asdf-extras setup:
+  asdf cmd asdf-extras setup [<version>]
+  asdf-extras setup [<version>]
+
+  Shortcut for installing asdf-extras itself in the home configuration: the same
+  as install --home asdf-extras <version>, with <version> defaulting to latest.
+  Activation and failure handling are those of install. There is no scope option;
+  use install for parent or local scopes. ASDF_EXTRAS_PLUGIN_NAME selects the
+  plugin name. Through asdf cmd it works before any runtime is installed.
+  Initialize your shell afterward with asdf-extras init <shell>.
+
+Examples:
+  asdf cmd asdf-extras setup
+  asdf cmd asdf-extras setup 0.9.0
 EOF
 }
 

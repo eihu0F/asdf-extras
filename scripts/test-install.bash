@@ -28,6 +28,12 @@ if [[ "$1" == exec && "${2:-}" == asdf-extras ]]; then
 	shift 2
 	exec bash "$ASDF_TEST_REPO/libexec/asdf-extras" "$@"
 fi
+if [[ "$1" == cmd ]]; then
+	subcommand="$3"
+	shift 3
+	[[ "${1:-}" != -- ]] || shift
+	exec bash "$ASDF_TEST_REPO/lib/commands/command-$subcommand" "$@"
+fi
 case "$1" in
 latest) printf '9.0\n' ;;
 list) cat "${ASDF_TEST_LOG}.installed" ;;
@@ -66,6 +72,8 @@ fail() {
 	exit 1
 }
 
+command_name=install
+
 assert_install() {
 	local scope="$1"
 	local options="$2"
@@ -76,7 +84,7 @@ assert_install() {
 	printf '# reset\n' >"$HOME/.tool-versions"
 	printf '# reset\n' >../.tool-versions
 	printf '# reset\n' >.tool-versions
-	"$BASH" "${repo_dir}/lib/commands/command-install" "$@"
+	"$BASH" "${repo_dir}/lib/commands/command-${command_name}" "$@"
 	actual="$(<"$ASDF_TEST_LOG")"
 	expected="$(printf '<install>%s\n<set>%s' "$options" "$scope")"
 	[[ "$actual" == "$expected" ]] || fail "unexpected asdf arguments: $actual"
@@ -88,7 +96,7 @@ assert_invalid() {
 	shift
 
 	: >"$ASDF_TEST_LOG"
-	if output="$("$BASH" "${repo_dir}/lib/commands/command-install" "$@" 2>&1)"; then
+	if output="$("$BASH" "${repo_dir}/lib/commands/command-${command_name}" "$@" 2>&1)"; then
 		fail "invalid arguments were accepted: $*"
 	fi
 	[[ "$output" == "asdf-extras: $expected" ]] || fail "unexpected error: $output"
@@ -111,6 +119,16 @@ assert_install '<--home><nodejs><24.11.0>' '<--verbose><--custom=value with spac
 assert_install '<--parent><nodejs><24.11.0>' \
 	'<--custom=value with spaces><nodejs><24.11.0>' \
 	'--custom=value with spaces' --parent nodejs 24.11.0
+
+# setup is install for asdf-extras itself, through asdf cmd.
+command_name=setup
+assert_install '<--home><asdf-extras><9.0>' '<asdf-extras><9.0>'
+assert_install '<--home><asdf-extras><8.0>' '<asdf-extras><8.0>' 8.0
+ASDF_EXTRAS_PLUGIN_NAME=custom-extras assert_install '<--home><custom-extras><9.0>' '<custom-extras><9.0>'
+assert_invalid "usage: asdf-extras setup [<version>]" 8.0 9.0
+assert_invalid "unknown setup option: --local" --local
+assert_invalid "unknown setup option: -p" -p
+command_name=install
 
 # Progress shows the resolved version, not the request, and what it replaces.
 rm -f "$HOME/.tool-versions"

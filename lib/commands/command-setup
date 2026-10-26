@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# asdf consumes the subcommand name when it selects this extension command.
+exec "$BASH" "$(dirname "${BASH_SOURCE[0]}")/../extras/dispatch.bash" plugin setup "$@"

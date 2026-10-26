@@ -48,7 +48,9 @@ Other `asdf` commands retain their native behavior.
 
 ```shell
 asdf plugin add asdf-extras https://github.com/eihu0F/asdf-extras.git
-asdf cmd asdf-extras install asdf-extras latest
+# Installs the latest asdf-extras and activates it for your home directory.
+# Add a version to pick one, e.g. "setup 0.9.0".
+asdf cmd asdf-extras setup
 ```
 
 The repository URL is required because the plugin is not in the asdf plugin
@@ -198,7 +200,7 @@ Without initialization, native help is unchanged. Use
 `asdf cmd asdf-extras help <topic>` for asdf-extras documentation.
 Through `asdf cmd`, use the explicit `help <topic>` form: asdf versions such as
 0.20.2 do not successfully forward `<subcommand> --help` to the plugin.
-Plain `asdf-extras help` includes all three command topics.
+Plain `asdf-extras help` includes every command topic.
 
 # Reference
 

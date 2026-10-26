@@ -6,7 +6,7 @@ _asdf_extras_complete() {
 	COMPREPLY=()
 	if [[ "$cmd" == install || "$cmd" == update ]] && ((COMP_CWORD > 1)); then
 		[[ "$cmd" != install ]] || mode=(--delegated)
-		if ! output="$(command bash "$ASDF_EXTRAS_COMPLETION_HELPER" ${mode[@]+"${mode[@]}"} "${COMP_WORDS[@]:1:COMP_CWORD}")"; then
+		if ! output="$(_asdf_extras_query ${mode[@]+"${mode[@]}"} "${COMP_WORDS[@]:1:COMP_CWORD}")"; then
 			return 1
 		fi
 		# Strip extras flags only in a local completion context; leave the input untouched.

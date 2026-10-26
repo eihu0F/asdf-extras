@@ -1,18 +1,17 @@
 _asdf_extras_dispatch() {
-	local dispatcher
+	local subcommand="$1"
+	shift
 
-	dispatcher="${ASDF_EXTRAS_DISPATCHER:-}"
-	if [[ -z "$dispatcher" ]]; then
-		printf "asdf-extras: dispatcher not set: ASDF_EXTRAS_DISPATCHER\n" >&2
+	# Reach extras through the entry point this init came from, so a removed
+	# runtime does not leave a stale path behind.
+	case "${ASDF_EXTRAS_INIT_ORIGIN:-}" in
+	plugin) command asdf cmd "${ASDF_EXTRAS_PLUGIN_NAME:-asdf-extras}" "$subcommand" -- "$@" ;;
+	installed) command asdf exec asdf-extras "$subcommand" "$@" ;;
+	*)
+		printf "asdf-extras: entry point not set: ASDF_EXTRAS_INIT_ORIGIN\n" >&2
 		return 1
-	fi
-
-	if [[ ! -r "$dispatcher" ]]; then
-		printf "asdf-extras: dispatcher not found: %s\n" "$dispatcher" >&2
-		return 1
-	fi
-
-	command bash "$dispatcher" "$@"
+		;;
+	esac
 }
 
 _asdf_extras_refresh() {
@@ -25,7 +24,7 @@ _asdf_extras_refresh() {
 	[[ "$executable" != "$previous" ]] || return "$update_rc"
 	# init does not load completion, so reload it only where it was enabled,
 	# in the same mode (the asdf overlay registers _ASDF_EXTRAS_NATIVE_COMPLETE).
-	if [[ -n "${ASDF_EXTRAS_COMPLETION_HELPER:-}" ]]; then
+	if [[ -n "${ASDF_EXTRAS_COMPLETION_ORIGIN:-}" ]]; then
 		completion_args=(completion)
 		[[ -z "${_ASDF_EXTRAS_NATIVE_COMPLETE:-}" ]] || completion_args+=(--asdf)
 		completion_args+=(zsh)

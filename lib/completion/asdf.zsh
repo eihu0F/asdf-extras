@@ -4,9 +4,9 @@ _asdf_extras_complete() {
 	local i scoped=0 normalized_current="$CURRENT"
 	if ((CURRENT > 2)) && [[ "$cmd" == install || "$cmd" == update ]]; then
 		if [[ "$cmd" == install ]]; then
-			output="$(command bash "$ASDF_EXTRAS_COMPLETION_HELPER" --delegated "${words[@]:1:$((CURRENT - 1))}")" || return 1
+			output="$(_asdf_extras_query --delegated "${words[@]:1:$((CURRENT - 1))}")" || return 1
 		else
-			output="$(command bash "$ASDF_EXTRAS_COMPLETION_HELPER" "${words[@]:1:$((CURRENT - 1))}")" || return 1
+			output="$(_asdf_extras_query "${words[@]:1:$((CURRENT - 1))}")" || return 1
 		fi
 		while IFS= read -r candidate; do
 			[[ -z "$candidate" ]] || candidates+=("$candidate")

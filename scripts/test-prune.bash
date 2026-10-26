@@ -51,7 +51,7 @@ fail() {
 	exit 1
 }
 
-dispatch="$repo_dir/lib/commands/dispatch.bash"
+dispatch="$repo_dir/libexec/asdf-extras"
 output="$(bash "$dispatch" prune)"
 expected="$(printf 'alpha 3.0\norphan 4.0\norphan 5.0')"
 [[ "$(<"$test_dir/uninstall.log")" == "$expected" ]] || fail "unexpected uninstall set: $(<"$test_dir/uninstall.log")"
@@ -123,9 +123,9 @@ fi
 grep -q 'failed to remove version: alpha 3.0' "$test_dir/error" || fail 'uninstall failure not reported'
 grep -Fx 'orphan 4.0' "$test_dir/uninstall.log" >/dev/null || fail 'pruning did not continue after uninstall failure'
 
-[[ "$(bash "$repo_dir/lib/commands/completion-candidates.bash" --standalone prune a)" == alpha ]] ||
+[[ "$(bash "$repo_dir/libexec/asdf-extras" completion --candidates --standalone prune a)" == alpha ]] ||
 	fail 'prune plugin completion missing'
-[[ -z "$(bash "$repo_dir/lib/commands/completion-candidates.bash" --standalone prune alpha b)" ]] ||
+[[ -z "$(bash "$repo_dir/libexec/asdf-extras" completion --candidates --standalone prune alpha b)" ]] ||
 	fail 'prune offered a second plugin argument'
 
 printf 'prune regression tests: PASS\n'

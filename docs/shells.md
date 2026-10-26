@@ -315,9 +315,16 @@ while without initialization it is native asdf's command. Use
 | Direct `asdf-extras update` | No automatic shell refresh |
 
 The Bash/Zsh/Fish wrapper resolves the new executable with
-`asdf which asdf-extras`, not the old shim or dispatcher. It reloads when the
+`asdf which asdf-extras`, not the old shim. It reloads when the
 selected executable path changes, keeping the current shell usable after cleanup
 removes the old runtime.
+
+Initialized wrappers and completion queries do not embed paths into an installed
+runtime. They call asdf-extras through the entry point that generated them:
+`asdf exec asdf-extras` for the installed command, which follows the selected
+version on every call, or `asdf cmd asdf-extras` for output generated from the
+plugin checkout. A removed runtime therefore does not break loaded definitions;
+reloading is only needed to pick up changed definitions.
 
 Completion is reloaded only if it is already enabled in the current shell, so
 setups that never enabled completion do not get it registered by an update. A

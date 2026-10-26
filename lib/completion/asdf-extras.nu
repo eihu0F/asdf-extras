@@ -12,9 +12,22 @@ def asdf-extras-argument-value [word: string] {
 	$literal | str substring 1..-2
 }
 
+# Asks extras for candidates through the entry point recorded at load time.
+def asdf-extras-query [...args: string] {
+	let origin = ($env.ASDF_EXTRAS_COMPLETION_ORIGIN? | default "")
+	let plugin_name = ($env.ASDF_EXTRAS_PLUGIN_NAME? | default "asdf-extras")
+	if $origin == "plugin" {
+		^asdf cmd $plugin_name completion -- --candidates ...$args | complete
+	} else if $origin == "installed" {
+		^asdf exec asdf-extras completion --candidates ...$args | complete
+	} else {
+		{exit_code: 1, stdout: "", stderr: "completion origin is not set: ASDF_EXTRAS_COMPLETION_ORIGIN"}
+	}
+}
+
 def asdf-extras-candidates [place: record] {
 	let words = ($place.command | skip 1 | each {|word| asdf-extras-argument-value $word })
-	let result = (^bash $env.ASDF_EXTRAS_COMPLETION_HELPER --standalone ...$words | complete)
+	let result = (asdf-extras-query "--standalone" ...$words)
 	if $result.exit_code != 0 {
 		let diagnostic = $"asdf-extras: completion failed: ($result.stderr | str trim)"
 		print --stderr $diagnostic

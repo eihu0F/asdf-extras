@@ -1,7 +1,7 @@
 function __asdf_extras_completion_candidates
 	set -l words (commandline -opc)
 	set -l current (commandline -ct)
-	command bash "$ASDF_EXTRAS_COMPLETION_HELPER" $words[2..-1] "$current"
+	__asdf_extras_query $words[2..-1] "$current"
 end
 
 function __asdf_extras_needs_completion

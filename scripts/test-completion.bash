@@ -11,6 +11,17 @@ mkdir -p "$test_root/bin"
 cat >"$test_root/bin/asdf" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
+# Stand in for the stable entry points that wrappers and completion query.
+if [[ "${1:-}" == exec && "${2:-}" == asdf-extras ]]; then
+	shift 2
+	exec bash "$ASDF_COMPLETION_REPO/libexec/asdf-extras" "$@"
+fi
+if [[ "${1:-}" == cmd && "${2:-}" == asdf-extras ]]; then
+	subcommand="$3"
+	shift 3
+	[[ "${1:-}" != -- ]] || shift
+	exec bash "$ASDF_COMPLETION_REPO/lib/commands/command-$subcommand" "$@"
+fi
 case "$*" in
 "completion bash")
 	[[ "${ASDF_COMPLETION_FAIL:-}" != generator ]] || exit 8
@@ -81,7 +92,7 @@ fail() {
 	}
 	code="$(bash "$ASDF_COMPLETION_REPO/lib/commands/command-init" bash)"
 	eval "$code"
-	[[ -z "${ASDF_EXTRAS_COMPLETION_HELPER:-}" ]] || fail "init set the completion helper"
+	[[ -z "${ASDF_EXTRAS_COMPLETION_ORIGIN:-}" ]] || fail "init set the completion origin"
 	[[ -z "${_ASDF_EXTRAS_NATIVE_COMPLETE:-}" ]] || fail "init registered the overlay"
 	! declare -F _asdf_extras_complete >/dev/null || fail "init defined overlay functions"
 	! complete -p asdf >/dev/null 2>&1 || fail "init registered asdf completion"
@@ -175,10 +186,13 @@ fail() {
 	[[ "$(complete -p asdf)" == "$external_registration" ]] || fail "external registration overwritten"
 '
 
-output="$(bash "$repo_dir/lib/commands/completion-candidates.bash" --standalone completion elvish --)"
+output="$(bash "$repo_dir/libexec/asdf-extras" completion --candidates --standalone completion elvish --)"
 [[ "$output" == --asdf ]] || fail "Elvish combined mode missing"
-output="$(bash "$repo_dir/lib/commands/completion-candidates.bash" --standalone update --all --)"
+output="$(bash "$repo_dir/libexec/asdf-extras" completion --candidates --standalone update --all --)"
 [[ "$output" == "$(printf '%s\n' --home --parent --local)" ]] || fail "standalone --all scopes"
+# Words typed on the command line belong to the query, even --help.
+output="$(bash "$repo_dir/libexec/asdf-extras" completion --candidates --standalone update --help)"
+[[ -z "$output" ]] || fail "--candidates treated a typed --help as a request for help"
 
 # shellcheck disable=SC2016
 "$BASH" -eu -c '
@@ -257,12 +271,12 @@ if command -v zsh >/dev/null; then
 			compadd native-command
 		}
 		compdef native_framework_handler asdf
-		helper_before="${ASDF_EXTRAS_COMPLETION_HELPER:-}"
+		origin_before="${ASDF_EXTRAS_COMPLETION_ORIGIN:-}"
 		code="$(bash "$ASDF_COMPLETION_REPO/lib/commands/command-init" zsh)"
 		eval "$code"
 		eval "$code"
 		[[ "${_comps[asdf]}" == native_framework_handler ]] || fail "init replaced the framework handler"
-		[[ -z "${ASDF_EXTRAS_COMPLETION_HELPER:-}" || "$ASDF_EXTRAS_COMPLETION_HELPER" == "$helper_before" ]] || fail "init changed the completion helper"
+		[[ -z "${ASDF_EXTRAS_COMPLETION_ORIGIN:-}" || "$ASDF_EXTRAS_COMPLETION_ORIGIN" == "$origin_before" ]] || fail "init changed the completion origin"
 		code="$(asdf completion zsh)"
 		eval "$code"
 		eval "$code"
@@ -376,13 +390,36 @@ else
 	printf 'SKIP: fish is unavailable\n'
 fi
 
+# Wrappers and completion queries reach extras through its entry points, so they
+# keep working after the runtime that generated them is removed.
+removed_runtime="$test_root/removed-runtime"
+for shell in bash zsh fish; do
+	command -v "$shell" >/dev/null || continue
+	rm -rf "$removed_runtime"
+	mkdir -p "$removed_runtime"
+	cp -R "$repo_dir/lib" "$repo_dir/libexec" "$removed_runtime/"
+	query=_asdf_extras_query
+	[[ "$shell" != fish ]] || query=__asdf_extras_query
+	{
+		bash "$removed_runtime/libexec/asdf-extras" init "$shell"
+		bash "$removed_runtime/libexec/asdf-extras" completion "$shell"
+		printf 'rm -rf %q\n' "$removed_runtime"
+		printf '%s --standalone "" >%q\n' "$query" "$test_root/removed.candidates"
+		printf 'asdf completion bash >%q\n' "$test_root/removed.completion"
+	} >"$test_root/removed.$shell"
+	"$shell" "$test_root/removed.$shell" || fail "$shell: entry points failed after runtime removal"
+	grep -Fx completion "$test_root/removed.candidates" >/dev/null || fail "$shell: completion query used a removed runtime"
+	grep -F "$repo_dir" "$test_root/removed.completion" >/dev/null || fail "$shell: wrapper did not reach the selected runtime"
+	[[ ! -e "$removed_runtime" ]] || fail "$shell: runtime was not removed"
+done
+
 # init enables command wrappers only; completion is a separate, explicit step.
 for shell in bash zsh fish elvish nushell; do
 	init_output="$(bash "$repo_dir/lib/commands/command-init" "$shell")"
-	for marker in ASDF_EXTRAS_COMPLETION_HELPER lib/completion/ nushell-completion; do
+	for marker in ASDF_EXTRAS_COMPLETION_ORIGIN lib/completion/ nushell-completion; do
 		[[ "$init_output" != *"$marker"* ]] || fail "init $shell emitted completion: $marker"
 	done
-	[[ "$init_output" == *ASDF_EXTRAS_DISPATCHER* ]] || fail "init $shell lost the command wrapper"
+	[[ "$init_output" == *ASDF_EXTRAS_INIT_ORIGIN* ]] || fail "init $shell lost the command wrapper"
 done
 nushell_wrappers="$(bash "$repo_dir/lib/commands/command-completion" --asdf --wrappers nushell)"
 [[ "$nushell_wrappers" == *"lib/init/nushell-completion.nu"* ]] || fail "--wrappers did not redefine the Nushell wrappers"

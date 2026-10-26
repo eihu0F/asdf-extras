@@ -19,9 +19,15 @@ mkdir -p "$HOME" "${test_dir}/project/child"
 cd "${test_dir}/project/child"
 printf '# parent configuration\n' >../.tool-versions
 
+export ASDF_TEST_REPO="$repo_dir"
 cat >"${test_dir}/asdf" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
+# Stand in for the installed entry point that initialized wrappers use.
+if [[ "$1" == exec && "${2:-}" == asdf-extras ]]; then
+	shift 2
+	exec bash "$ASDF_TEST_REPO/libexec/asdf-extras" "$@"
+fi
 case "$1" in
 latest) printf '9.0\n' ;;
 list) cat "${ASDF_TEST_LOG}.installed" ;;
@@ -146,10 +152,10 @@ for shell_name in bash zsh fish; do
 	printf '# reset\n' >.tool-versions
 	if [[ "$shell_name" == fish ]]; then
 		# shellcheck disable=SC2016
-		"$shell_name" -c 'source "$argv[1]/lib/init/fish.fish"; asdf install --local nodejs 8.0' -- "$repo_dir"
+		"$shell_name" -c 'set -gx ASDF_EXTRAS_INIT_ORIGIN installed; source "$argv[1]/lib/init/fish.fish"; asdf install --local nodejs 8.0' -- "$repo_dir"
 	else
 		# shellcheck disable=SC2016
-		"$shell_name" -c 'ASDF_EXTRAS_DISPATCHER="$1/lib/commands/dispatch.bash"; source "$1/lib/init/$2"; asdf install --local nodejs 8.0' \
+		"$shell_name" -c 'ASDF_EXTRAS_INIT_ORIGIN=installed; source "$1/lib/init/$2"; asdf install --local nodejs 8.0' \
 			-- "$repo_dir" "$([[ "$shell_name" == bash ]] && printf bash.sh || printf zsh.zsh)"
 	fi
 	grep -Fx '<set><nodejs><8.0>' "$ASDF_TEST_LOG" >/dev/null || fail "$shell_name: local install not routed"

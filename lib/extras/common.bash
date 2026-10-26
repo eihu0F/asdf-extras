@@ -21,6 +21,14 @@ extras_run() {
 	esac
 }
 
+# Prints the entry point origin recorded by dispatch.bash, for generated shell code.
+extras_origin() {
+	case "${ASDF_EXTRAS_ORIGIN:-}" in
+	plugin | installed) printf '%s\n' "$ASDF_EXTRAS_ORIGIN" ;;
+	*) extras_fail "unknown entry point origin: ${ASDF_EXTRAS_ORIGIN:-unset}" ;;
+	esac
+}
+
 extras_need_args() {
 	local required="$1"
 	local got="$2"

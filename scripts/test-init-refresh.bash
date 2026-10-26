@@ -19,6 +19,9 @@ if [[ "$*" == "which asdf-extras" ]]; then
 		exit 4
 	fi
 	cat "$ASDF_REFRESH_TEST_DIR/selected"
+elif [[ "${1:-}" == exec && "${2:-}" == asdf-extras ]]; then
+	shift 2
+	exec "$(cat "$ASDF_REFRESH_TEST_DIR/selected")" "$@"
 elif [[ "$*" == "completion bash" ]]; then
 	printf '_test_native_complete() { COMPREPLY=(); }\ncomplete -F _test_native_complete asdf\n'
 elif [[ "$*" == "completion zsh" ]]; then
@@ -46,6 +49,7 @@ prepare_runtimes() {
 #!/usr/bin/env bash
 set -euo pipefail
 subcommand="$1"
+root="$(dirname "$(dirname "$0")")"
 if [[ "$subcommand" == completion && "$ASDF_REFRESH_SCENARIO" == completion-generation-failure ]]; then
 	printf 'echo must-not-evaluate\n'
 	exit 3
@@ -63,28 +67,25 @@ if [[ "$subcommand" == init ]]; then
 		exit 0
 	fi
 fi
-root="$(dirname "$(dirname "$0")")"
-shift
-exec bash "$root/lib/commands/command-$subcommand" "$@"
+if [[ "$subcommand" == update && "$(basename "$root")" == old ]]; then
+	printf 'update\n' >>"$ASDF_REFRESH_TEST_DIR/log"
+	case "$ASDF_REFRESH_SCENARIO" in
+	unchanged) exit 0 ;;
+	failed-update) exit 7 ;;
+	esac
+	printf '%s/new/bin/asdf-extras\n' "$ASDF_REFRESH_TEST_DIR" >"$ASDF_REFRESH_TEST_DIR/selected"
+	rm -rf "$ASDF_REFRESH_TEST_DIR/old"
+	[[ "$ASDF_REFRESH_SCENARIO" != partial-failure ]] || exit 7
+	exit 0
+fi
+if [[ "$subcommand" != init && "$subcommand" != completion && "$(basename "$root")" == new ]]; then
+	printf 'new %s\n' "$*" >>"$ASDF_REFRESH_TEST_DIR/log"
+	exit 0
+fi
+exec bash "$root/libexec/asdf-extras" "$@"
 EOF
 		chmod +x "$test_dir/$runtime/bin/asdf-extras"
 	done
-	cat >"$test_dir/old/lib/commands/dispatch.bash" <<'EOF'
-#!/usr/bin/env bash
-set -euo pipefail
-printf 'update\n' >>"$ASDF_REFRESH_TEST_DIR/log"
-case "$ASDF_REFRESH_SCENARIO" in
-unchanged) exit 0 ;;
-failed-update) exit 7 ;;
-esac
-printf '%s/new/bin/asdf-extras\n' "$ASDF_REFRESH_TEST_DIR" >"$ASDF_REFRESH_TEST_DIR/selected"
-rm -rf "$ASDF_REFRESH_TEST_DIR/old"
-[[ "$ASDF_REFRESH_SCENARIO" != partial-failure ]] || exit 7
-EOF
-	cat >"$test_dir/new/lib/commands/dispatch.bash" <<'EOF'
-#!/usr/bin/env bash
-printf 'new %s\n' "$*" >>"$ASDF_REFRESH_TEST_DIR/log"
-EOF
 	printf '%s/old/bin/asdf-extras\n' "$test_dir" >"$test_dir/selected"
 	: >"$test_dir/log"
 }
@@ -106,7 +107,7 @@ for shell_name in bash zsh fish; do
 		if [[ "$shell_name" == fish ]]; then
 			# shellcheck disable=SC2016
 			"$shell_name" -c '
-				set -gx ASDF_EXTRAS_DISPATCHER "$ASDF_REFRESH_TEST_DIR/old/lib/commands/dispatch.bash"
+				set -gx ASDF_EXTRAS_INIT_ORIGIN installed
 				source "$ASDF_REFRESH_TEST_DIR/old/lib/init/fish.fish"
 				asdf update
 				set -l rc $status
@@ -122,7 +123,7 @@ for shell_name in bash zsh fish; do
 		else
 			# shellcheck disable=SC2016
 			"$shell_name" -c '
-				ASDF_EXTRAS_DISPATCHER="$ASDF_REFRESH_TEST_DIR/old/lib/commands/dispatch.bash"
+				ASDF_EXTRAS_INIT_ORIGIN=installed
 				source "$ASDF_REFRESH_TEST_DIR/old/lib/init/$1"
 				if asdf update; then rc=0; else rc=$?; fi
 				[[ "$rc" == "$ASDF_REFRESH_EXPECTED" ]] || exit 90
@@ -156,18 +157,19 @@ for shell_name in bash zsh fish; do
 			expected=0
 			[[ "$scenario" != completion-generation-failure || "$completion_mode" == none ]] || expected=1
 			export ASDF_REFRESH_EXPECTED="$expected"
-			# The helper path identifies which runtime generated the loaded completion.
+			# Completion loaded by hand comes from the plugin; a reload by the selected
+			# executable comes from the installed entry point.
 			if [[ "$scenario" == success ]]; then
-				export ASDF_REFRESH_HELPER_RUNTIME=new
+				export ASDF_REFRESH_COMPLETION_ORIGIN=installed
 			else
-				export ASDF_REFRESH_HELPER_RUNTIME=old
+				export ASDF_REFRESH_COMPLETION_ORIGIN=plugin
 			fi
 			if [[ "$shell_name" == fish ]]; then
 				# shellcheck disable=SC2016
 				"$shell_name" -c '
-					set -gx ASDF_EXTRAS_DISPATCHER "$ASDF_REFRESH_TEST_DIR/old/lib/commands/dispatch.bash"
+					set -gx ASDF_EXTRAS_INIT_ORIGIN installed
 					source "$ASDF_REFRESH_TEST_DIR/old/lib/init/fish.fish"
-					test -z "$ASDF_EXTRAS_COMPLETION_HELPER"; or exit 80
+					test -z "$ASDF_EXTRAS_COMPLETION_ORIGIN"; or exit 80
 					switch "$ASDF_REFRESH_COMPLETION"
 					case standalone
 						bash "$ASDF_REFRESH_TEST_DIR/old/lib/commands/command-completion" fish | source
@@ -177,9 +179,9 @@ for shell_name in bash zsh fish; do
 					asdf update
 					set -l rc $status
 					test $rc -eq $ASDF_REFRESH_EXPECTED; or exit 90
-					set -l helper "$ASDF_EXTRAS_COMPLETION_HELPER"
+					set -l origin "$ASDF_EXTRAS_COMPLETION_ORIGIN"
 					if test "$ASDF_REFRESH_COMPLETION" = none
-						test -z "$helper"; or exit 91
+						test -z "$origin"; or exit 91
 						if set -q __asdf_extras_completion_registered
 							exit 92
 						end
@@ -187,7 +189,7 @@ for shell_name in bash zsh fish; do
 							exit 93
 						end
 					else
-						test "$helper" = "$ASDF_REFRESH_TEST_DIR/$ASDF_REFRESH_HELPER_RUNTIME/lib/commands/completion-candidates.bash"; or exit 94
+						test "$origin" = "$ASDF_REFRESH_COMPLETION_ORIGIN"; or exit 94
 						if test "$ASDF_REFRESH_COMPLETION" = combined
 							set -q __asdf_extras_completion_registered; or exit 95
 						else if set -q __asdf_extras_completion_registered
@@ -198,20 +200,20 @@ for shell_name in bash zsh fish; do
 			else
 				# shellcheck disable=SC2016
 				"$shell_name" -c '
-					ASDF_EXTRAS_DISPATCHER="$ASDF_REFRESH_TEST_DIR/old/lib/commands/dispatch.bash"
+					ASDF_EXTRAS_INIT_ORIGIN=installed
 					source "$ASDF_REFRESH_TEST_DIR/old/lib/init/$1"
-					[[ -z "${ASDF_EXTRAS_COMPLETION_HELPER:-}" ]] || exit 80
+					[[ -z "${ASDF_EXTRAS_COMPLETION_ORIGIN:-}" ]] || exit 80
 					case "$ASDF_REFRESH_COMPLETION" in
 					standalone) eval "$(bash "$ASDF_REFRESH_TEST_DIR/old/lib/commands/command-completion" "$2")" ;;
 					combined) eval "$(bash "$ASDF_REFRESH_TEST_DIR/old/lib/commands/command-completion" --asdf "$2")" ;;
 					esac
 					if asdf update; then rc=0; else rc=$?; fi
 					[[ "$rc" == "$ASDF_REFRESH_EXPECTED" ]] || exit 90
-					helper="${ASDF_EXTRAS_COMPLETION_HELPER:-}"
+					origin="${ASDF_EXTRAS_COMPLETION_ORIGIN:-}"
 					if [[ "$ASDF_REFRESH_COMPLETION" == none ]]; then
-						[[ -z "$helper" && -z "${_ASDF_EXTRAS_NATIVE_COMPLETE:-}" ]] || exit 91
+						[[ -z "$origin" && -z "${_ASDF_EXTRAS_NATIVE_COMPLETE:-}" ]] || exit 91
 					else
-						[[ "$helper" == "$ASDF_REFRESH_TEST_DIR/$ASDF_REFRESH_HELPER_RUNTIME/lib/commands/completion-candidates.bash" ]] || exit 94
+						[[ "$origin" == "$ASDF_REFRESH_COMPLETION_ORIGIN" ]] || exit 94
 						if [[ "$ASDF_REFRESH_COMPLETION" == combined ]]; then
 							[[ -n "${_ASDF_EXTRAS_NATIVE_COMPLETE:-}" ]] || exit 95
 						else
@@ -225,12 +227,15 @@ for shell_name in bash zsh fish; do
 	done
 done
 
-cat >"$test_dir/notice-dispatch.bash" <<'EOF'
+mkdir -p "$test_dir/notice"
+cat >"$test_dir/notice/asdf" <<'EOF'
 #!/usr/bin/env bash
+[[ "$1 $2" == "exec asdf-extras" ]] || exit 64
 printf 'update-output\n'
 exit "${ASDF_NOTICE_STATUS:-0}"
 EOF
-export ASDF_EXTRAS_DISPATCHER="$test_dir/notice-dispatch.bash"
+chmod +x "$test_dir/notice/asdf"
+export PATH="$test_dir/notice:$PATH" ASDF_EXTRAS_INIT_ORIGIN=installed
 for shell_name in elvish nu; do
 	if ! command -v "$shell_name" >/dev/null; then
 		printf 'SKIP: %s is unavailable\n' "$shell_name"

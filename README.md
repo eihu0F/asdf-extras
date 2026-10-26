@@ -48,13 +48,10 @@ Other `asdf` commands retain their native behavior.
 
 ```shell
 asdf plugin add asdf-extras https://github.com/eihu0F/asdf-extras.git
+# Installs the latest asdf-extras and activates it for your home directory.
+# Add a version to pick one, e.g. "setup 0.9.0".
 asdf cmd asdf-extras setup
 ```
-
-`setup` installs asdf-extras itself and activates it in the home configuration; it is
-the same as `asdf cmd asdf-extras install asdf-extras latest`. Pass a version
-(`setup 0.9.0`) to pick one. `setup` has no scope option; use `install` to put
-asdf-extras in a parent or local configuration.
 
 The repository URL is required because the plugin is not in the asdf plugin
 index. `asdf cmd asdf-extras` runs the plugin checkout to bootstrap installation;

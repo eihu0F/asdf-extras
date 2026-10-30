@@ -161,6 +161,18 @@ for bad in "--shell" "--shell vim --protocol 1 --" "--shell bash --protocol x --
 		fail "invoke accepted: $bad"
 	fi
 done
+# The completion query tells the glue what to do with native completion.
+query() {
+	bash "$repo_dir/libexec/asdf-extras" invoke --complete --shell bash --protocol 1 "$@"
+}
+[[ "$(query --cword 1 -- asdf "")" == "$(printf 'native original\nupdate\nget\nshell')" ]] || fail "completion: root candidates"
+[[ "$(query --cword 1 -- asdf cur)" == 'native original' ]] || fail "completion: native command is left to native completion"
+[[ "$(query --cword 2 -- asdf current n)" == 'native original' ]] || fail "completion: native command arguments"
+[[ "$(query --cword 3 -- asdf install --local "")" == "$(printf 'native drop 2\n--replace')" ]] || fail "completion: install drops the scope flag"
+[[ "$(query --cword 3 -- asdf install --local "" --replace)" == "$(printf 'native drop 2 4\n--replace')" ]] || fail "completion: install drops flags after the cursor"
+[[ "$(query --cword 2 -- asdf update --)" == native\ none* ]] || fail "completion: update is left to extras"
+[[ "$(query --standalone --cword 1 -- asdf-extras g)" == "$(printf 'native none\nget')" ]] || fail "completion: standalone"
+if query --cword x -- asdf >/dev/null 2>&1; then fail "completion accepted an invalid cword"; fi
 # Without the control channel, shell must explain and fail, not claim success.
 if invoke shell python 1 >/dev/null 2>"$test_root/error"; then
 	fail "invoke shell succeeded without a control file"

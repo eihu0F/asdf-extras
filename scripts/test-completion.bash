@@ -12,6 +12,11 @@ cat >"$test_root/bin/asdf" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 # Stand in for the stable entry points that wrappers and completion query.
+if [[ "${1:-}" == which && "${2:-}" == asdf-extras ]]; then
+	[[ -z "${ASDF_COMPLETION_NO_RUNTIME:-}" ]] || exit 1
+	printf '%s\n' "$ASDF_COMPLETION_REPO/libexec/asdf-extras"
+	exit 0
+fi
 if [[ "${1:-}" == exec && "${2:-}" == asdf-extras ]]; then
 	shift 2
 	exec bash "$ASDF_COMPLETION_REPO/libexec/asdf-extras" "$@"
@@ -143,6 +148,13 @@ fail() {
 	absent 22.0.0
 	run_completion asdf version ""
 	contains native-command
+	# Without a resolvable runtime, native completion keeps working alone.
+	ASDF_EXTRAS_COMPLETION_ORIGIN=installed run_completion asdf get ""
+	contains nodejs
+	ASDF_EXTRAS_COMPLETION_ORIGIN=installed ASDF_COMPLETION_NO_RUNTIME=1 run_completion asdf version ""
+	contains native-command
+	ASDF_EXTRAS_COMPLETION_ORIGIN=installed ASDF_COMPLETION_NO_RUNTIME=1 run_completion asdf get ""
+	absent nodejs
 	ASDF_COMPLETION_NATIVE_RC=7
 	if run_completion asdf version ""; then fail "native failure suppressed"; else [[ $? == 7 ]] || fail "native failure status"; fi
 	unset ASDF_COMPLETION_NATIVE_RC
@@ -429,6 +441,15 @@ if command -v fish >/dev/null; then
 		contains_candidate 22.0.0 "asdf update nodejs --version 2"
 		contains_candidate latest "asdf install nodejs --parent l"
 		contains_candidate native-command "asdf version "
+		# Without a resolvable runtime, native completion keeps working alone.
+		set -l previous_origin "$ASDF_EXTRAS_COMPLETION_ORIGIN"
+		set -gx ASDF_EXTRAS_COMPLETION_ORIGIN installed
+		contains_candidate nodejs "asdf get --parent n"
+		set -gx ASDF_COMPLETION_NO_RUNTIME 1
+		contains_candidate native-command "asdf version "
+		not contains -- nodejs (complete -C "asdf get --parent n" | string split \t -f 1); or fail "extras candidates without a runtime"
+		set -e ASDF_COMPLETION_NO_RUNTIME
+		set -gx ASDF_EXTRAS_COMPLETION_ORIGIN "$previous_origin"
 		cd "$ASDF_COMPLETION_TEST"
 		contains_candidate native-file "asdf exec native-"
 		set -e __asdf_extras_completion_registered
@@ -460,7 +481,7 @@ for shell in bash zsh fish; do
 		bash "$removed_runtime/libexec/asdf-extras" init "$shell"
 		bash "$removed_runtime/libexec/asdf-extras" completion "$shell"
 		printf 'rm -rf %q\n' "$removed_runtime"
-		printf '%s --standalone "" >%q\n' "$query" "$test_root/removed.candidates"
+		printf '%s --standalone --cword 1 -- asdf-extras "" >%q\n' "$query" "$test_root/removed.candidates"
 		printf 'asdf completion bash >%q\n' "$test_root/removed.completion"
 	} >"$test_root/removed.$shell"
 	"$shell" "$test_root/removed.$shell" || fail "$shell: entry points failed after runtime removal"

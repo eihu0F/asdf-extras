@@ -17,6 +17,10 @@ unset ASDF_PYTHON_VERSION ASDF_NODEJS_VERSION ASDF_MY_TOOL_VERSION ASDF_A_B_C_VE
 cat >"$test_root/bin/asdf" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
+if [[ "${1:-}" == which && "${2:-}" == asdf-extras ]]; then
+	printf '%s\n' "$ASDF_SHELL_REPO/libexec/asdf-extras"
+	exit 0
+fi
 if [[ "${1:-}" == exec && "${2:-}" == asdf-extras ]]; then
 	shift 2
 	exec bash "$ASDF_SHELL_REPO/libexec/asdf-extras" "$@"

@@ -7,8 +7,9 @@
 #   asdf-extras invoke --complete [--standalone] --cword <i> --shell <shell> \
 #     --protocol <n> -- <command line words>...   (answers a completion stub)
 #
-# ASDF_EXTRAS_CONTROL names a file shared with the wrapper (control protocol 1).
-# It is the only way to change the calling shell, which a process cannot do:
+# ASDF_EXTRAS_CONTROL_FD names an open file descriptor that the wrapper reads once
+# this process ends (control protocol 1). It is the only way to change the calling
+# shell, which a process cannot do, and it needs no file. Lines written to it:
 #   handled                 first line, written before anything else; without it
 #                           the wrapper knows nothing ran and runs native asdf
 #   set <NAME> <VALUE>      export an environment variable (VALUE has no newline)
@@ -22,12 +23,14 @@ current_script_path=${BASH_SOURCE[0]}
 commands_dir="${current_script_path%/*}"
 extras_lib="${commands_dir%/*}"
 
-control="${ASDF_EXTRAS_CONTROL:-}"
-if [[ -n "$control" ]]; then
-	printf 'handled\n' >"$control"
+# The channel exists only if the wrapper opened it for this process.
+control_fd="${ASDF_EXTRAS_CONTROL_FD:-}"
+if [[ "$control_fd" =~ ^[0-9]+$ ]] && { true >&"$control_fd"; } 2>/dev/null; then
+	printf 'handled\n' >&"$control_fd"
+else
+	control_fd=""
 fi
-# Commands started from here must not inherit the channel, except shell.
-unset ASDF_EXTRAS_CONTROL
+unset ASDF_EXTRAS_CONTROL_FD
 
 # shellcheck source=../common.bash
 source "${extras_lib}/common.bash"
@@ -88,6 +91,12 @@ main() {
 	esac
 	[[ "$protocol" =~ ^[0-9]+$ ]] || extras_fail "invoke: invalid protocol: ${protocol:-<none>}"
 
+	# Only shell uses the channel. Closing it elsewhere keeps the wrapper from waiting
+	# for background processes that would otherwise inherit it.
+	if [[ -n "$control_fd" && "${1:-}" != shell ]]; then
+		eval "exec ${control_fd}>&-"
+	fi
+
 	if ((complete)); then
 		[[ "$cword" =~ ^[0-9]+$ ]] || extras_fail "invoke: invalid cword: ${cword:-<none>}"
 		# shellcheck source=../completion-candidates.bash
@@ -124,7 +133,7 @@ main() {
 		;;
 	shell)
 		shift
-		ASDF_EXTRAS_CONTROL="$control" run shell "$@"
+		ASDF_EXTRAS_CONTROL_FD="$control_fd" run shell "$@"
 		;;
 	update)
 		shift

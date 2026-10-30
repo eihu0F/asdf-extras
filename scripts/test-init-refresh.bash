@@ -50,8 +50,8 @@ prepare_runtimes() {
 set -euo pipefail
 # The initialized wrapper calls the runtime as: invoke --shell <s> --protocol <n> -- <asdf args>.
 if [[ "$1" == invoke ]]; then
-	[[ -z "${ASDF_EXTRAS_CONTROL:-}" ]] || printf 'handled\n' >"$ASDF_EXTRAS_CONTROL"
-	unset ASDF_EXTRAS_CONTROL
+	[[ -z "${ASDF_EXTRAS_CONTROL_FD:-}" ]] || printf 'handled\n' >&"$ASDF_EXTRAS_CONTROL_FD"
+	unset ASDF_EXTRAS_CONTROL_FD
 	shift
 	while [[ "$1" != -- ]]; do shift; done
 	shift

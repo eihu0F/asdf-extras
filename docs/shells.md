@@ -341,11 +341,15 @@ can be resolved (asdf-extras is not installed or not selected), the call runs na
 asdf, so recovery commands such as `asdf install asdf-extras` keep working. Output
 generated from the plugin checkout calls `asdf cmd asdf-extras invoke` instead.
 
-A process cannot change its parent shell, so `invoke` asks the wrapper to do it through a
-control file named by `ASDF_EXTRAS_CONTROL`. The first line, `handled`, proves that
-`invoke` ran; without it the wrapper runs native asdf. The other lines are `set <NAME>
-<VALUE>` and `unset <NAME>` for `ASDF_*` environment variables, which the wrapper applies
-only when the command succeeded. Anything else is ignored. This is how `asdf shell` works.
+A process cannot change its parent shell, so `invoke` asks the wrapper to do it through
+an extra file descriptor, named by `ASDF_EXTRAS_CONTROL_FD`, that the wrapper reads after
+the command ends. No temporary file is involved: the wrapper captures the descriptor
+(a pipe) while standard input, output and error stay connected to the terminal. The first
+line, `handled`, proves that `invoke` ran; without it the wrapper runs native asdf. The
+other lines are `set <NAME> <VALUE>` and `unset <NAME>` for `ASDF_*` environment variables,
+which the wrapper applies only when the command succeeded. Anything else is ignored. This is
+how `asdf shell` works. Only `asdf shell` keeps the descriptor open for the command it runs,
+so background processes started by other commands cannot hold the wrapper up.
 
 Completion in Bash, Zsh and Fish works the same way. The registered completion is fixed
 glue that sends the command line to `asdf-extras invoke --complete`. The runtime answers

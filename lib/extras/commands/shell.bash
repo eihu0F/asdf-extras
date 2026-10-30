@@ -13,10 +13,10 @@ source "${extras_lib}/help.bash"
 extras_maybe_help shell "$@"
 
 # A child process cannot change its parent's environment. It asks the wrapper to
-# do it through the control file (see invoke.bash). Without that channel, as when
-# run directly, nothing can change, so never report success.
-control="${ASDF_EXTRAS_CONTROL:-}"
-if [[ -z "$control" ]]; then
+# do it through the control channel (see invoke.bash). Without that channel, as
+# when run directly, nothing can change, so never report success.
+control_fd="${ASDF_EXTRAS_CONTROL_FD:-}"
+if [[ ! "$control_fd" =~ ^[0-9]+$ ]] || ! { true >&"$control_fd"; } 2>/dev/null; then
 	extras_fail "shell must run through an initialized shell; a separate process cannot change the calling shell (see: asdf-extras init <shell>, then: asdf shell <plugin> <version>)"
 fi
 
@@ -44,9 +44,9 @@ main() {
 	# The same normalization as native asdf: uppercase, with - as _.
 	variable="ASDF_$(printf '%s' "$plugin" | LC_ALL=C tr '[:lower:]-' '[:upper:]_')_VERSION"
 	if ((unset_override)); then
-		printf 'unset %s\n' "$variable" >>"$control"
+		printf 'unset %s\n' "$variable" >&"$control_fd"
 	else
-		printf 'set %s %s\n' "$variable" "$versions" >>"$control"
+		printf 'set %s %s\n' "$variable" "$versions" >&"$control_fd"
 	fi
 }
 

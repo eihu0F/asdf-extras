@@ -24,13 +24,13 @@ printf '<%s>\n' "$@" >"$ASDF_INVOKE_ROOT/runtime-args"
 case "$ASDF_INVOKE_SCENARIO" in
 silent) exit "${ASDF_INVOKE_RC:-0}" ;;
 passthrough)
-	printf 'handled\n' >"$ASDF_EXTRAS_CONTROL"
+	printf 'handled\n' >&"$ASDF_EXTRAS_CONTROL_FD"
 	cat
 	printf 'to stderr\n' >&2
 	exit "${ASDF_INVOKE_RC:-0}"
 	;;
 nomarker)
-	printf 'set ASDF_A_VERSION early\n' >"$ASDF_EXTRAS_CONTROL"
+	printf 'set ASDF_A_VERSION early\n' >&"$ASDF_EXTRAS_CONTROL_FD"
 	exit 0
 	;;
 control)
@@ -45,7 +45,7 @@ control)
 		printf 'unset ASDF_C_VERSION\n'
 		printf 'unset HOME\n'
 		printf 'garbage\n'
-	} >"$ASDF_EXTRAS_CONTROL"
+	} >&"$ASDF_EXTRAS_CONTROL_FD"
 	exit "${ASDF_INVOKE_RC:-0}"
 	;;
 esac
@@ -175,20 +175,33 @@ query() {
 if query --cword x -- asdf >/dev/null 2>&1; then fail "completion accepted an invalid cword"; fi
 # Without the control channel, shell must explain and fail, not claim success.
 if invoke shell python 1 >/dev/null 2>"$test_root/error"; then
-	fail "invoke shell succeeded without a control file"
+	fail "invoke shell succeeded without a control channel"
 fi
 grep -q 'initialized shell' "$test_root/error" || fail "invoke shell did not explain"
+# A descriptor that is not open is no channel either.
+if ASDF_EXTRAS_CONTROL_FD=9 invoke shell python 1 >/dev/null 2>&1; then
+	fail "invoke shell accepted a closed descriptor"
+fi
 # With it, shell validates in the runtime and only then asks for a change.
 : >"$test_root/control"
-ASDF_EXTRAS_CONTROL="$test_root/control" invoke shell my-tool 1.0 system
+ASDF_EXTRAS_CONTROL_FD=3 invoke shell my-tool 1.0 system 3>"$test_root/control"
 [[ "$(<"$test_root/control")" == "$(printf 'handled\nset ASDF_MY_TOOL_VERSION 1.0 system')" ]] || fail "shell control lines"
 for bad in "" "python" "python 'bad version'" "-x 1" "--unset" "--unset a b"; do
-	: >"$test_root/control"
-	# shellcheck disable=SC2086
-	if eval "ASDF_EXTRAS_CONTROL='$test_root/control' invoke shell $bad" >/dev/null 2>&1; then
+	if eval "ASDF_EXTRAS_CONTROL_FD=3 invoke shell $bad 3>'$test_root/control'" >/dev/null 2>&1; then
 		fail "shell accepted: $bad"
 	fi
 	[[ "$(<"$test_root/control")" == handled ]] || fail "shell wrote a change for: $bad"
+done
+# Commands other than shell do not keep the channel open.
+ASDF_EXTRAS_CONTROL_FD=3 invoke current x 3>"$test_root/control" >/dev/null
+[[ "$(<"$test_root/control")" == handled ]] || fail "native command wrote to the channel"
+
+# The wrappers use no temporary files.
+mkdir -p "$test_root/tmp"
+for shell in bash zsh fish; do
+	command -v "$shell" >/dev/null || continue
+	TMPDIR="$test_root/tmp" ASDF_EXTRAS_INIT_ORIGIN=installed ASDF_INVOKE_SCENARIO=control run_shell "$shell" 'asdf shell python 1' >/dev/null 2>&1 || true
+	[[ -z "$(ls -A "$test_root/tmp")" ]] || fail "$shell: wrapper left files in TMPDIR"
 done
 
 printf 'invoke contract tests: PASS\n'

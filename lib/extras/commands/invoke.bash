@@ -4,6 +4,8 @@
 # shell arrives here, so the routing lives in the runtime and the wrapper stays a
 # fixed stub. Usage:
 #   asdf-extras invoke --shell <shell> --protocol <n> -- <asdf arguments>...
+#   asdf-extras invoke --complete [--standalone] --cword <i> --shell <shell> \
+#     --protocol <n> -- <command line words>...   (answers a completion stub)
 #
 # ASDF_EXTRAS_CONTROL names a file shared with the wrapper (control protocol 1).
 # It is the only way to change the calling shell, which a process cannot do:
@@ -50,9 +52,21 @@ has_help_flag() {
 }
 
 main() {
-	local shell_name="" protocol=""
+	local shell_name="" protocol="" complete=0 standalone=0 cword=""
 	while (($#)); do
 		case "$1" in
+		--complete)
+			complete=1
+			shift
+			;;
+		--standalone)
+			standalone=1
+			shift
+			;;
+		--cword)
+			cword="${2:-}"
+			shift $(($# > 1 ? 2 : 1))
+			;;
 		--shell)
 			shell_name="${2:-}"
 			shift $(($# > 1 ? 2 : 1))
@@ -73,6 +87,18 @@ main() {
 	*) extras_fail "invoke: unsupported shell: ${shell_name:-<none>}" ;;
 	esac
 	[[ "$protocol" =~ ^[0-9]+$ ]] || extras_fail "invoke: invalid protocol: ${protocol:-<none>}"
+
+	if ((complete)); then
+		[[ "$cword" =~ ^[0-9]+$ ]] || extras_fail "invoke: invalid cword: ${cword:-<none>}"
+		# shellcheck source=../completion-candidates.bash
+		source "${extras_lib}/completion-candidates.bash"
+		if ((standalone)); then
+			extras_completion_query --standalone "$cword" "$@"
+		else
+			extras_completion_query "$cword" "$@"
+		fi
+		return 0
+	fi
 
 	local subcommand="${1:-}" arg
 	case "$subcommand" in

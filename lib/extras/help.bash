@@ -234,8 +234,10 @@ asdf-extras completion:
   --asdf adds the native asdf overlay without installing command wrappers.
   Initialized asdf completion automatically enables --asdf.
   init enables command wrappers only; it does not load completion.
-  Completion definitions are loaded when the completion command runs; a new shell
-  loads changed ones.
+  In Bash, Zsh and Fish the registered completion is fixed glue: it asks the
+  runtime (asdf-extras invoke --complete) for candidates, and for whether and how
+  native completion runs, so updates need no reload. Without a resolvable runtime
+  only native completion runs.
   Nushell requires >= 0.116.1; save generated output and source it.
   Elvish requires >= 0.21.0 and an interactive editor.
   Configure native completion before extras init; see README for shell setup.

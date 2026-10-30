@@ -347,8 +347,15 @@ control file named by `ASDF_EXTRAS_CONTROL`. The first line, `handled`, proves t
 <VALUE>` and `unset <NAME>` for `ASDF_*` environment variables, which the wrapper applies
 only when the command succeeded. Anything else is ignored. This is how `asdf shell` works.
 
+Completion in Bash, Zsh and Fish works the same way. The registered completion is fixed
+glue that sends the command line to `asdf-extras invoke --complete`. The runtime answers
+with candidates and with whether native completion should run (as typed, without some
+words such as the scope flags of `install`, or not at all). Only the glue can run native
+completion, because it is shell code, so the glue does that and merges the results.
+Native definitions are kept. Without a resolvable runtime, only native completion runs.
+
 Because the behavior lives in the runtime, changing it does not require reloading running
-shells. The wrapper itself is meant to change rarely; a change to it, or to the
-completion definitions, is picked up by a new shell. Startup configuration files are
-never rewritten. Elvish and Nushell still use wrappers with their own logic; a new
-session loads changed definitions there.
+shells. The wrapper and the completion glue are meant to change rarely; a change to them
+is picked up by a new shell. Startup configuration files are never rewritten. Elvish and
+Nushell still use definitions with their own logic; a new session loads changed
+definitions there.

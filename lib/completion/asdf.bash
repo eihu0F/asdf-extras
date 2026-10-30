@@ -1,61 +1,56 @@
+# Fixed glue: the runtime decides what to complete and how native completion is used
+# (see extras_completion_query); this only runs native completion, which is shell
+# code, and merges the candidates.
 _asdf_extras_complete() {
-	local cur="${COMP_WORDS[COMP_CWORD]}" cmd="${COMP_WORDS[1]:-}"
-	local candidate output rc=0 i scoped=0 normalized_cword="$COMP_CWORD"
-	local -a normalized=() mode=()
+	local cur="${COMP_WORDS[COMP_CWORD]}" candidate output directive extras rc=0 query_rc=0 i dropped
 	local original_cword="$COMP_CWORD"
+	local -a drop=() normalized=()
 	COMPREPLY=()
-	if [[ "$cmd" == install || "$cmd" == update || "$cmd" == get || "$cmd" == shell ]] && ((COMP_CWORD > 1)); then
-		[[ "$cmd" != install ]] || mode=(--delegated)
-		if ! output="$(_asdf_extras_query ${mode[@]+"${mode[@]}"} "${COMP_WORDS[@]:1:COMP_CWORD}")"; then
-			return 1
-		fi
-		# Strip extras flags only in a local completion context; leave the input untouched.
-		normalized=("${COMP_WORDS[0]}" install)
-		for ((i = 2; i < ${#COMP_WORDS[@]}; i++)); do
-			case "${COMP_WORDS[i]}" in
-			-u | --home | -p | --parent | --local | --replace)
-				if ((i != original_cword)); then
-					scoped=1
+	output="$(_asdf_extras_query --cword "$COMP_CWORD" -- "${COMP_WORDS[@]}")" || query_rc=$?
+	if ((query_rc == 2)); then
+		# No runtime: native completion alone.
+		output="native original"
+	elif ((query_rc != 0)); then
+		return 1
+	fi
+	directive="${output%%$'\n'*}"
+	extras="${output#"$directive"}"
+	if [[ -n "${_ASDF_EXTRAS_NATIVE_COMPLETE:-}" ]]; then
+		case "$directive" in
+		"native none") ;;
+		"native drop "*)
+			read -r -a drop <<<"${directive#native drop }"
+			local normalized_cword="$COMP_CWORD"
+			for ((i = 0; i < ${#COMP_WORDS[@]}; i++)); do
+				dropped=0
+				for candidate in "${drop[@]}"; do
+					((candidate != i)) || dropped=1
+				done
+				if ((dropped)); then
 					((i >= original_cword)) || normalized_cword=$((normalized_cword - 1))
 					continue
 				fi
 				normalized+=("${COMP_WORDS[i]}")
-				;;
-			*) normalized+=("${COMP_WORDS[i]}") ;;
-			esac
-		done
-		if [[ "$cmd" == install && -n "${_ASDF_EXTRAS_NATIVE_COMPLETE:-}" ]]; then
-			if ((scoped)); then
-				local -a COMP_WORDS=("${normalized[@]}")
-				local COMP_CWORD="$normalized_cword"
-				local COMP_LINE COMP_POINT
-				printf -v COMP_LINE '%q ' "${normalized[@]}"
-				COMP_LINE="${COMP_LINE% }"
-				local prefix
-				printf -v prefix '%q ' "${normalized[@]:0:COMP_CWORD+1}"
-				COMP_POINT=$((${#prefix} - 1))
-				"$_ASDF_EXTRAS_NATIVE_COMPLETE" "${normalized[0]}" "$cur" "${normalized[COMP_CWORD - 1]}" || rc=$?
-			else
-				"$_ASDF_EXTRAS_NATIVE_COMPLETE" "$@" || rc=$?
-			fi
-		fi
-	else
-		if [[ -n "${_ASDF_EXTRAS_NATIVE_COMPLETE:-}" ]]; then
-			"$_ASDF_EXTRAS_NATIVE_COMPLETE" "$@" || rc=$?
-		fi
-		output=""
-		if ((original_cword == 1)); then
-			for candidate in update get shell; do
-				[[ "$candidate" != "$cur"* ]] || output+="$candidate"$'\n'
 			done
-		fi
+			local -a COMP_WORDS=("${normalized[@]}")
+			local COMP_CWORD="$normalized_cword"
+			local COMP_LINE COMP_POINT
+			printf -v COMP_LINE '%q ' "${normalized[@]}"
+			COMP_LINE="${COMP_LINE% }"
+			local prefix
+			printf -v prefix '%q ' "${normalized[@]:0:COMP_CWORD+1}"
+			COMP_POINT=$((${#prefix} - 1))
+			"$_ASDF_EXTRAS_NATIVE_COMPLETE" "${normalized[0]}" "$cur" "${normalized[COMP_CWORD - 1]}" || rc=$?
+			;;
+		*) "$_ASDF_EXTRAS_NATIVE_COMPLETE" "$@" || rc=$? ;;
+		esac
 	fi
 	while IFS= read -r candidate; do
 		[[ -n "$candidate" ]] || continue
 		if [[ " ${COMPREPLY[*]-} " != *" $candidate "* ]]; then
 			COMPREPLY+=("$candidate")
 		fi
-	done <<<"$output"
+	done <<<"$extras"
 	# Localized COMP_WORDS/COMP_CWORD disappear when this function returns.
 	return "$rc"
 }

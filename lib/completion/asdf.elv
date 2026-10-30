@@ -8,9 +8,10 @@ fn complete {|@words|
 		$native $@words
 		put update
 		put get
+		put shell
 		return
 	}
-	if (has-value [update get] $words[1]) {
+	if (has-value [update get shell] $words[1]) {
 		common:candidates extras (all $words[1..])
 		return
 	}

@@ -60,6 +60,9 @@ BASH
 	[[ "${ASDF_COMPLETION_FAIL:-}" != plugins ]] || exit 6
 	printf 'nodejs\npython\n'
 	;;
+"list nodejs")
+	printf '  20.0.0\n *22.0.0\n'
+	;;
 "list all nodejs")
 	[[ "${ASDF_COMPLETION_FAIL:-}" != versions ]] || exit 7
 	printf '20.0.0\n22.0.0\n'
@@ -116,7 +119,19 @@ fail() {
 	run_completion asdf ""
 	contains update
 	contains get
+	contains shell
 	contains native-command
+	run_completion asdf shell ""
+	contains --unset
+	contains nodejs
+	absent native-command
+	run_completion asdf shell nodejs ""
+	contains 22.0.0
+	contains system
+	contains 20.0.0
+	run_completion asdf shell --unset ""
+	contains python
+	absent --unset
 	run_completion asdf get ""
 	contains nodejs
 	contains --local
@@ -204,6 +219,8 @@ output="$(bash "$repo_dir/libexec/asdf-extras" completion --candidates --standal
 [[ "$output" == *get* ]] || fail "get missing from subcommand candidates"
 output="$(bash "$repo_dir/libexec/asdf-extras" completion --candidates --standalone help g)"
 [[ "$output" == get ]] || fail "get help topic missing"
+output="$(bash "$repo_dir/libexec/asdf-extras" completion --candidates --standalone help s)"
+[[ "$output" == shell ]] || fail "shell help topic missing"
 # Every position after the plugin completes a version, and --replace is offered once.
 candidates() { bash "$repo_dir/libexec/asdf-extras" completion --candidates --standalone "$@"; }
 for subcommand in install update; do
@@ -314,7 +331,12 @@ if command -v zsh >/dev/null; then
 		_asdf_extras_complete
 		grep -qx update "$ASDF_COMPLETION_TEST/zsh-candidates"
 		grep -qx get "$ASDF_COMPLETION_TEST/zsh-candidates"
+		grep -qx shell "$ASDF_COMPLETION_TEST/zsh-candidates"
 		grep -qx native-command "$ASDF_COMPLETION_TEST/zsh-candidates"
+		: >"$ASDF_COMPLETION_TEST/zsh-candidates"
+		words=(asdf shell nodejs 2); CURRENT=4
+		_asdf_extras_complete
+		grep -qx 22.0.0 "$ASDF_COMPLETION_TEST/zsh-candidates"
 		: >"$ASDF_COMPLETION_TEST/zsh-candidates"
 		words=(asdf get --parent n); CURRENT=5
 		_asdf_extras_complete
@@ -398,6 +420,9 @@ if command -v fish >/dev/null; then
 		contains_candidate update "asdf up"
 		contains_candidate get "asdf g"
 		contains_candidate nodejs "asdf get --parent n"
+		contains_candidate shell "asdf sh"
+		contains_candidate --unset "asdf shell --"
+		contains_candidate 22.0.0 "asdf shell nodejs 2"
 		contains_candidate --version "asdf update --"
 		contains_candidate --local "asdf install --"
 		contains_candidate nodejs "asdf update --local n"

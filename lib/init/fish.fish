@@ -65,8 +65,52 @@ function __asdf_extras_refresh
 	return $update_rc
 end
 
+# Sets or removes ASDF_<TOOL>_VERSION in this shell, so it must run here and not
+# in a child process. Arguments are only ever data: they are validated before
+# anything changes and never evaluated.
+function __asdf_extras_shell
+	set -l usage 'asdf-extras: usage: asdf shell <plugin> <version>... | asdf shell --unset <plugin>'
+	set -l unset_override 0
+
+	if test (count $argv) -ge 1; and test "$argv[1]" = --unset
+		set unset_override 1
+		set -e argv[1]
+		if test (count $argv) -ne 1
+			echo $usage >&2
+			return 1
+		end
+	else if test (count $argv) -lt 2
+		echo $usage >&2
+		return 1
+	end
+	set -l plugin "$argv[1]"
+	set -e argv[1]
+	if not string match -rq -- '^[A-Za-z0-9_][A-Za-z0-9_-]*$' "$plugin"
+		echo "asdf-extras: invalid plugin name: $plugin" >&2
+		return 1
+	end
+	for candidate in $argv
+		if not string match -rq -- '^[A-Za-z0-9][A-Za-z0-9._+:/@~^-]*$' "$candidate"
+			echo "asdf-extras: invalid version: $candidate" >&2
+			return 1
+		end
+	end
+
+	# The same normalization as native asdf: uppercase, with - as _.
+	set -l tool (string upper -- (string replace -a -- - _ "$plugin"))
+	set -l variable "ASDF_"$tool"_VERSION"
+	if test $unset_override -eq 1
+		set -e -g $variable
+	else
+		# Quoting a list joins its elements with a space.
+		set -gx $variable "$argv"
+	end
+	# set -e fails for an override that is not set, which is not an error here.
+	return 0
+end
+
 function asdf
-	if test (count $argv) -ge 1; and contains -- "$argv[1]" install update get completion
+	if test (count $argv) -ge 1; and contains -- "$argv[1]" install update get completion shell
 		if contains -- --help $argv; or contains -- -h $argv
 			__asdf_extras_dispatch help --asdf $argv
 			return $status
@@ -89,6 +133,11 @@ function asdf
 
 	if test (count $argv) -ge 1; and test "$argv[1]" = "get"
 		__asdf_extras_dispatch get $argv[2..-1]
+		return $status
+	end
+
+	if test (count $argv) -ge 1; and test "$argv[1]" = "shell"
+		__asdf_extras_shell $argv[2..-1]
 		return $status
 	end
 

@@ -2,7 +2,7 @@ _asdf_extras_complete() {
 	local cmd="${words[2]:-}" output candidate rc=1
 	local -a candidates normalized
 	local i scoped=0 normalized_current="$CURRENT"
-	if ((CURRENT > 2)) && [[ "$cmd" == install || "$cmd" == update || "$cmd" == get ]]; then
+	if ((CURRENT > 2)) && [[ "$cmd" == install || "$cmd" == update || "$cmd" == get || "$cmd" == shell ]]; then
 		if [[ "$cmd" == install ]]; then
 			output="$(_asdf_extras_query --delegated "${words[@]:1:$((CURRENT - 1))}")" || return 1
 		else
@@ -37,7 +37,7 @@ _asdf_extras_complete() {
 		rc=0
 		"$_ASDF_EXTRAS_NATIVE_COMPLETE" "$@" || rc=$?
 		if ((CURRENT == 2)); then
-			candidates=(update get)
+			candidates=(update get shell)
 		fi
 	fi
 	if ((${#candidates})); then

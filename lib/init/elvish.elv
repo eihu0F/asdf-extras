@@ -1,5 +1,8 @@
 # asdf-extras init overlay for elvish
 
+use re
+use str
+
 fn asdf-extras-dispatch {|subcommand @args|
 	# Reach extras through the entry point this init came from, so a removed
 	# runtime does not leave a stale path behind.
@@ -17,6 +20,46 @@ fn asdf-extras-dispatch {|subcommand @args|
 	}
 }
 
+# Sets or removes ASDF_<TOOL>_VERSION in this shell, so it must run here and not
+# in a child process. Arguments are only ever data: they are validated before
+# anything changes and never evaluated.
+fn asdf-extras-shell {|@args|
+	var usage = 'asdf-extras: usage: asdf shell <plugin> <version>... | asdf shell --unset <plugin>'
+	var unset-override = $false
+
+	if (and (> (count $args) 0) (eq $args[0] --unset)) {
+		set unset-override = $true
+		set args = $args[1..]
+		if (!= (count $args) 1) {
+			echo $usage >&2
+			fail 'invalid asdf shell usage'
+		}
+	} elif (< (count $args) 2) {
+		echo $usage >&2
+		fail 'invalid asdf shell usage'
+	}
+	var plugin = $args[0]
+	set args = $args[1..]
+	if (not (re:match '^[A-Za-z0-9_][A-Za-z0-9_-]*$' $plugin)) {
+		echo 'asdf-extras: invalid plugin name: '$plugin >&2
+		fail 'invalid plugin name'
+	}
+	for version $args {
+		if (not (re:match '^[A-Za-z0-9][A-Za-z0-9._+:/@~^-]*$' $version)) {
+			echo 'asdf-extras: invalid version: '$version >&2
+			fail 'invalid version'
+		}
+	}
+
+	# The same normalization as native asdf: uppercase, with - as _.
+	var variable = 'ASDF_'(str:to-upper (str:replace - _ $plugin))'_VERSION'
+	if $unset-override {
+		unset-env $variable
+	} else {
+		set-env $variable (str:join ' ' $args)
+	}
+}
+
 fn asdf {|@args|
 	if (== (count $args) 0) {
 		e:asdf
@@ -28,7 +71,7 @@ fn asdf {|@args|
 		return
 	}
 
-	if (and (has-value [install update get completion] $args[0]) (or (has-value $args --help) (has-value $args -h))) {
+	if (and (has-value [install update get completion shell] $args[0]) (or (has-value $args --help) (has-value $args -h))) {
 		asdf-extras-dispatch help --asdf $@args
 		return
 	}
@@ -44,6 +87,11 @@ fn asdf {|@args|
 
 	if (eq $args[0] get) {
 		asdf-extras-dispatch get (all $args[1..])
+		return
+	}
+
+	if (eq $args[0] shell) {
+		asdf-extras-shell (all $args[1..])
 		return
 	}
 

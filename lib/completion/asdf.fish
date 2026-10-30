@@ -6,7 +6,7 @@ end
 
 function __asdf_extras_needs_completion
 	set -l words (commandline -opc)
-	test (count $words) -le 1; or contains -- $words[2] install update get
+	test (count $words) -le 1; or contains -- $words[2] install update get shell
 end
 
 if not set -q __asdf_extras_completion_registered

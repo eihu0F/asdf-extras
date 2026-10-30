@@ -53,11 +53,54 @@ _asdf_extras_refresh() {
 	return "$update_rc"
 }
 
+# Sets or removes ASDF_<TOOL>_VERSION in this shell, so it must run here and not
+# in a child process. Arguments are only ever data: they are validated before
+# anything changes and never evaluated.
+_asdf_extras_shell() {
+	local usage="asdf-extras: usage: asdf shell <plugin> <version>... | asdf shell --unset <plugin>"
+	local plugin_pattern='^[A-Za-z0-9_][A-Za-z0-9_-]*$'
+	local version_pattern='^[A-Za-z0-9][A-Za-z0-9._+:/@~^-]*$'
+	local unset_override=0 plugin variable version versions=""
+
+	if [[ "${1:-}" == "--unset" ]]; then
+		unset_override=1
+		shift
+		if (($# != 1)); then
+			printf '%s\n' "$usage" >&2
+			return 1
+		fi
+	elif (($# < 2)); then
+		printf '%s\n' "$usage" >&2
+		return 1
+	fi
+	plugin="$1"
+	shift
+	if [[ ! "$plugin" =~ $plugin_pattern ]]; then
+		printf 'asdf-extras: invalid plugin name: %s\n' "$plugin" >&2
+		return 1
+	fi
+	for version in "$@"; do
+		if [[ ! "$version" =~ $version_pattern ]]; then
+			printf 'asdf-extras: invalid version: %s\n' "$version" >&2
+			return 1
+		fi
+		versions="${versions:+$versions }$version"
+	done
+
+	# The same normalization as native asdf: uppercase, with - as _.
+	variable="ASDF_$(printf '%s' "$plugin" | LC_ALL=C tr '[:lower:]-' '[:upper:]_')_VERSION"
+	if ((unset_override)); then
+		unset -v "$variable"
+	else
+		export "$variable=$versions"
+	fi
+}
+
 asdf() {
 	local arg previous update_rc
 
 	case "${1:-}" in
-	install | update | get | completion)
+	install | update | get | completion | shell)
 		for arg in "$@"; do
 			if [[ "$arg" == --help || "$arg" == -h ]]; then
 				_asdf_extras_dispatch help --asdf "$@"
@@ -86,6 +129,12 @@ asdf() {
 	if [[ "${1:-}" == "get" ]]; then
 		shift
 		_asdf_extras_dispatch get "$@"
+		return $?
+	fi
+
+	if [[ "${1:-}" == "shell" ]]; then
+		shift
+		_asdf_extras_shell "$@"
 		return $?
 	fi
 

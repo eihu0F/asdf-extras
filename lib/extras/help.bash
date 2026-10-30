@@ -10,6 +10,7 @@ extras_maybe_help() {
 			update) extras_help_update ;;
 			prune) extras_help_prune ;;
 			get) extras_help_get ;;
+			shell) extras_help_shell ;;
 			setup) extras_help_setup ;;
 			completion) extras_help_completion ;;
 			esac
@@ -174,6 +175,35 @@ Examples:
 EOF
 }
 
+extras_help_shell() {
+	cat <<'EOF'
+asdf-extras shell:
+  asdf shell <plugin> <version>...
+  asdf shell --unset <plugin>
+
+  Session-only version override, available after asdf-extras init <shell>.
+  Sets or removes the exported ASDF_<TOOL>_VERSION variable in the calling shell,
+  so it applies to later commands in that shell and its child processes only.
+  <TOOL> is the plugin name in uppercase with - replaced by _, as in native asdf.
+  Several versions are joined into one ordered list, e.g. python 3.12.0 system.
+  --unset removes the override, so normal configuration resolution resumes.
+  No configuration file is changed and nothing is installed or uninstalled.
+  Arguments are validated before anything changes: a plugin name is letters,
+  digits, _ and -; a version starts with a letter or digit and may contain
+  letters, digits and . _ + : / @ ~ ^ -. Nothing is evaluated.
+  The plugin and the installation are not checked; an unavailable version is
+  reported by asdf when it is resolved. latest is not resolved.
+  A separate or already running shell is unaffected.
+  A standalone asdf-extras shell process cannot change the calling shell, so it
+  only explains this requirement and fails.
+
+Examples:
+  asdf shell python 3.14.0
+  asdf shell python 3.14.0 system
+  asdf shell --unset python
+EOF
+}
+
 extras_help_setup() {
 	cat <<'EOF'
 asdf-extras setup:
@@ -221,12 +251,14 @@ asdf-extras extensions (enabled by init):
     Scoped install also activates the version; unscoped install stays native.
   asdf get [--home|-u|--parent|-p|--local] [<plugin>]
     Prints the versions configured in one scope file without changing it.
+  asdf shell <plugin> <version>... | asdf shell --unset <plugin>
+    Overrides or restores the version for the current shell session only.
   asdf-extras prune
     Removes installed versions not used by the home configuration.
   asdf completion <bash|zsh|fish|elvish|nushell>
     Includes native completion and extras extensions.
-  asdf update --help / asdf install --help / asdf get --help / asdf-extras prune --help
-    Show update, install, get and prune behavior and safety details.
+  asdf update --help / asdf install --help / asdf get --help / asdf shell --help / asdf-extras prune --help
+    Show update, install, get, shell and prune behavior and safety details.
   asdf completion --help
     Show extras targets, scopes, defaults, safety behavior and completion modes.
 EOF

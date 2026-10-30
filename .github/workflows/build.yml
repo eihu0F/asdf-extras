@@ -32,6 +32,8 @@ jobs:
         run: bash ./scripts/test-completion-elvish.bash
       - name: Help routing regression tests
         run: bash ./scripts/test-help.bash
+      - name: Shell override regression tests
+        run: bash ./scripts/test-shell.bash
   nushell_completion:
     name: Nushell completion
     runs-on: ubuntu-latest
@@ -50,6 +52,8 @@ jobs:
         run: bash ./scripts/test-completion-nushell.bash
       - name: Help routing regression tests
         run: bash ./scripts/test-help.bash
+      - name: Shell override regression tests
+        run: bash ./scripts/test-shell.bash
   plugin_test:
     name: asdf plugin test
     strategy:
@@ -69,6 +73,9 @@ jobs:
       - name: Get command regression tests (system Bash)
         shell: /bin/bash {0}
         run: /bin/bash ./scripts/test-get.bash
+      - name: Shell override regression tests (system Bash)
+        shell: /bin/bash {0}
+        run: /bin/bash ./scripts/test-shell.bash
       - name: Update command regression tests (system Bash)
         shell: /bin/bash {0}
         run: /bin/bash ./scripts/test-update.bash

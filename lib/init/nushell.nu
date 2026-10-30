@@ -15,8 +15,44 @@ def --env "asdf-extras-dispatch" [subcommand: string, ...args] {
 	}
 }
 
+# Sets or removes ASDF_<TOOL>_VERSION in this shell, so it must run here and not
+# in a child process. Arguments are only ever data: they are validated before
+# anything changes and never evaluated.
+def --env asdf-extras-shell [args: list<string>] {
+	let usage = "asdf-extras: usage: asdf shell <plugin> <version>... | asdf shell --unset <plugin>"
+	let unset_override = (($args | get --optional 0 | default "") == "--unset")
+	let args = (if $unset_override { $args | skip 1 } else { $args })
+
+	if $unset_override {
+		if ($args | length) != 1 {
+			error make {msg: $usage}
+		}
+	} else if ($args | length) < 2 {
+		error make {msg: $usage}
+	}
+	let plugin = ($args | first)
+	let versions = ($args | skip 1)
+	if not ($plugin =~ '^[A-Za-z0-9_][A-Za-z0-9_-]*$') {
+		error make {msg: $"asdf-extras: invalid plugin name: ($plugin)"}
+	}
+	for version in $versions {
+		if not ($version =~ '^[A-Za-z0-9][A-Za-z0-9._+:/@~^-]*$') {
+			error make {msg: $"asdf-extras: invalid version: ($version)"}
+		}
+	}
+
+	# The same normalization as native asdf: uppercase, with - as _.
+	let tool = ($plugin | str replace --all "-" "_" | str uppercase)
+	let variable = $"ASDF_($tool)_VERSION"
+	if $unset_override {
+		hide-env --ignore-errors $variable
+	} else {
+		load-env {($variable): ($versions | str join " ")}
+	}
+}
+
 def --env --wrapped asdf-extras-run [...args] {
-	if (($args | get --optional 0 | default "") in [install update get completion]) {
+	if (($args | get --optional 0 | default "") in [install update get completion shell]) {
 		if ("--help" in $args or "-h" in $args) {
 			asdf-extras-dispatch help "--asdf" ...$args
 			return
@@ -40,6 +76,11 @@ def --env --wrapped asdf-extras-run [...args] {
 
 	if (($args | length) >= 1 and ($args | get 0) == "get") {
 		asdf-extras-dispatch get ...($args | skip 1)
+		return
+	}
+
+	if (($args | length) >= 1 and ($args | get 0) == "shell") {
+		asdf-extras-shell ($args | skip 1)
 		return
 	}
 
@@ -87,6 +128,10 @@ def --env --wrapped "asdf update" [...args] {
 
 def --env --wrapped "asdf get" [...args] {
 	asdf ...([get] ++ $args)
+}
+
+def --env --wrapped "asdf shell" [...args] {
+	asdf ...([shell] ++ $args)
 }
 
 def --env --wrapped "asdf completion" [...args] {

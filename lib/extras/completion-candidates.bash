@@ -1,5 +1,35 @@
 #!/usr/bin/env bash
 
+# Candidates for asdf shell, whose words are <plugin> <version>... or
+# --unset <plugin>. The last argument is the word being completed.
+extras_shell_candidates() {
+	local current="${!#}" candidate candidates
+	if [[ "${1:-}" == --unset ]] && (($# > 1)); then
+		# Only the plugin follows --unset.
+		(($# == 2)) || return 0
+	elif (($# == 1)); then
+		[[ --unset != "$current"* ]] || printf '%s\n' --unset
+	else
+		# Only installed versions are useful to select, so list those.
+		candidates="$(
+			extras_installed_versions "$1"
+			printf 'system\n'
+		)"
+		while IFS= read -r candidate; do
+			[[ -z "$candidate" || "$candidate" != "$current"* ]] || printf '%s\n' "$candidate"
+		done <<<"$candidates"
+		return 0
+	fi
+	[[ "$current" != -* ]] || return 0
+	candidates="$(command asdf plugin list)" || {
+		printf 'asdf-extras: could not list plugins for completion\n' >&2
+		return 1
+	}
+	while IFS= read -r candidate; do
+		[[ -z "$candidate" || "$candidate" != "$current"* ]] || printf '%s\n' "$candidate"
+	done <<<"$candidates"
+}
+
 # Prints completion candidates for the words typed so far; the shell completion
 # scripts query it through `completion --candidates`.
 extras_completion_candidates() {
@@ -25,7 +55,7 @@ extras_completion_candidates() {
 		case "$subcommand" in
 		help | --help | -h)
 			[[ $# -eq 2 ]] || return 0
-			for candidate in install update get prune completion; do
+			for candidate in install update get shell prune completion; do
 				[[ "$candidate" != "$current"* ]] || printf '%s\n' "$candidate"
 			done
 			return 0
@@ -61,12 +91,16 @@ extras_completion_candidates() {
 		esac
 	fi
 	[[ $# -gt 1 ]] || {
-		for candidate in update get; do
+		for candidate in update get shell; do
 			[[ "$candidate" != "$current"* ]] || printf '%s\n' "$candidate"
 		done
 		return 0
 	}
 	shift
+	if [[ "$subcommand" == shell ]]; then
+		extras_shell_candidates "$@"
+		return
+	fi
 	[[ "$subcommand" == install || "$subcommand" == update || "$subcommand" == get || "$subcommand" == prune ]] || return 0
 	while [[ $# -gt 1 ]]; do
 		arg="$1"

@@ -22,6 +22,7 @@ if [[ "${1:-}" == --asdf ]]; then
 	update) extras_help_update ;;
 	prune) extras_help_prune ;;
 	get) extras_help_get ;;
+	shell) extras_help_shell ;;
 	setup) extras_help_setup ;;
 	completion) extras_help_completion ;;
 	*)
@@ -41,9 +42,10 @@ if [[ "$#" -gt 0 ]]; then
 	update) extras_help_update ;;
 	prune) extras_help_prune ;;
 	get) extras_help_get ;;
+	shell) extras_help_shell ;;
 	setup) extras_help_setup ;;
 	completion) extras_help_completion ;;
-	*) extras_fail "unknown help topic: $1 (expected install, update, get, prune, setup or completion)" ;;
+	*) extras_fail "unknown help topic: $1 (expected install, update, get, shell, prune, setup or completion)" ;;
 	esac
 	exit 0
 fi
@@ -63,11 +65,12 @@ Fallback (when asdf-extras is not installed):
 Subcommands:
   completion [--asdf] <bash|zsh|fish|elvish|nushell>
   get [--home|-u|--parent|-p|--local] [<plugin>]
-  help [install|update|get|prune|setup|completion]
+  help [install|update|get|shell|prune|setup|completion]
   init <bash|zsh|fish|elvish|nushell>
   install [--home|-u|--parent|-p|--local] [--replace] <plugin> <version>...
   prune [<plugin>]
   setup [<version>]
+  shell <plugin> <version>... | shell --unset <plugin>   (initialized asdf only)
 	update [--all | --asdf --plugin --version] [--use-latest] [scope] [<plugin> [version]]
   version
 
@@ -87,6 +90,8 @@ printf '\n'
 extras_help_update
 printf '\n'
 extras_help_get
+printf '\n'
+extras_help_shell
 printf '\n'
 extras_help_prune
 printf '\n'

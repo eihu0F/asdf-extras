@@ -65,6 +65,7 @@ also work with macOS Bash 3.2 (for example, empty arrays under `set -u`).
 | --- | --- | --- |
 | `test-install.bash` | `install` options, argument validation, and Bash/Zsh/Fish routing | None |
 | `test-get.bash` | Scoped reads by `get`, exit statuses and help | None |
+| `test-shell.bash` | Session overrides by `asdf shell` in every available init shell, and help | None (Elvish and Nushell are tested when installed) |
 | `test-prune.bash` | Removal of unused versions by `prune` | None |
 | `test-update.bash` | `update` scopes, failure handling, and runtime self-update | None |
 | `test-update-asdf.bash` | `update --asdf` self-update | `jq` |

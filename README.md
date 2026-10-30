@@ -85,7 +85,7 @@ configuration; see [what it does](#update-plugins-and-tools) first.
 
 # Usage
 
-These examples assume shell initialization is enabled. Update, `get` and scoped
+These examples assume shell initialization is enabled. Update, `get`, `shell` and scoped
 install are available through `asdf`; prune is a separate `asdf-extras` command, not an
 extension of `asdf prune`.
 
@@ -156,6 +156,37 @@ order and including fallbacks such as `system`, on a single line (for example
   configuration, and `2` when the plugin has no version in the selected file. A missing
   home or local file lists nothing.
 
+## Override a version for the current shell
+
+```shell
+asdf shell python 3.14.0
+asdf shell python 3.14.0 system
+asdf shell --unset python
+```
+
+`asdf shell` replaces the `asdf shell` that native asdf lost when it became an
+executable that cannot change its parent shell. The initialized `asdf` wrapper sets
+(or, with `--unset`, removes) the exported `ASDF_<TOOL>_VERSION` variable in the
+calling shell itself, in the syntax of each supported shell. It works in Bash, Zsh,
+Fish, Elvish and Nushell after [initialization](docs/shells.md).
+
+- The override applies to later commands in that shell and its child processes. Other
+  shells, including ones already running, are unaffected.
+- `<TOOL>` is the plugin name in uppercase with `-` replaced by `_`, as in native asdf
+  (`my-tool` sets `ASDF_MY_TOOL_VERSION`). Several versions form one ordered list, as in
+  `.tool-versions`.
+- `--unset` removes the override so normal configuration resolution resumes. It also
+  succeeds when no override is set.
+- No configuration file is read or changed and nothing is installed or uninstalled.
+  The plugin and its installation are not checked, and `latest` is not resolved; asdf
+  reports an unavailable version when it resolves one.
+- Arguments are data and are validated before anything changes. A plugin name is letters,
+  digits, `_` and `-`; a version starts with a letter or digit and may also contain
+  `. _ + : / @ ~ ^ -` (so `ref:main` and `path:/opt/node` work). Any other request fails
+  without changing the override.
+- A separate `asdf-extras shell` process cannot change the calling shell, so it only
+  explains that initialization is required and exits nonzero.
+
 ## Prune unused versions
 
 > [!WARNING]
@@ -188,6 +219,7 @@ other versions and returns a nonzero status.
 | `asdf update --help` | Update targets, defaults, scopes, and cleanup |
 | `asdf install --help` | Native install help followed by scope and activation guidance |
 | `asdf get --help` | Scoped reads, output format and exit statuses |
+| `asdf shell --help` | Session-only overrides, tool-name normalization and validation |
 | `asdf-extras prune --help` | Home-based cleanup behavior |
 | `asdf completion --help` | Completion modes and shell setup |
 

@@ -24,6 +24,10 @@ cat >"${test_dir}/asdf" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 # Stand in for the installed entry point that initialized wrappers use.
+if [[ "$1" == which && "${2:-}" == asdf-extras ]]; then
+	printf '%s\n' "$ASDF_TEST_REPO/libexec/asdf-extras"
+	exit 0
+fi
 if [[ "$1" == exec && "${2:-}" == asdf-extras ]]; then
 	shift 2
 	exec bash "$ASDF_TEST_REPO/libexec/asdf-extras" "$@"

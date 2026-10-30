@@ -12,6 +12,10 @@ cat >"$test_root/bin/asdf" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 # Stand in for the stable entry points that wrappers and completion query.
+if [[ "${1:-}" == which && "${2:-}" == asdf-extras ]]; then
+	printf '%s\n' "$ASDF_COMPLETION_REPO/libexec/asdf-extras"
+	exit 0
+fi
 if [[ "${1:-}" == exec && "${2:-}" == asdf-extras ]]; then
 	shift 2
 	exec bash "$ASDF_COMPLETION_REPO/libexec/asdf-extras" "$@"

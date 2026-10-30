@@ -48,25 +48,16 @@ prepare_runtimes() {
 		cat >"$test_dir/$runtime/bin/asdf-extras" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
+# The initialized wrapper calls the runtime as: invoke --shell <s> --protocol <n> -- <asdf args>.
+if [[ "$1" == invoke ]]; then
+	[[ -z "${ASDF_EXTRAS_CONTROL:-}" ]] || printf 'handled\n' >"$ASDF_EXTRAS_CONTROL"
+	unset ASDF_EXTRAS_CONTROL
+	shift
+	while [[ "$1" != -- ]]; do shift; done
+	shift
+fi
 subcommand="$1"
 root="$(dirname "$(dirname "$0")")"
-if [[ "$subcommand" == completion && "$ASDF_REFRESH_SCENARIO" == completion-generation-failure ]]; then
-	printf 'echo must-not-evaluate\n'
-	exit 3
-fi
-if [[ "$subcommand" == init ]]; then
-	if [[ "$ASDF_REFRESH_SCENARIO" == generation-failure ]]; then
-		printf 'echo must-not-evaluate\n'
-		exit 3
-	fi
-	if [[ "$ASDF_REFRESH_SCENARIO" == empty-init ]]; then
-		exit 0
-	fi
-	if [[ "$ASDF_REFRESH_SCENARIO" == evaluation-failure ]]; then
-		printf 'false\n'
-		exit 0
-	fi
-fi
 if [[ "$subcommand" == update && "$(basename "$root")" == old ]]; then
 	printf 'update\n' >>"$ASDF_REFRESH_TEST_DIR/log"
 	case "$ASDF_REFRESH_SCENARIO" in
@@ -95,13 +86,12 @@ for shell_name in bash zsh fish; do
 		printf 'SKIP: %s is unavailable\n' "$shell_name"
 		continue
 	fi
-	for scenario in success partial-failure unchanged failed-update generation-failure empty-init evaluation-failure resolution-failure; do
+	for scenario in success partial-failure unchanged failed-update resolution-failure; do
 		export ASDF_REFRESH_SCENARIO="$scenario"
 		prepare_runtimes
 		case "$scenario" in
-		success | unchanged) expected=0 ;;
+		success | unchanged | resolution-failure) expected=0 ;;
 		partial-failure | failed-update) expected=7 ;;
-		generation-failure | empty-init | evaluation-failure | resolution-failure) expected=1 ;;
 		esac
 		export ASDF_REFRESH_EXPECTED="$expected"
 		if [[ "$shell_name" == fish ]]; then
@@ -117,6 +107,8 @@ for shell_name in bash zsh fish; do
 					asdf install --local test 2.0
 					asdf update
 					test $status -eq 0; or exit 91
+					asdf install --local test 2.0
+				else if test "$ASDF_REFRESH_SCENARIO" = resolution-failure
 					asdf install --local test 2.0
 				end
 			' || fail "$shell_name/$scenario"
@@ -134,6 +126,7 @@ for shell_name in bash zsh fish; do
 					asdf update || exit 91
 					asdf install --local test 2.0
 					;;
+				resolution-failure) asdf install --local test 2.0 ;;
 				esac
 			' -- "$([[ "$shell_name" == bash ]] && printf bash.sh || printf zsh.zsh)" ||
 				fail "$shell_name/$scenario"
@@ -141,89 +134,11 @@ for shell_name in bash zsh fish; do
 		if [[ "$scenario" == success || "$scenario" == partial-failure ]]; then
 			[[ "$(grep -c '^new install' "$test_dir/log")" == 3 ]] || fail "$shell_name: stale runtime or duplicate invocation"
 		fi
-	done
-done
-
-# init does not load completion, so an update reloads it only where it was enabled.
-for shell_name in bash zsh fish; do
-	if ! command -v "$shell_name" >/dev/null; then
-		printf 'SKIP: %s is unavailable\n' "$shell_name"
-		continue
-	fi
-	for completion_mode in none standalone combined; do
-		for scenario in success unchanged completion-generation-failure; do
-			export ASDF_REFRESH_SCENARIO="$scenario" ASDF_REFRESH_COMPLETION="$completion_mode"
-			prepare_runtimes
-			expected=0
-			[[ "$scenario" != completion-generation-failure || "$completion_mode" == none ]] || expected=1
-			export ASDF_REFRESH_EXPECTED="$expected"
-			# Completion loaded by hand comes from the plugin; a reload by the selected
-			# executable comes from the installed entry point.
-			if [[ "$scenario" == success ]]; then
-				export ASDF_REFRESH_COMPLETION_ORIGIN=installed
-			else
-				export ASDF_REFRESH_COMPLETION_ORIGIN=plugin
-			fi
-			if [[ "$shell_name" == fish ]]; then
-				# shellcheck disable=SC2016
-				"$shell_name" -c '
-					set -gx ASDF_EXTRAS_INIT_ORIGIN installed
-					source "$ASDF_REFRESH_TEST_DIR/old/lib/init/fish.fish"
-					test -z "$ASDF_EXTRAS_COMPLETION_ORIGIN"; or exit 80
-					switch "$ASDF_REFRESH_COMPLETION"
-					case standalone
-						bash "$ASDF_REFRESH_TEST_DIR/old/lib/commands/command-completion" fish | source
-					case combined
-						bash "$ASDF_REFRESH_TEST_DIR/old/lib/commands/command-completion" --asdf fish | source
-					end
-					asdf update
-					set -l rc $status
-					test $rc -eq $ASDF_REFRESH_EXPECTED; or exit 90
-					set -l origin "$ASDF_EXTRAS_COMPLETION_ORIGIN"
-					if test "$ASDF_REFRESH_COMPLETION" = none
-						test -z "$origin"; or exit 91
-						if set -q __asdf_extras_completion_registered
-							exit 92
-						end
-						if set -q __asdf_extras_standalone_registered
-							exit 93
-						end
-					else
-						test "$origin" = "$ASDF_REFRESH_COMPLETION_ORIGIN"; or exit 94
-						if test "$ASDF_REFRESH_COMPLETION" = combined
-							set -q __asdf_extras_completion_registered; or exit 95
-						else if set -q __asdf_extras_completion_registered
-							exit 96
-						end
-					end
-				' || fail "$shell_name/$completion_mode/$scenario: completion reload (status $?)"
-			else
-				# shellcheck disable=SC2016
-				"$shell_name" -c '
-					ASDF_EXTRAS_INIT_ORIGIN=installed
-					source "$ASDF_REFRESH_TEST_DIR/old/lib/init/$1"
-					[[ -z "${ASDF_EXTRAS_COMPLETION_ORIGIN:-}" ]] || exit 80
-					case "$ASDF_REFRESH_COMPLETION" in
-					standalone) eval "$(bash "$ASDF_REFRESH_TEST_DIR/old/lib/commands/command-completion" "$2")" ;;
-					combined) eval "$(bash "$ASDF_REFRESH_TEST_DIR/old/lib/commands/command-completion" --asdf "$2")" ;;
-					esac
-					if asdf update; then rc=0; else rc=$?; fi
-					[[ "$rc" == "$ASDF_REFRESH_EXPECTED" ]] || exit 90
-					origin="${ASDF_EXTRAS_COMPLETION_ORIGIN:-}"
-					if [[ "$ASDF_REFRESH_COMPLETION" == none ]]; then
-						[[ -z "$origin" && -z "${_ASDF_EXTRAS_NATIVE_COMPLETE:-}" ]] || exit 91
-					else
-						[[ "$origin" == "$ASDF_REFRESH_COMPLETION_ORIGIN" ]] || exit 94
-						if [[ "$ASDF_REFRESH_COMPLETION" == combined ]]; then
-							[[ -n "${_ASDF_EXTRAS_NATIVE_COMPLETE:-}" ]] || exit 95
-						else
-							[[ -z "${_ASDF_EXTRAS_NATIVE_COMPLETE:-}" ]] || exit 96
-						fi
-					fi
-				' -- "$([[ "$shell_name" == bash ]] && printf bash.sh || printf zsh.zsh)" "$shell_name" ||
-					fail "$shell_name/$completion_mode/$scenario: completion reload (status $?)"
-			fi
-		done
+		if [[ "$scenario" == resolution-failure ]]; then
+			# The wrapper does not depend on the runtime resolving: native asdf still works.
+			grep -Fx 'native install --local test 2.0' "$test_dir/log" >/dev/null ||
+				fail "$shell_name: no native fallback when the runtime cannot be resolved"
+		fi
 	done
 done
 

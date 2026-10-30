@@ -5,8 +5,11 @@
 
 set -euo pipefail
 
+# Avoid spawning processes (such as dirname): every asdf call of an initialized
+# shell passes through here.
 current_script_path=${BASH_SOURCE[0]}
-commands_dir="$(dirname "$current_script_path")/commands"
+[[ "$current_script_path" == /* || "$current_script_path" == ./* || "$current_script_path" == ../* ]] || current_script_path="./$current_script_path"
+commands_dir="${current_script_path%/*}/commands"
 
 # Each entry point states its origin, so an inherited value never applies.
 case "${1:-}" in

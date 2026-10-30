@@ -329,30 +329,26 @@ while without initialization it is native asdf's command. Use
 
 | Invocation | When the selected asdf-extras runtime changes |
 | --- | --- |
-| Initialized Bash/Zsh/Fish `asdf update` | Automatically reloads asdf-extras initialization, and reloads completion in the mode you enabled; retains native completion definitions |
-| Initialized Elvish/Nushell `asdf update` | Prints a reminder after every update, including failures, to start a new session if asdf-extras changed; does not reload current definitions |
-| Direct `asdf-extras update` | No automatic shell refresh |
+| Initialized Bash/Zsh/Fish `asdf update` | Nothing to reload: the `asdf` wrapper is a fixed stub that calls the selected runtime on every call. Completion keeps working and a new shell loads its changed definitions |
+| Initialized Elvish/Nushell `asdf update` | The session keeps working. Prints a note after every update, including failures, that a new session loads changed definitions if asdf-extras changed |
+| Direct `asdf-extras update` | No shell change is needed or made |
 
-The Bash/Zsh/Fish wrapper resolves the new executable with
-`asdf which asdf-extras`, not the old shim. It reloads when the
-selected executable path changes, keeping the current shell usable after cleanup
-removes the old runtime.
+The initialized Bash/Zsh/Fish `asdf` function holds no behavior of its own. Every call
+resolves the selected runtime with `asdf which asdf-extras` and runs
+`asdf-extras invoke`, which decides what to do: an asdf-extras command, or native asdf.
+Standard input, output, error and the exit status pass through unchanged. If no runtime
+can be resolved (asdf-extras is not installed or not selected), the call runs native
+asdf, so recovery commands such as `asdf install asdf-extras` keep working. Output
+generated from the plugin checkout calls `asdf cmd asdf-extras invoke` instead.
 
-Initialized wrappers and completion queries do not embed paths into an installed
-runtime. They call asdf-extras through the entry point that generated them:
-`asdf exec asdf-extras` for the installed command, which follows the selected
-version on every call, or `asdf cmd asdf-extras` for output generated from the
-plugin checkout. A removed runtime therefore does not break loaded definitions;
-reloading is only needed to pick up changed definitions.
+A process cannot change its parent shell, so `invoke` asks the wrapper to do it through a
+control file named by `ASDF_EXTRAS_CONTROL`. The first line, `handled`, proves that
+`invoke` ran; without it the wrapper runs native asdf. The other lines are `set <NAME>
+<VALUE>` and `unset <NAME>` for `ASDF_*` environment variables, which the wrapper applies
+only when the command succeeded. Anything else is ignored. This is how `asdf shell` works.
 
-Completion is reloaded only if it is already enabled in the current shell, so
-setups that never enabled completion do not get it registered by an update. A
-standalone `asdf-extras completion` setup is reloaded as standalone, and an
-initialized `asdf completion` setup as the combined overlay.
-
-If a bulk update fails but changes the selected runtime, initialization (and
-enabled completion) is still refreshed and the update's failure status is preserved. If the runtime is
-unchanged, no initialization is evaluated. Refresh failures report an error and
-return nonzero. Startup configuration files are never rewritten.
-For Elvish/Nushell, a new session reloads startup initialization without
-referencing a removed runtime.
+Because the behavior lives in the runtime, changing it does not require reloading running
+shells. The wrapper itself is meant to change rarely; a change to it, or to the
+completion definitions, is picked up by a new shell. Startup configuration files are
+never rewritten. Elvish and Nushell still use wrappers with their own logic; a new
+session loads changed definitions there.

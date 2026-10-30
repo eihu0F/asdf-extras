@@ -57,7 +57,7 @@ EOF
 		elvish "$test_root/test"
 		;;
 	nushell)
-		printf "source '%s/init.nu'\nsource '%s/init.nu'\n%s\nexit \$env.LAST_EXIT_CODE\n" \
+		printf "source '%s/init.nu'\nsource '%s/init.nu'\n%s\nexit (\$env.LAST_EXIT_CODE? | default 0)\n" \
 			"$test_root" "$test_root" "$request" >"$test_root/test.nu"
 		nu --no-config-file "$test_root/test.nu"
 		;;

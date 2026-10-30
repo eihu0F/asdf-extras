@@ -44,9 +44,9 @@ fn asdf-extras-shell {|@args|
 		echo 'asdf-extras: invalid plugin name: '$plugin >&2
 		fail 'invalid plugin name'
 	}
-	for version $args {
-		if (not (re:match '^[A-Za-z0-9][A-Za-z0-9._+:/@~^-]*$' $version)) {
-			echo 'asdf-extras: invalid version: '$version >&2
+	for candidate $args {
+		if (not (re:match '^[A-Za-z0-9][A-Za-z0-9._+:/@~^-]*$' $candidate)) {
+			echo 'asdf-extras: invalid version: '$candidate >&2
 			fail 'invalid version'
 		}
 	}

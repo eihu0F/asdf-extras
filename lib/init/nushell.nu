@@ -42,7 +42,7 @@ def --env asdf-extras-shell [args: list<string>] {
 	}
 
 	# The same normalization as native asdf: uppercase, with - as _.
-	let tool = ($plugin | str replace --all "-" "_" | str upcase)
+	let tool = ($plugin | str replace --all "-" "_" | str uppercase)
 	let variable = $"ASDF_($tool)_VERSION"
 	if $unset_override {
 		hide-env --ignore-errors $variable

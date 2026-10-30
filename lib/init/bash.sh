@@ -15,16 +15,15 @@ _asdf_extras_dispatch() {
 }
 
 # Shared by Bash and Zsh; lib/init/zsh.zsh loads it.
-_asdf_extras_refresh() {
-	local previous="$1" update_rc="$2" executable init_code completion_code
+# Evaluates freshly generated initialization, and completion where it was
+# enabled, in this shell. $1 is the executable to generate from; empty means the
+# entry point this initialization came from.
+_asdf_extras_reload() {
+	local executable="$1" init_code completion_code
 	local shell_name=bash
 	[[ -z "${ZSH_VERSION:-}" ]] || shell_name=zsh
-	local -a completion_args=()
-	if ! executable="$(command asdf which asdf-extras)"; then
-		printf 'asdf-extras: cannot resolve updated executable; retry eval "$(asdf-extras init %s)" after fixing version selection\n' "$shell_name" >&2
-		return 1
-	fi
-	[[ "$executable" != "$previous" ]] || return "$update_rc"
+	local -a generator=("$executable") completion_args=()
+	[[ -n "$executable" ]] || generator=(_asdf_extras_dispatch)
 	# init does not load completion, so reload it only where it was enabled,
 	# in the same mode (the asdf overlay registers _ASDF_EXTRAS_NATIVE_COMPLETE).
 	if [[ -n "${ASDF_EXTRAS_COMPLETION_ORIGIN:-}" ]]; then
@@ -32,7 +31,7 @@ _asdf_extras_refresh() {
 		[[ -z "${_ASDF_EXTRAS_NATIVE_COMPLETE:-}" ]] || completion_args+=(--asdf)
 		completion_args+=("$shell_name")
 	fi
-	if ! init_code="$("$executable" init "$shell_name")" || [[ -z "$init_code" ]]; then
+	if ! init_code="$("${generator[@]}" init "$shell_name")" || [[ -z "$init_code" ]]; then
 		printf 'asdf-extras: cannot generate initialization; retry eval "$(asdf-extras init %s)"\n' "$shell_name" >&2
 		return 1
 	fi
@@ -41,7 +40,7 @@ _asdf_extras_refresh() {
 		return 1
 	fi
 	if ((${#completion_args[@]})); then
-		if ! completion_code="$("$executable" "${completion_args[@]}")" || [[ -z "$completion_code" ]]; then
+		if ! completion_code="$("${generator[@]}" "${completion_args[@]}")" || [[ -z "$completion_code" ]]; then
 			printf 'asdf-extras: cannot generate completion; retry eval "$(asdf-extras %s)"\n' "${completion_args[*]}" >&2
 			return 1
 		fi
@@ -50,6 +49,20 @@ _asdf_extras_refresh() {
 			return 1
 		fi
 	fi
+	return 0
+}
+
+# After an update, reload only if the selected runtime changed.
+_asdf_extras_refresh() {
+	local previous="$1" update_rc="$2" executable
+	local shell_name=bash
+	[[ -z "${ZSH_VERSION:-}" ]] || shell_name=zsh
+	if ! executable="$(command asdf which asdf-extras)"; then
+		printf 'asdf-extras: cannot resolve updated executable; retry eval "$(asdf-extras init %s)" after fixing version selection\n' "$shell_name" >&2
+		return 1
+	fi
+	[[ "$executable" != "$previous" ]] || return "$update_rc"
+	_asdf_extras_reload "$executable" || return 1
 	return "$update_rc"
 }
 
@@ -100,7 +113,7 @@ asdf() {
 	local arg previous update_rc
 
 	case "${1:-}" in
-	install | update | get | completion | shell)
+	install | update | get | completion | shell | reload)
 		for arg in "$@"; do
 			if [[ "$arg" == --help || "$arg" == -h ]]; then
 				_asdf_extras_dispatch help --asdf "$@"
@@ -135,6 +148,16 @@ asdf() {
 	if [[ "${1:-}" == "shell" ]]; then
 		shift
 		_asdf_extras_shell "$@"
+		return $?
+	fi
+
+	if [[ "${1:-}" == "reload" ]]; then
+		shift
+		if (($#)); then
+			printf 'asdf-extras: usage: asdf reload\n' >&2
+			return 1
+		fi
+		_asdf_extras_reload ""
 		return $?
 	fi
 

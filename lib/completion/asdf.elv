@@ -9,6 +9,7 @@ fn complete {|@words|
 		put update
 		put get
 		put shell
+		put reload
 		return
 	}
 	if (has-value [update get shell] $words[1]) {

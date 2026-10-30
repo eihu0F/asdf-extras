@@ -220,6 +220,7 @@ other versions and returns a nonzero status.
 | `asdf install --help` | Native install help followed by scope and activation guidance |
 | `asdf get --help` | Scoped reads, output format and exit statuses |
 | `asdf shell --help` | Session-only overrides, tool-name normalization and validation |
+| `asdf reload --help` | On-demand reload of this shell's definitions, per shell |
 | `asdf-extras prune --help` | Home-based cleanup behavior |
 | `asdf completion --help` | Completion modes and shell setup |
 
@@ -464,7 +465,8 @@ completion. Load framework/native completion before asdf-extras setup.
 
 Initialized Bash/Zsh/Fish wrappers refresh automatically when an update changes
 the selected runtime, and reload completion if you enabled it. Elvish/Nushell
-require a new session if it changes.
+keep working and need a new session only to load changed definitions. In Bash, Zsh
+and Fish, `asdf reload` reloads the current shell's definitions on demand.
 Direct `asdf-extras update` does not refresh the current shell.
 
 See the [shell guide](docs/shells.md) for setup details,

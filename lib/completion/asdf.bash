@@ -45,7 +45,7 @@ _asdf_extras_complete() {
 		fi
 		output=""
 		if ((original_cword == 1)); then
-			for candidate in update get shell; do
+			for candidate in update get shell reload; do
 				[[ "$candidate" != "$cur"* ]] || output+="$candidate"$'\n'
 			done
 		fi

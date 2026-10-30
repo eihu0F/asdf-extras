@@ -19,16 +19,13 @@ function __asdf_extras_dispatch
 	end
 end
 
-function __asdf_extras_refresh
-	set -l previous "$argv[1]"
-	set -l update_rc "$argv[2]"
-	set -l executable (command asdf which asdf-extras)
-	if test $status -ne 0
-		echo 'asdf-extras: cannot resolve updated executable; retry asdf-extras init fish | source after fixing version selection' >&2
-		return 1
-	end
-	if test "$executable" = "$previous"
-		return $update_rc
+# Evaluates freshly generated initialization, and completion where it was
+# enabled, in this shell. The first argument is the executable to generate from;
+# empty means the entry point this initialization came from.
+function __asdf_extras_reload
+	set -l generator __asdf_extras_dispatch
+	if test -n "$argv[1]"
+		set generator "$argv[1]"
 	end
 	# init does not load completion, so reload it only where it was enabled,
 	# in the same mode (the asdf overlay sets __asdf_extras_completion_registered).
@@ -40,7 +37,7 @@ function __asdf_extras_refresh
 		end
 		set -a completion_args fish
 	end
-	set -l init_code ("$executable" init fish)
+	set -l init_code ("$generator" init fish)
 	if test $status -ne 0; or test (count $init_code) -eq 0
 		echo 'asdf-extras: cannot generate initialization; retry asdf-extras init fish | source' >&2
 		return 1
@@ -51,7 +48,7 @@ function __asdf_extras_refresh
 		return 1
 	end
 	if test (count $completion_args) -gt 0
-		set -l completion_code ("$executable" $completion_args)
+		set -l completion_code ("$generator" $completion_args)
 		if test $status -ne 0; or test (count $completion_code) -eq 0
 			echo "asdf-extras: cannot generate completion; retry asdf-extras $completion_args | source" >&2
 			return 1
@@ -62,6 +59,22 @@ function __asdf_extras_refresh
 			return 1
 		end
 	end
+	return 0
+end
+
+# After an update, reload only if the selected runtime changed.
+function __asdf_extras_refresh
+	set -l previous "$argv[1]"
+	set -l update_rc "$argv[2]"
+	set -l executable (command asdf which asdf-extras)
+	if test $status -ne 0
+		echo 'asdf-extras: cannot resolve updated executable; retry asdf-extras init fish | source after fixing version selection' >&2
+		return 1
+	end
+	if test "$executable" = "$previous"
+		return $update_rc
+	end
+	__asdf_extras_reload "$executable"; or return 1
 	return $update_rc
 end
 
@@ -110,7 +123,7 @@ function __asdf_extras_shell
 end
 
 function asdf
-	if test (count $argv) -ge 1; and contains -- "$argv[1]" install update get completion shell
+	if test (count $argv) -ge 1; and contains -- "$argv[1]" install update get completion shell reload
 		if contains -- --help $argv; or contains -- -h $argv
 			__asdf_extras_dispatch help --asdf $argv
 			return $status
@@ -138,6 +151,15 @@ function asdf
 
 	if test (count $argv) -ge 1; and test "$argv[1]" = "shell"
 		__asdf_extras_shell $argv[2..-1]
+		return $status
+	end
+
+	if test (count $argv) -ge 1; and test "$argv[1]" = "reload"
+		if test (count $argv) -gt 1
+			echo 'asdf-extras: usage: asdf reload' >&2
+			return 1
+		end
+		__asdf_extras_reload ""
 		return $status
 	end
 

@@ -55,7 +55,7 @@ extras_completion_candidates() {
 		case "$subcommand" in
 		help | --help | -h)
 			[[ $# -eq 2 ]] || return 0
-			for candidate in install update get shell prune completion; do
+			for candidate in install update get shell reload prune completion; do
 				[[ "$candidate" != "$current"* ]] || printf '%s\n' "$candidate"
 			done
 			return 0
@@ -91,7 +91,7 @@ extras_completion_candidates() {
 		esac
 	fi
 	[[ $# -gt 1 ]] || {
-		for candidate in update get shell; do
+		for candidate in update get shell reload; do
 			[[ "$candidate" != "$current"* ]] || printf '%s\n' "$candidate"
 		done
 		return 0

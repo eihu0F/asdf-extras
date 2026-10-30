@@ -34,6 +34,8 @@ jobs:
         run: bash ./scripts/test-help.bash
       - name: Shell override regression tests
         run: bash ./scripts/test-shell.bash
+      - name: Shell initialization refresh tests
+        run: bash ./scripts/test-init-refresh.bash
   nushell_completion:
     name: Nushell completion
     runs-on: ubuntu-latest
@@ -54,6 +56,8 @@ jobs:
         run: bash ./scripts/test-help.bash
       - name: Shell override regression tests
         run: bash ./scripts/test-shell.bash
+      - name: Shell initialization refresh tests
+        run: bash ./scripts/test-init-refresh.bash
   plugin_test:
     name: asdf plugin test
     strategy:

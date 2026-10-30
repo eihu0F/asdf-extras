@@ -62,7 +62,7 @@ fail() {
 entry="$repo_dir/libexec/asdf-extras"
 bash "$entry" >"$test_root/direct"
 grep -q 'init <bash|zsh|fish|elvish|nushell>' "$test_root/direct"
-for topic in install update get shell prune setup completion; do
+for topic in install update get shell reload prune setup completion; do
 	bash "$entry" help "$topic" >"$test_root/direct"
 	bash "$entry" --help "$topic" >"$test_root/alias"
 	cmp "$test_root/direct" "$test_root/alias"
@@ -94,6 +94,18 @@ grep -Fx prune < <(bash "$repo_dir/libexec/asdf-extras" completion --candidates 
 	fail 'standalone prune completion missing'
 [[ "$(bash "$repo_dir/libexec/asdf-extras" completion --candidates --standalone help p)" == prune ]] ||
 	fail 'prune help topic completion missing'
+[[ "$(bash "$repo_dir/libexec/asdf-extras" completion --candidates --standalone help r)" == reload ]] ||
+	fail 'reload help topic completion missing'
+# A separate process cannot reload the calling shell: it explains and fails.
+for command_path in "$entry" "$repo_dir/lib/commands/command-reload"; do
+	subcommand_args=(reload)
+	[[ "$command_path" == "$entry" ]] || subcommand_args=()
+	if bash "$command_path" ${subcommand_args[@]+"${subcommand_args[@]}"} >"$test_root/direct" 2>"$test_root/error"; then
+		fail 'standalone reload reported success'
+	fi
+	[[ ! -s "$test_root/direct" ]] || fail 'standalone reload printed output'
+	grep -q 'initialized shell' "$test_root/error" || fail 'standalone reload did not explain initialization'
+done
 
 run_shell() {
 	local shell="$1" request="$2" init_file
@@ -179,6 +191,10 @@ for origin in installed plugin; do
 		run_shell "$shell" "asdf get --help" >"$test_root/long"
 		grep -q 'asdf-extras get' "$test_root/long" || fail "$shell: asdf get --help"
 		run_shell "$shell" "asdf get -h" >"$test_root/short"
+		cmp "$test_root/long" "$test_root/short"
+		run_shell "$shell" "asdf reload --help" >"$test_root/long"
+		grep -q 'asdf-extras reload' "$test_root/long" || fail "$shell: asdf reload --help"
+		run_shell "$shell" "asdf reload -h" >"$test_root/short"
 		cmp "$test_root/long" "$test_root/short"
 		mkdir -p "$test_root/home"
 		printf 'python 3.12.0 3.11.0 system\n' >"$test_root/home/.tool-versions"

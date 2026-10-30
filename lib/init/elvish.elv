@@ -71,7 +71,7 @@ fn asdf {|@args|
 		return
 	}
 
-	if (and (has-value [install update get completion shell] $args[0]) (or (has-value $args --help) (has-value $args -h))) {
+	if (and (has-value [install update get completion shell reload] $args[0]) (or (has-value $args --help) (has-value $args -h))) {
 		asdf-extras-dispatch help --asdf $@args
 		return
 	}
@@ -95,11 +95,17 @@ fn asdf {|@args|
 		return
 	}
 
+	if (eq $args[0] reload) {
+		# Elvish keeps the definitions it evaluated until the session ends.
+		echo 'asdf-extras: asdf reload is not supported in Elvish; start a new Elvish session to load changed definitions.' >&2
+		fail 'asdf reload is not supported in Elvish'
+	}
+
 	if (eq $args[0] update) {
 		try {
 			asdf-extras-dispatch update (all $args[1..])
 		} finally {
-			echo 'asdf-extras: if asdf-extras was updated, start a new Elvish session to reload its initialization before using extras commands again.' >&2
+			echo 'asdf-extras: this session keeps working. If asdf-extras was updated, start a new Elvish session to load its changed definitions.' >&2
 		}
 		return
 	}

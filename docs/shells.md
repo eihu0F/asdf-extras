@@ -4,7 +4,8 @@
 
 Choose the section for your shell and copy its **Recommended setup** into the
 startup file indicated. Initialization (`asdf-extras init <shell>`) enables
-`asdf update`, `asdf get`, `asdf shell` and scoped `asdf install`. The `asdf completion <shell>` line that
+`asdf update`, `asdf get`, `asdf shell`, scoped `asdf install` and (Bash, Zsh and
+Fish) `asdf reload`. The `asdf completion <shell>` line that
 follows it enables Tab completion for both `asdf` and `asdf-extras`. Keep them in
 this order, and start a new shell afterward.
 If asdf is not on PATH yet, complete the
@@ -29,6 +30,7 @@ extensions. Do not copy both alternatives.
 - [Which completion command should I use?](#which-completion-command-should-i-use)
 - [Completion behavior details](#completion-behavior-details)
 - [Shell refresh after updates](#shell-refresh-after-updates)
+- [Reloading definitions on demand](#reloading-definitions-on-demand)
 
 ## Bash
 
@@ -330,7 +332,7 @@ while without initialization it is native asdf's command. Use
 | Invocation | When the selected asdf-extras runtime changes |
 | --- | --- |
 | Initialized Bash/Zsh/Fish `asdf update` | Automatically reloads asdf-extras initialization, and reloads completion in the mode you enabled; retains native completion definitions |
-| Initialized Elvish/Nushell `asdf update` | Prints a reminder after every update, including failures, to start a new session if asdf-extras changed; does not reload current definitions |
+| Initialized Elvish/Nushell `asdf update` | The session keeps working. Prints a note after every update, including failures, that a new session loads changed definitions if asdf-extras changed; does not reload current definitions |
 | Direct `asdf-extras update` | No automatic shell refresh |
 
 The Bash/Zsh/Fish wrapper resolves the new executable with
@@ -356,3 +358,32 @@ unchanged, no initialization is evaluated. Refresh failures report an error and
 return nonzero. Startup configuration files are never rewritten.
 For Elvish/Nushell, a new session reloads startup initialization without
 referencing a removed runtime.
+
+## Reloading definitions on demand
+
+A loaded session keeps the definitions it evaluated: the `asdf` wrapper and, if
+enabled, completion. Since they reach asdf-extras through `asdf exec asdf-extras` or
+`asdf cmd asdf-extras`, they keep working after the runtime changes. A reload is only
+needed to pick up *changed* definitions, for example in a session that stayed open
+while asdf-extras was updated from another shell.
+
+| Shell | How to reload |
+| --- | --- |
+| Bash, Zsh, Fish | Run `asdf reload` |
+| Elvish, Nushell | Start a new session; `asdf reload` reports this and fails |
+
+`asdf reload` takes no arguments. It evaluates freshly generated initialization in the
+calling shell, through the entry point that initialization came from, and reloads
+completion only if it is enabled, in the same mode (asdf-extras only, or combined with
+native asdf). Native completion definitions are kept, the selected runtime does not
+have to change, and startup files are not rewritten. If generation or evaluation
+fails, it reports an error, returns nonzero and keeps what was loaded. Other open
+sessions are not affected; run it in each one. A standalone `asdf-extras reload` cannot
+change the calling shell, so it only explains this and fails.
+
+Elvish and Nushell cannot replace definitions in a running session. Nushell binds
+commands when a file is sourced (`source`), and there is no way to define commands in the
+caller's scope from a function or to evaluate generated code from a string. Elvish
+registers the `asdf` function when the initialization is evaluated. Restarting the shell
+in place (`exec`) was not chosen, because it would discard unexported variables, jobs
+and other session state. The definitions stay thin, so a new session is rarely needed.

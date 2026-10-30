@@ -120,6 +120,7 @@ fail() {
 	contains update
 	contains get
 	contains shell
+	contains reload
 	contains native-command
 	run_completion asdf shell ""
 	contains --unset
@@ -332,6 +333,7 @@ if command -v zsh >/dev/null; then
 		grep -qx update "$ASDF_COMPLETION_TEST/zsh-candidates"
 		grep -qx get "$ASDF_COMPLETION_TEST/zsh-candidates"
 		grep -qx shell "$ASDF_COMPLETION_TEST/zsh-candidates"
+		grep -qx reload "$ASDF_COMPLETION_TEST/zsh-candidates"
 		grep -qx native-command "$ASDF_COMPLETION_TEST/zsh-candidates"
 		: >"$ASDF_COMPLETION_TEST/zsh-candidates"
 		words=(asdf shell nodejs 2); CURRENT=4
@@ -421,6 +423,7 @@ if command -v fish >/dev/null; then
 		contains_candidate get "asdf g"
 		contains_candidate nodejs "asdf get --parent n"
 		contains_candidate shell "asdf sh"
+		contains_candidate reload "asdf rel"
 		contains_candidate --unset "asdf shell --"
 		contains_candidate 22.0.0 "asdf shell nodejs 2"
 		contains_candidate --version "asdf update --"

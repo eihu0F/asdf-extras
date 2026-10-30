@@ -146,6 +146,7 @@ if (not-eq $native-input [asdf current '']) { fail 'ordinary context changed' }
 check update asdf ''
 check get asdf ''
 check shell asdf ''
+check reload asdf ''
 check nodejs asdf get --parent n
 check --local asdf update --all --
 check nodejs asdf update --local n

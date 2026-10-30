@@ -37,7 +37,7 @@ _asdf_extras_complete() {
 		rc=0
 		"$_ASDF_EXTRAS_NATIVE_COMPLETE" "$@" || rc=$?
 		if ((CURRENT == 2)); then
-			candidates=(update get shell)
+			candidates=(update get shell reload)
 		fi
 	fi
 	if ((${#candidates})); then

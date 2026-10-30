@@ -4,7 +4,7 @@ def asdf-extras-asdf-candidates [place: record] {
 	let subcommand = ($command | split row " " | last)
 	if $command == "asdf" {
 		let native = ("asdf-extras-native-root " + ($args | str join " ") | commandline complete --detailed | each {|item| $item | reject span })
-		return ($native | append [{value: update, description: "Update asdf, plugins and tool versions"} {value: get, description: "Show the versions configured in one scope file"} {value: shell, description: "Override a tool version for the current shell session"}] | uniq-by value)
+		return ($native | append [{value: update, description: "Update asdf, plugins and tool versions"} {value: get, description: "Show the versions configured in one scope file"} {value: shell, description: "Override a tool version for the current shell session"} {value: reload, description: "Reload the asdf-extras definitions of this shell"}] | uniq-by value)
 	}
 	let mode = (if $subcommand == install { [--delegated] } else { [] })
 	let values = ($args | each {|word| asdf-extras-argument-value $word })

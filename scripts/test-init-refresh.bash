@@ -227,6 +227,99 @@ for shell_name in bash zsh fish; do
 	done
 done
 
+# asdf reload loads changed definitions on demand: the selected runtime does not
+# change, and completion keeps its mode. The marker is appended to the init file
+# after the shell loaded it, so it only appears if reload evaluated it again.
+for shell_name in bash zsh fish; do
+	if ! command -v "$shell_name" >/dev/null; then
+		printf 'SKIP: %s is unavailable\n' "$shell_name"
+		continue
+	fi
+	for completion_mode in none standalone combined; do
+		for scenario in success generation-failure completion-generation-failure; do
+			export ASDF_REFRESH_SCENARIO="$scenario" ASDF_REFRESH_COMPLETION="$completion_mode"
+			prepare_runtimes
+			expected=0
+			case "$scenario" in
+			generation-failure) expected=1 ;;
+			completion-generation-failure) [[ "$completion_mode" == none ]] || expected=1 ;;
+			esac
+			export ASDF_REFRESH_EXPECTED="$expected"
+			# A failed generation leaves what was loaded by hand, which came from the plugin.
+			export ASDF_REFRESH_COMPLETION_ORIGIN=plugin
+			[[ "$scenario" != success ]] || export ASDF_REFRESH_COMPLETION_ORIGIN=installed
+			if [[ "$shell_name" == fish ]]; then
+				# shellcheck disable=SC2016
+				"$shell_name" -c '
+					set -gx ASDF_EXTRAS_INIT_ORIGIN installed
+					source "$ASDF_REFRESH_TEST_DIR/old/lib/init/fish.fish"
+					switch "$ASDF_REFRESH_COMPLETION"
+					case standalone
+						bash "$ASDF_REFRESH_TEST_DIR/old/lib/commands/command-completion" fish | source
+					case combined
+						bash "$ASDF_REFRESH_TEST_DIR/old/lib/commands/command-completion" --asdf fish | source
+					end
+					echo "set -g ASDF_TEST_RELOADED 1" >>"$ASDF_REFRESH_TEST_DIR/old/lib/init/fish.fish"
+					asdf reload extra 2>/dev/null; and exit 81
+					set -q ASDF_TEST_RELOADED; and exit 82
+					asdf reload
+					set -l rc $status
+					test $rc -eq $ASDF_REFRESH_EXPECTED; or exit 90
+					if test "$ASDF_REFRESH_SCENARIO" = generation-failure
+						set -q ASDF_TEST_RELOADED; and exit 91
+					else
+						set -q ASDF_TEST_RELOADED; or exit 92
+					end
+					if test "$ASDF_REFRESH_COMPLETION" = none
+						test -z "$ASDF_EXTRAS_COMPLETION_ORIGIN"; or exit 93
+					else
+						test "$ASDF_EXTRAS_COMPLETION_ORIGIN" = "$ASDF_REFRESH_COMPLETION_ORIGIN"; or exit 94
+						if test "$ASDF_REFRESH_COMPLETION" = combined
+							set -q __asdf_extras_completion_registered; or exit 95
+						else if set -q __asdf_extras_completion_registered
+							exit 96
+						end
+					end
+				' || fail "$shell_name/$completion_mode/$scenario: reload (status $?)"
+			else
+				# shellcheck disable=SC2016
+				"$shell_name" -c '
+					ASDF_EXTRAS_INIT_ORIGIN=installed
+					source "$ASDF_REFRESH_TEST_DIR/old/lib/init/$1"
+					case "$ASDF_REFRESH_COMPLETION" in
+					standalone) eval "$(bash "$ASDF_REFRESH_TEST_DIR/old/lib/commands/command-completion" "$2")" ;;
+					combined) eval "$(bash "$ASDF_REFRESH_TEST_DIR/old/lib/commands/command-completion" --asdf "$2")" ;;
+					esac
+					printf "\nASDF_TEST_RELOADED=1\n" >>"$ASDF_REFRESH_TEST_DIR/old/lib/init/bash.sh"
+					if asdf reload extra 2>/dev/null; then exit 81; fi
+					[[ -z "${ASDF_TEST_RELOADED:-}" ]] || exit 82
+					if asdf reload; then rc=0; else rc=$?; fi
+					[[ "$rc" == "$ASDF_REFRESH_EXPECTED" ]] || exit 90
+					if [[ "$ASDF_REFRESH_SCENARIO" == generation-failure ]]; then
+						[[ -z "${ASDF_TEST_RELOADED:-}" ]] || exit 91
+					else
+						[[ -n "${ASDF_TEST_RELOADED:-}" ]] || exit 92
+					fi
+					origin="${ASDF_EXTRAS_COMPLETION_ORIGIN:-}"
+					if [[ "$ASDF_REFRESH_COMPLETION" == none ]]; then
+						[[ -z "$origin" && -z "${_ASDF_EXTRAS_NATIVE_COMPLETE:-}" ]] || exit 93
+					else
+						[[ "$origin" == "$ASDF_REFRESH_COMPLETION_ORIGIN" ]] || exit 94
+						if [[ "$ASDF_REFRESH_COMPLETION" == combined ]]; then
+							[[ -n "${_ASDF_EXTRAS_NATIVE_COMPLETE:-}" ]] || exit 95
+						else
+							[[ -z "${_ASDF_EXTRAS_NATIVE_COMPLETE:-}" ]] || exit 96
+						fi
+					fi
+				' -- "$([[ "$shell_name" == bash ]] && printf bash.sh || printf zsh.zsh)" "$shell_name" ||
+					fail "$shell_name/$completion_mode/$scenario: reload (status $?)"
+			fi
+		done
+	done
+	# The runtime did not change, so nothing was updated or uninstalled.
+	grep -q '^update' "$test_dir/log" && fail "$shell_name: reload ran an update"
+done
+
 mkdir -p "$test_dir/notice"
 cat >"$test_dir/notice/asdf" <<'EOF'
 #!/usr/bin/env bash
@@ -261,5 +354,15 @@ for shell_name in elvish nu; do
 		grep -Fx update-output "$test_dir/stdout" >/dev/null || fail "$shell_name: update output lost"
 		grep -F 'start a new' "$test_dir/stderr" >/dev/null || fail "$shell_name: reload reminder missing"
 	done
+	# Neither shell can replace loaded definitions, so asdf reload must say so, not succeed.
+	if [[ "$shell_name" == elvish ]]; then
+		code="$(<"$repo_dir/lib/init/elvish.elv")"$'\nasdf reload'
+	else
+		code="source '$repo_dir/lib/init/nushell.nu'; asdf reload"
+	fi
+	if "$shell_name" -c "$code" >"$test_dir/stdout" 2>"$test_dir/stderr"; then
+		fail "$shell_name: asdf reload reported success"
+	fi
+	grep -F 'start a new' "$test_dir/stderr" >/dev/null || fail "$shell_name: reload explanation missing"
 done
 printf 'shell initialization refresh tests: PASS\n'

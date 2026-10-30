@@ -11,6 +11,7 @@ extras_maybe_help() {
 			prune) extras_help_prune ;;
 			get) extras_help_get ;;
 			shell) extras_help_shell ;;
+			reload) extras_help_reload ;;
 			setup) extras_help_setup ;;
 			completion) extras_help_completion ;;
 			esac
@@ -204,6 +205,33 @@ Examples:
 EOF
 }
 
+extras_help_reload() {
+	cat <<'EOF'
+asdf-extras reload:
+  asdf reload
+
+  Reloads the asdf-extras definitions of the current shell on demand, without a
+  new session: the asdf wrapper, and completion if it was enabled, in the same
+  mode (asdf-extras only, or combined with native asdf). Native completion
+  definitions are kept. Available in Bash, Zsh and Fish after asdf-extras init.
+  The selected runtime does not have to change; generation goes through the entry
+  point this initialization came from. On failure the shell keeps what it has
+  loaded and the command returns nonzero.
+  Use it to pick up changed definitions, for example in a session that was open
+  while asdf-extras was updated elsewhere. After asdf update, an initialized Bash,
+  Zsh or Fish reloads by itself when the runtime changed.
+  Only the calling shell is affected; other open sessions must run it themselves.
+  A standalone asdf-extras reload cannot change the calling shell, so it only
+  explains this and fails.
+  Elvish and Nushell cannot replace their definitions in a running session, so
+  there asdf reload reports that and a new session loads the changed definitions.
+  Startup files are never rewritten.
+
+Examples:
+  asdf reload
+EOF
+}
+
 extras_help_setup() {
 	cat <<'EOF'
 asdf-extras setup:
@@ -253,12 +281,14 @@ asdf-extras extensions (enabled by init):
     Prints the versions configured in one scope file without changing it.
   asdf shell <plugin> <version>... | asdf shell --unset <plugin>
     Overrides or restores the version for the current shell session only.
+  asdf reload
+    Reloads these definitions in the current shell (Bash, Zsh and Fish).
   asdf-extras prune
     Removes installed versions not used by the home configuration.
   asdf completion <bash|zsh|fish|elvish|nushell>
     Includes native completion and extras extensions.
-  asdf update --help / asdf install --help / asdf get --help / asdf shell --help / asdf-extras prune --help
-    Show update, install, get, shell and prune behavior and safety details.
+  asdf update --help / asdf install --help / asdf get --help / asdf shell --help / asdf reload --help / asdf-extras prune --help
+    Show update, install, get, shell, reload and prune behavior and safety details.
   asdf completion --help
     Show extras targets, scopes, defaults, safety behavior and completion modes.
 EOF

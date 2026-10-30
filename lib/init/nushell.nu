@@ -52,7 +52,7 @@ def --env asdf-extras-shell [args: list<string>] {
 }
 
 def --env --wrapped asdf-extras-run [...args] {
-	if (($args | get --optional 0 | default "") in [install update get completion shell]) {
+	if (($args | get --optional 0 | default "") in [install update get completion shell reload]) {
 		if ("--help" in $args or "-h" in $args) {
 			asdf-extras-dispatch help "--asdf" ...$args
 			return
@@ -84,15 +84,20 @@ def --env --wrapped asdf-extras-run [...args] {
 		return
 	}
 
+	if (($args | length) >= 1 and ($args | get 0) == "reload") {
+		# Nushell binds commands when a file is sourced, so definitions cannot be replaced in a running session.
+		error make {msg: "asdf-extras: asdf reload is not supported in Nushell; start a new Nushell session to load changed definitions."}
+	}
+
 	if (($args | length) >= 1 and ($args | get 0) == "update") {
 		try {
 			asdf-extras-dispatch update ...($args | skip 1)
 		} catch {|err|
-			print --stderr 'asdf-extras: if asdf-extras was updated, start a new Nushell session to reload its initialization before using extras commands again.'
+			print --stderr 'asdf-extras: this session keeps working. If asdf-extras was updated, start a new Nushell session to load its changed definitions.'
 			error make $err
 		}
 		let update_status = $env.LAST_EXIT_CODE
-		print --stderr 'asdf-extras: if asdf-extras was updated, start a new Nushell session to reload its initialization before using extras commands again.'
+		print --stderr 'asdf-extras: this session keeps working. If asdf-extras was updated, start a new Nushell session to load its changed definitions.'
 		$env.LAST_EXIT_CODE = $update_status
 		return
 	}

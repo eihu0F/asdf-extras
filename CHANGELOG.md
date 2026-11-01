@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.11.0](https://github.com/eihu0F/asdf-extras/compare/v0.10.0...v0.11.0) (2026-11-01)
+
+
+### Features
+
+* add session-only asdf shell overrides to shell initialization ([#81](https://github.com/eihu0F/asdf-extras/issues/81)) ([2048071](https://github.com/eihu0F/asdf-extras/commit/2048071897626b56f727df31aea98011612fb29d))
+* make the Bash, Zsh and Fish wrapper and completion fixed stubs for asdf-extras invoke ([#85](https://github.com/eihu0F/asdf-extras/issues/85)) ([ca0daa7](https://github.com/eihu0F/asdf-extras/commit/ca0daa77e4bff7024587763bc1097dc57f6c7e9f))
+
 ## [0.10.0](https://github.com/eihu0F/asdf-extras/compare/v0.9.2...v0.10.0) (2026-10-26)
 
 

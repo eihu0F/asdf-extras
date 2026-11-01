@@ -69,7 +69,8 @@ also work with macOS Bash 3.2 (for example, empty arrays under `set -u`).
 | `test-prune.bash` | Removal of unused versions by `prune` | None |
 | `test-update.bash` | `update` scopes, failure handling, and runtime self-update | None |
 | `test-update-asdf.bash` | `update --asdf` self-update | `jq` |
-| `test-init-refresh.bash` | Shell initialization refresh after an update | None |
+| `test-invoke.bash` | The `invoke` contract: wrapper stubs, control descriptor, fallback to native asdf | None |
+| `test-init-refresh.bash` | Wrappers keep working across a runtime change and removal | None |
 | `test-help.bash` | `--help` and `help` routing for every available init shell | None |
 | `test-completion.bash` | Completion registration for Bash, Zsh, and Fish | None |
 | `test-completion-elvish.bash` | Completion through a real interactive Elvish editor | Elvish 0.21.0 or later, util-linux `script`, coreutils `timeout` (Linux) |

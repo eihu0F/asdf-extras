@@ -76,6 +76,9 @@ jobs:
       - name: Shell override regression tests (system Bash)
         shell: /bin/bash {0}
         run: /bin/bash ./scripts/test-shell.bash
+      - name: Invoke contract tests (system Bash)
+        shell: /bin/bash {0}
+        run: /bin/bash ./scripts/test-invoke.bash
       - name: Update command regression tests (system Bash)
         shell: /bin/bash {0}
         run: /bin/bash ./scripts/test-update.bash

@@ -1,45 +1,47 @@
+# Fixed glue: the runtime decides what to complete and how native completion is used
+# (see extras_completion_query); this only runs native completion, which is shell
+# code, and adds the candidates. The runtime counts words from 0; Zsh from 1.
 _asdf_extras_complete() {
-	local cmd="${words[2]:-}" output candidate rc=1
-	local -a candidates normalized
-	local i scoped=0 normalized_current="$CURRENT"
-	if ((CURRENT > 2)) && [[ "$cmd" == install || "$cmd" == update || "$cmd" == get || "$cmd" == shell ]]; then
-		if [[ "$cmd" == install ]]; then
-			output="$(_asdf_extras_query --delegated "${words[@]:1:$((CURRENT - 1))}")" || return 1
-		else
-			output="$(_asdf_extras_query "${words[@]:1:$((CURRENT - 1))}")" || return 1
-		fi
-		while IFS= read -r candidate; do
-			[[ -z "$candidate" ]] || candidates+=("$candidate")
-		done <<<"$output"
-		if [[ "$cmd" == install ]]; then
-			normalized=("${words[1]}" install)
-			for ((i = 3; i <= ${#words}; i++)); do
-				case "${words[i]}" in
-				-u | --home | -p | --parent | --local | --replace)
-					if ((i != CURRENT)); then
-						scoped=1
-						((i >= CURRENT)) || normalized_current=$((normalized_current - 1))
-						continue
-					fi
-					normalized+=("${words[i]}")
-					;;
-				*) normalized+=("${words[i]}") ;;
-				esac
+	local output directive extras candidate rc=1 query_rc=0 i dropped
+	local -a candidates drop normalized
+	output="$(_asdf_extras_query --cword "$((CURRENT - 1))" -- "${words[@]}")" || query_rc=$?
+	if ((query_rc == 2)); then
+		# No runtime: native completion alone.
+		output="native original"
+	elif ((query_rc != 0)); then
+		return 1
+	fi
+	directive="${output%%$'\n'*}"
+	extras="${output#"$directive"}"
+	while IFS= read -r candidate; do
+		[[ -z "$candidate" ]] || candidates+=("$candidate")
+	done <<<"$extras"
+	case "$directive" in
+	"native none") ;;
+	"native drop "*)
+		local normalized_current="$CURRENT"
+		read -r -A drop <<<"${directive#native drop }"
+		for ((i = 1; i <= ${#words}; i++)); do
+			dropped=0
+			for candidate in "${drop[@]}"; do
+				((candidate + 1 != i)) || dropped=1
 			done
-			if ((scoped)); then
-				local -a words=("${normalized[@]}")
-				local CURRENT="$normalized_current"
+			if ((dropped)); then
+				((i >= CURRENT)) || normalized_current=$((normalized_current - 1))
+				continue
 			fi
-			rc=0
-			"$_ASDF_EXTRAS_NATIVE_COMPLETE" "$@" || rc=$?
-		fi
-	else
+			normalized+=("${words[i]}")
+		done
+		local -a words=("${normalized[@]}")
+		local CURRENT="$normalized_current"
 		rc=0
 		"$_ASDF_EXTRAS_NATIVE_COMPLETE" "$@" || rc=$?
-		if ((CURRENT == 2)); then
-			candidates=(update get shell)
-		fi
-	fi
+		;;
+	*)
+		rc=0
+		"$_ASDF_EXTRAS_NATIVE_COMPLETE" "$@" || rc=$?
+		;;
+	esac
 	if ((${#candidates})); then
 		compadd -- "${candidates[@]}" && rc=0
 	fi

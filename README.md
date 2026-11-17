@@ -429,6 +429,8 @@ installed versions are skipped without running hooks.
 [update environment variables](#update-environment-variables). An existing
 environment file is sourced before installation. If a hook function variable
 is set, the function runs as `<function> <plugin> <version>` before installation.
+Hook execution temporarily disables `set -euo pipefail`, then restores the
+previous shell options after the hook returns.
 The plugin-specific function takes precedence over the global fallback.
 
 ```shell

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.0](https://github.com/eihu0F/asdf-extras/compare/v0.11.0...v0.12.0) (2026-11-17)
+
+
+### Features
+
+* implement strict mode handling in install hooks ([#87](https://github.com/eihu0F/asdf-extras/issues/87)) ([37f9e17](https://github.com/eihu0F/asdf-extras/commit/37f9e17bd75881dffbd0f2ce101f6cb89f74f53b))
+
 ## [0.11.0](https://github.com/eihu0F/asdf-extras/compare/v0.10.0...v0.11.0) (2026-11-01)
 
 

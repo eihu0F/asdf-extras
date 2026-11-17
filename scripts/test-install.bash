@@ -205,6 +205,22 @@ grep -Fx '<install><python><3.4.5><python-env>' "$ASDF_TEST_ENV_LOG" >/dev/null 
 grep -Fx '<set><python><>' "$ASDF_TEST_ENV_LOG" >/dev/null ||
 	fail "python install env leaked into set"
 
+cat >"${ASDF_EXTRAS_INSTALL_ENV_DIR}/nodejs.env" <<'EOF'
+strict_mode_probe() {
+	[[ ! -o errexit ]] || return 1
+	[[ ! -o nounset ]] || return 1
+	[[ ! -o pipefail ]] || return 1
+	export ASDF_TEST_MARKER=strict-disabled
+}
+ASDF_EXTRAS_INSTALL_ENV_FUNCTION_NODEJS=strict_mode_probe
+EOF
+: >"$ASDF_TEST_ENV_LOG"
+"$BASH" "${repo_dir}/lib/commands/command-install" nodejs 7.8.9
+grep -Fx '<install><nodejs><7.8.9><strict-disabled>' "$ASDF_TEST_ENV_LOG" >/dev/null ||
+	fail "install hook should run without strict shell options"
+grep -Fx '<set><nodejs><>' "$ASDF_TEST_ENV_LOG" >/dev/null ||
+	fail "install hook marker leaked into set after strict-mode probe"
+
 # Check shell wrappers route local installs while leaving plain installs native.
 for shell_name in bash zsh fish; do
 	if ! command -v "$shell_name" >/dev/null; then

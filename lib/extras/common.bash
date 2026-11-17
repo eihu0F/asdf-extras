@@ -173,6 +173,7 @@ extras_prepare_install_environment() {
 	local suffix data_dir env_dir default_env_file
 	local env_file_var env_file
 	local fn_var fn_name
+	local had_errexit=0 had_nounset=0 had_pipefail=0 hook_status=0
 
 	suffix="$(extras_plugin_env_suffix "$plugin")"
 	data_dir="${ASDF_DATA_DIR:-$HOME/.asdf}"
@@ -203,7 +204,18 @@ extras_prepare_install_environment() {
 		extras_fail "install env function not found: ${fn_name} (plugin: ${plugin})"
 	fi
 
-	if ! "$fn_name" "$plugin" "$version"; then
+	[[ -o errexit ]] && had_errexit=1
+	[[ -o nounset ]] && had_nounset=1
+	[[ -o pipefail ]] && had_pipefail=1
+	set +e +u
+	set +o pipefail
+	"$fn_name" "$plugin" "$version"
+	hook_status=$?
+	((had_errexit)) && set -e
+	((had_nounset)) && set -u
+	((had_pipefail)) && set -o pipefail
+
+	if [[ "$hook_status" -ne 0 ]]; then
 		extras_fail "install env function failed: ${fn_name} (plugin: ${plugin})"
 	fi
 }
